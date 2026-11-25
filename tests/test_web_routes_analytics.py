@@ -129,6 +129,50 @@ class AnalyticsRouteTests(unittest.TestCase):
         self.assertEqual({"T": 4, "J": 1, "H": 1}, full["by_type"])
         self.assertEqual({"[x]": 3, "[ ]": 2, "[N]": 1}, full["by_status"])
 
+    def test_common_period_clips_week_and_month_buckets_and_all_chart_sources(self):
+        Path(self.path).write_text(
+            "[x] T Before done:2024-01-28 elapsed:1m\n"
+            "[x] T Start done:2024-01-29 elapsed:2m\n"
+            "[x] T End done:2024-02-02 elapsed:3m\n"
+            "[x] T After done:2024-02-03 elapsed:4m\n"
+            "[ ] H Exercise done:2024-01-28 done:2024-01-29 done:2024-02-02 done:2024-02-03\n"
+            "[N] J Mood on:2024-01-29 mood:good\n"
+            "[N] J Later on:2024-02-03 mood:bad\n",
+            encoding="utf-8",
+        )
+        period = {"from": "2024-01-29", "to": "2024-02-02"}
+        for group, labels, counts in (
+            (
+                "daily",
+                ["2024-01-29", "2024-01-30", "2024-01-31", "2024-02-01", "2024-02-02"],
+                [1, 0, 0, 0, 1],
+            ),
+            ("weekly", ["2024-01-29/2024-02-02"], [2]),
+            ("monthly", ["2024-01-29/2024-01-31", "2024-02-01/2024-02-02"], [1, 1]),
+        ):
+            for chart in ("tasks", "habits", "mood"):
+                with self.subTest(group=group, chart=chart):
+                    result = self.client.get(
+                        "/api/chart/" + chart, params={**period, "group": group}
+                    ).json()
+                    self.assertEqual({**period, "group": group}, result["range"])
+                    self.assertEqual(labels, result["labels"])
+                    if chart != "mood":
+                        self.assertEqual(counts, result["datasets"][0]["data"])
+                    else:
+                        self.assertEqual({"good": 1}, result["counts"])
+        elapsed = self.client.get("/api/chart/elapsed", params=period).json()
+        self.assertEqual(period, elapsed["range"])
+        self.assertEqual([5], elapsed["datasets"][0]["data"])
+        heatmap = self.client.get("/api/chart/habits-heatmap", params=period).json()
+        self.assertEqual(period, heatmap["range"])
+        self.assertEqual(
+            {"2024-01-29": 1, "2024-02-02": 1}, heatmap["habits"][0]["dates"]
+        )
+        summary = self.client.get("/api/stats/summary", params=period).json()
+        self.assertEqual(period, summary["range"])
+        self.assertEqual(2, summary["by_type"]["T"])
+
     def test_read_only_and_bearer_auth_still_apply_to_analytics_routes(self):
         from lifetxt.webapp import create_app
 

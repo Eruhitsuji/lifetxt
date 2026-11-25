@@ -347,18 +347,95 @@
       switchWorkspace("stats");
     }
 
+    // One inclusive calendar period for the chart and breakdown. Never use
+    // the browser's local day to fill missing workspace dates.
+    function statsDate(text) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(text || "") || text.startsWith("0000")) return null;
+      const day = new Date(text + "T00:00:00Z");
+      return Number.isFinite(day.getTime()) && day.toISOString().slice(0, 10) === text ? day : null;
+    }
+
+    function statsRangeSelection() {
+      const start = document.getElementById("breakdown-from");
+      const end = document.getElementById("breakdown-to");
+      const fromText = start?.value || "";
+      const toText = end?.value || "";
+      const to = toText || appConfig?.today || "";
+      const lastDay = statsDate(to);
+      const status = document.getElementById("stats-range-status");
+      const invalid = "Choose valid dates with From on or before To.";
+      let error = "";
+      let from = fromText;
+      if (start?.validity?.badInput || end?.validity?.badInput) error = invalid;
+      else if (!lastDay) error = toText ? invalid : "Workspace date unavailable. Reload the page or specify both dates.";
+      else {
+        if (!from) {
+          const first = new Date(lastDay);
+          first.setUTCDate(first.getUTCDate() - 29);
+          from = first.toISOString().slice(0, 10);
+        }
+        if (!statsDate(from) || from > to) error = invalid;
+      }
+      if (status) status.textContent = error ? t(error) : statsPeriodLabel("Selected period", {from, to});
+      return error ? null : {from, to};
+    }
+
+    function statsPeriodLabel(label, range) {
+      const lang = document.documentElement?.lang === "ja" ? "ja-JP" : "en-US";
+      const format = date => new Intl.DateTimeFormat(lang, {
+        year: "numeric", month: "short", day: "numeric", timeZone: "UTC",
+      }).format(statsDate(date));
+      return t(label) + ": " + format(range.from) + " – " + format(range.to);
+    }
+
+    function statsPeriodQuery(range) {
+      return "from=" + encodeURIComponent(range.from) + "&to=" + encodeURIComponent(range.to);
+    }
+
+    function statsAppliedPeriod(id, responseRange, selected) {
+      if (!responseRange || responseRange.from !== selected.from || responseRange.to !== selected.to) {
+        throw new Error("Unexpected statistics period");
+      }
+      const node = document.getElementById(id);
+      if (node) node.textContent = statsPeriodLabel("Applied period", responseRange);
+    }
+
+    function clearStatsAppliedPeriod(id) {
+      const node = document.getElementById(id);
+      if (node) node.textContent = "";
+    }
+
+    function resetStatsRange() {
+      document.getElementById("breakdown-from").value = "";
+      document.getElementById("breakdown-to").value = "";
+      return refreshStatsView();
+    }
+
+    function statsChartDateRule(type) {
+      const rules = {
+        tasks: "Tasks: record date (done first), grouped by current status; undated tasks are omitted.",
+        habits: "Habits: recorded done dates; completed habits without done use the record date. Streak ends on To.",
+        "habits-heatmap": "Habits: recorded done dates; completed habits without done use the record date. Streak ends on To.",
+        mood: "Mood: journal record date; values are averaged within each bucket.",
+        elapsed: "Elapsed: record date; undated elapsed records are included.",
+      };
+      const node = document.getElementById("chart-date-rule");
+      if (node) node.textContent = t(rules[type] || "") + " " + t("Timestamp dates use the date written in the record (not a timezone conversion).");
+    }
+
     let statsBreakdownGeneration = 0;
     async function loadStatsBreakdown() {
       const el = document.getElementById("stats-breakdown");
       if (!el) return;
       const generation = ++statsBreakdownGeneration;
+      const range = statsRangeSelection();
+      clearStatsAppliedPeriod("stats-breakdown-applied");
+      if (!range) { el.innerHTML = ""; return; }
       el.innerHTML = `<div class="empty" style="grid-column:1 / -1" role="status">${escapeHtml(t("Loading statistics breakdown…"))}</div>`;
       try {
-        const fromVal = (document.getElementById("breakdown-from") || {}).value || "";
-        const toVal = (document.getElementById("breakdown-to") || {}).value || "";
-        const qs = (fromVal ? `from=${encodeURIComponent(fromVal)}&` : "") + (toVal ? `to=${encodeURIComponent(toVal)}` : "");
-        const data = await api("/api/stats/summary" + (qs ? "?" + qs : ""));
+        const data = await api("/api/stats/summary?" + statsPeriodQuery(range));
         if (generation !== statsBreakdownGeneration) return;
+        statsAppliedPeriod("stats-breakdown-applied", data.range, range);
         const STATUS_EMOJI = {"[ ]": "○", "[/]": "◑", "[x]": "✓", "[-]": "✕", "[>]": "→"};
         const typeRows = Object.entries(data.by_type || {})
           .sort((a,b) => b[1]-a[1])
@@ -384,6 +461,7 @@
           </div>`;
       } catch (_) {
         if (generation !== statsBreakdownGeneration) return;
+        clearStatsAppliedPeriod("stats-breakdown-applied");
         el.innerHTML = `<div class="empty" style="grid-column:1 / -1">
           <p role="status">${escapeHtml(t("Could not load the statistics breakdown."))}</p>
           <button type="button" class="secondary" onclick="loadStatsBreakdown()">${escapeHtml(t("Reload breakdown"))}</button>
@@ -425,18 +503,25 @@
       if (!container) return;
       const generation = ++chartLoadGeneration;
       const group = currentChartGroup;
+      const range = statsRangeSelection();
+      clearStatsAppliedPeriod("chart-applied-range");
+      statsChartDateRule(type);
+      const groupBar = document.getElementById("chart-group-bar");
+      if (groupBar) groupBar.style.display = GROUP_SUPPORTED.has(type) ? "" : "none";
       const heatmap = type === "habits-heatmap";
       if (mainChart) {
         mainChart.destroy();
         mainChart = null;
       }
+      if (!range) { container.innerHTML = ""; return; }
       container.innerHTML = `<div class="empty" role="status">${escapeHtml(t("Loading statistics chart…"))}</div>`;
       try {
         if (!heatmap) await ensureChartJs();
         if (generation !== chartLoadGeneration) return;
-        const groupParam = GROUP_SUPPORTED.has(type) ? `?group=${encodeURIComponent(group)}` : "";
-        const data = await api("/api/chart/" + encodeURIComponent(type) + groupParam);
+        const groupParam = GROUP_SUPPORTED.has(type) ? `&group=${encodeURIComponent(group)}` : "";
+        const data = await api("/api/chart/" + encodeURIComponent(type) + "?" + statsPeriodQuery(range) + groupParam);
         if (generation !== chartLoadGeneration) return;
+        statsAppliedPeriod("chart-applied-range", data.range, range);
         if (heatmap) {
           renderHeatmap(container, data);
           return;
@@ -468,9 +553,9 @@
               y: {
                 beginAtZero: true,
                 title: {
-                  display: GROUP_SUPPORTED.has(type) && group !== "daily",
-                  text: group === "weekly" ? "completions / week"
-                      : group === "monthly" ? "completions / month" : "",
+                  display: (type === "tasks" || type === "habits") && group !== "daily",
+                  text: group === "weekly" ? t(type === "tasks" ? "records / week" : "completions / week")
+                      : group === "monthly" ? t(type === "tasks" ? "records / month" : "completions / month") : "",
                 },
               },
             },
@@ -478,6 +563,7 @@
         });
       } catch (_) {
         if (generation !== chartLoadGeneration) return;
+        clearStatsAppliedPeriod("chart-applied-range");
         container.innerHTML = `<div class="empty">
           <p role="status">${escapeHtml(t("Could not load the statistics chart."))}</p>
           <button type="button" class="secondary" onclick="refreshCharts()">${escapeHtml(t("Reload chart"))}</button>
@@ -486,57 +572,44 @@
     }
 
     function renderHeatmap(container, data) {
-      const today = new Date().toISOString().slice(0, 10);
-      const rangeStart = new Date(data.range?.from || new Date().getFullYear() + "-01-01");
       if (!data.habits?.length) {
         container.innerHTML = `<div class="empty" role="status">${escapeHtml(t("No habit data."))}</div>`;
         return;
       }
-
-      // Build month labels array (one per week column)
-      const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-      function buildMonthLabels(start, end) {
-        const labels = [];
-        let col = 0;
-        const d = new Date(start);
-        const startPad = d.getDay();
-        for (let pad = 0; pad < startPad; pad++) { labels.push(""); col++; }
-        let lastMonth = -1;
-        while (d <= end) {
-          const mo = d.getMonth();
-          if (d.getDay() === 0) {
-            labels.push(mo !== lastMonth ? MONTHS[mo] : "");
-            lastMonth = mo;
-          }
-          d.setDate(d.getDate() + 1);
+      const start = statsDate(data.range.from);
+      const end = statsDate(data.range.to);
+      const today = appConfig?.today;
+      const pad = start.getUTCDay();
+      const days = Math.round((end - start) / 86400000) + 1;
+      const weeks = Math.ceil((pad + days) / 7);
+      const locale = document.documentElement?.lang === "ja" ? "ja-JP" : "en-US";
+      const monthFormat = new Intl.DateTimeFormat(locale, {month: "short", timeZone: "UTC"});
+      const months = Array(weeks).fill("");
+      const dates = [];
+      let previousMonth = -1;
+      for (let day = new Date(start), index = 0; day <= end; day.setUTCDate(day.getUTCDate() + 1), index++) {
+        const week = Math.floor((pad + index) / 7);
+        const month = day.getUTCMonth();
+        if (month !== previousMonth) {
+          months[week] = monthFormat.format(day);
+          previousMonth = month;
         }
-        return labels;
+        dates.push(day.toISOString().slice(0, 10));
       }
-
-      const endDate = new Date();
-      const monthLabels = buildMonthLabels(new Date(rangeStart), endDate);
-
-      let html = `<div class="heatmap-section" style="padding:.5rem 1rem">`;
+      let html = '<div class="heatmap-section" style="padding:.5rem 1rem">';
       for (const habit of data.habits) {
-        html += `<div class="heatmap-habit">
-          <div class="heatmap-title">${escapeHtml(habit.title)}<span class="heatmap-streak">🔥 ${habit.streak} day streak</span></div>
-          <div class="heatmap-months">${monthLabels.map(m => `<div class="heatmap-month-cell">${escapeHtml(m)}</div>`).join("")}</div>
+        html += `<div class="heatmap-habit" style="--heatmap-weeks:${weeks}">
+          <div class="heatmap-title">${escapeHtml(habit.title)}<span class="heatmap-streak">🔥 ${habit.streak} ${escapeHtml(t("day streak"))}</span></div>
+          <div class="heatmap-months">${months.map(m => `<div class="heatmap-month-cell">${escapeHtml(m)}</div>`).join("")}</div>
           <div class="heatmap-grid">`;
-        const start = new Date(rangeStart);
-        const startDay = start.getDay();
-        for (let pad = 0; pad < startDay; pad++) html += `<div class="heatmap-cell" style="visibility:hidden"></div>`;
-        const d = new Date(start);
-        while (d <= endDate) {
-          const ds = d.toISOString().slice(0, 10);
+        for (let n = 0; n < pad; n++) html += '<div class="heatmap-cell" style="visibility:hidden"></div>';
+        for (const ds of dates) {
           const isDone = !!(habit.dates && habit.dates[ds]);
-          const isToday = ds === today;
-          html += `<div class="heatmap-cell${isDone ? " done" : ""}${isToday ? " today" : ""}" data-date="${ds}"></div>`;
-          d.setDate(d.getDate() + 1);
+          html += `<div class="heatmap-cell${isDone ? " done" : ""}${ds === today ? " today" : ""}" data-date="${ds}"></div>`;
         }
-        html += `</div></div>`;
+        html += "</div></div>";
       }
-      html += `</div>`;
-      container.innerHTML = html;
+      container.innerHTML = html + "</div>";
     }
 
     function showChart(type, btn) {

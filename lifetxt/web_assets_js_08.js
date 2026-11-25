@@ -244,9 +244,7 @@
       if (v === "server") tasks.push(loadServerBackupStatus());
       if (v === "context") tasks.push(loadPersonalContext());
       if (v === "stats") {
-        statsLoaded = true;
-        tasks.push(loadChart(currentChartType));
-        tasks.push(loadStatsBreakdown());
+        tasks.push(refreshStatsView());
       }
       await Promise.all(tasks);
     }

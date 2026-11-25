@@ -3516,6 +3516,7 @@ capabilities:
       - req-web-notification-empty-i18n
       - req-web-notification-permission-i18n
       - req-web-sort-source-translation
+      - req-web-stats-shared-range
       - req-web-stats-canonical-refresh
       - req-web-runtime-build-info
     implementation_locations:
@@ -3544,12 +3545,14 @@ capabilities:
       - 'a route module must not import fastapi at module level: create_app imports it inside the function behind an ImportError guard, which is what keeps import lifetxt.webapp working without the Web extras and the no-Web CI job green'
       - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1778 tests, OK (skipped=14)'
     related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/1729
       - https://github.com/Eruhitsuji/lifetxt/issues/1060
       - https://github.com/Eruhitsuji/lifetxt/issues/1058
       - https://github.com/Eruhitsuji/lifetxt/issues/67
       - https://github.com/Eruhitsuji/lifetxt/issues/82
       - https://github.com/Eruhitsuji/lifetxt/issues/84
     related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/1730
       - https://github.com/Eruhitsuji/lifetxt/pull/1061
       - https://github.com/Eruhitsuji/lifetxt/pull/1059
       - https://github.com/Eruhitsuji/lifetxt/pull/83

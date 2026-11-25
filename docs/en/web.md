@@ -1780,9 +1780,29 @@ Shared field labels in Focus, Review and Graph, and the bulk completion date dia
 
 Focus, Review and Graph align action buttons with the bottom of labeled inputs. Use Add or Apply normally; Review retains its stacked controls on small screens.
 
-In Statistics, use From/To to filter the breakdown by type and status. Both boundary dates are included. With only From, the period ends today. With only To, the period starts 29 days before To. Choose All to clear both dates and count all records. The main chart has its own period.
+In Statistics, set **From / To** at the top of the page. The same inclusive
+calendar period applies to Tasks, Habits, Heatmap, Mood, Elapsed and the
+type/status breakdown. With only From, the period ends on the workspace date
+obtained when the page loads. With only To, it starts 29 days before To.
+**Last 30 days** clears the controls and selects that bounded default instead
+of counting all records. Reload the page to refresh the workspace date.
+The Dashboard's undated summary is unchanged. The selected period and each
+successful result's applied period are shown separately. An invalid or reversed
+range clears the old results without requesting data.
 
-The breakdown uses the same record date as CLI statistics. It uses the first valid value from `done`, `on`, `due`, `do`, `from`, `created`, or `updated`, in that order. Records without a usable date are included.
+Daily, Weekly (seven-day intervals from From), and Monthly (calendar months)
+are aggregation units within the period; partial buckets stop at To.
+The Heatmap shows only dates in the requested interval.
+
+The current statistics APIs retain their existing date semantics. The record
+date is the first valid value from `done`, `on`, `due`, `do`, `from`,
+`created`, or `updated`, in that order. Task counts show current status by
+record date (undated tasks are omitted); habit cells use recorded completion
+dates, falling back to record date for completed habits without `done`.
+Habit streaks end at To and can include earlier days. Mood uses journal record
+dates; elapsed and breakdown include undated records. An offset-bearing record
+still uses its written calendar date, not a converted workspace-local date.
+These distinctions are labeled so the counts need not be identical.
 
 Personal Context next-step links and the Server backup guide link use underlined theme text, including after visiting them. Open either view and follow the guidance link normally; no extra setting is needed.
 

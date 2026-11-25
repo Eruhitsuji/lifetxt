@@ -320,8 +320,8 @@
     #import-raw-row { margin-top:.5rem; }
     #import-raw-input { width:100%; font-family:monospace; font-size:.8rem; }
     /* ── Heatmap month labels ────────────────────────────────────── */
-    .heatmap-months { display:grid; grid-template-columns:repeat(53,1fr); gap:2px; margin-bottom:.2rem; }
-    .heatmap-month-cell { font-size:.6rem; color:var(--muted); text-align:center; }
+    .heatmap-months { display:grid; grid-template-columns:repeat(var(--heatmap-weeks, 53), 20px); gap:2px; margin-bottom:.2rem; width:max-content; }
+    .heatmap-month-cell { font-size:.6rem; color:var(--muted); white-space:nowrap; }
     .source { color: var(--muted); font-size: .74rem; white-space: nowrap; font-family: var(--font-mono); opacity: .85; }
     form.stack { grid-template-columns: 1fr 1fr; }
     form.stack label, form.stack textarea, form.stack .actions, .wide { grid-column: 1 / -1; }
@@ -670,3 +670,6 @@
     .cal-tg-block:hover .cal-tg-resize::after { opacity: .45; }
     .cal-tg-ghost { position: absolute; left: 2px; right: 2px; z-index: 4; pointer-events: none; border: 1px dashed var(--accent); background: var(--accent-soft); border-radius: 6px; padding: 2px 6px; font-size: .7rem; color: var(--accent); }
     .cal-tg { user-select: none; }
+
+    .stats-period-info { margin:.4rem 1rem; color:var(--muted); font-size:.85rem; overflow-wrap:anywhere; }
+    .stats-period-info p { margin:.25rem 0; }

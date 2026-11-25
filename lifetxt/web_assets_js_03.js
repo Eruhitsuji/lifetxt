@@ -284,8 +284,7 @@
     }
     function refreshStatsView() {
       statsLoaded = true;
-      loadChart(currentChartType);
-      loadStatsBreakdown();
+      return Promise.all([loadChart(currentChartType), loadStatsBreakdown()]);
     }
     function switchWorkspace(view, historyMode = "push") {
       const params = query();

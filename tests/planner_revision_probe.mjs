@@ -71,6 +71,20 @@ function action(section,title,label=null) {
 }
 await p.boot();
 assert.equal($('feedback').textContent,'Today');
+// The review uses real command-center references, including tasks without IDs.
+const reviewTasks=$('time-review-tasks').children;
+const reviewTitles=reviewTasks.map(row=>row.children[0].children[1].textContent);
+assert.ok(reviewTitles.includes('Task'));
+assert.ok(reviewTitles.includes('Line_Task'));
+const reviewCheck=reviewTasks[0].children[0].children[0];
+reviewCheck.checked=true;reviewCheck.onchange();
+assert.match($('time-review-count').textContent,/1 \/ 3/);
+$('time-review-mode').value='night';$('time-review-mode').onchange();
+assert.match($('time-review-prompts').children[0].textContent,/learn/);
+assert.equal(writes().length,0);
+await p.load();
+assert.match($('time-review-count').textContent,/0 \/ 3/);
+
 // All actual form/button paths, including repeated submit prevention.
 $('open-capture').onclick();$('capture-text').value='Captured';
 await Promise.all([$('capture-form').onsubmit(event),$('capture-form').onsubmit(event)]);

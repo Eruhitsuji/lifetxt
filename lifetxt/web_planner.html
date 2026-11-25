@@ -16,6 +16,18 @@
 <p id="focus-status" role="status" aria-live="polite"></p><nav id="focus-links" aria-labelledby="focus-heading"></nav>
 </section>
 <div id="day-view">
+<section id="time-review-panel" class="panel" hidden aria-labelledby="time-review-heading"><details id="time-review-disclosure">
+<summary id="time-review-heading" data-i18n="timeReviewTitle">Time-based review</summary>
+<p data-i18n="timeReviewHelp">Choose any review period. Selections are temporary and do not change your records.</p>
+<label for="time-review-mode" data-i18n="timeReviewMode">Review period</label>
+<select id="time-review-mode"><option value="morning" data-i18n="timeReviewMorning">Morning</option><option value="midday" data-i18n="timeReviewMidday">Midday</option><option value="evening" data-i18n="timeReviewEvening">Evening</option><option value="night" data-i18n="timeReviewNight">Night</option></select>
+<ul id="time-review-prompts" aria-live="polite"></ul>
+<h3 data-i18n="timeReviewActuals">Recorded completions (whole selected day)</h3>
+<p id="time-review-evidence" role="status"></p><ul id="time-review-completions"></ul>
+<h3 data-i18n="timeReviewCandidates">Important task candidates (choose up to 3)</h3>
+<p id="time-review-count" role="status"></p><div id="time-review-tasks"></div>
+<button id="time-review-flow" type="button" data-i18n="timeReviewFlow">Open Suggested Daily Flow</button>
+</details></section>
 <section id="flow-panel" class="panel" aria-labelledby="flow-heading"><details id="flow-disclosure">
 <summary id="flow-heading" data-i18n="flowTitle">Suggested Daily Flow</summary>
 <p data-i18n="flowUnsaved">Read-only suggestions, not saved or executed. Fixed appointments stay fixed.</p>

@@ -170,6 +170,16 @@ date cannot create a completion dated by that selected date. Past schedule
 entries remain scheduled context, not proof that an event occurred; Planner
 does not reconstruct historical Task state.
 
+Expand **Time-based review** in today's Day view to switch manually between
+Morning, Midday, Evening and Night. The questions change with each period.
+Recorded completions cover the whole selected day and active scope, not an
+inferred time band; incomplete or unavailable evidence is labeled. Choose up
+to three important tasks from the current command-center candidates, open a
+task's existing details, or jump to Suggested Daily Flow. The selection does
+not change records or feed the suggestions automatically and resets when the
+day reloads. This works in read-only mode too. Hiding Review in Customize also
+hides this panel. Automatic Today emphasis is independent.
+
 Multiple files can be read at once. Paths may be glob patterns such as
 `projects/**/*.life.txt`, and directories are expanded to life.txt-like `.txt`
 files. Create, update, and delete operations use the first file unless

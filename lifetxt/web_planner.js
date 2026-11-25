@@ -10,6 +10,103 @@
     en: {focusTitle:"Focus now", focusMode:"Today emphasis", focusAuto:"Auto", focusMorning:"Morning", focusDaytime:"Daytime", focusEvening:"Evening", focusStandard:"Standard", focusTimes:"Automatic time bands (workspace time)", focusMorningStart:"Morning starts", focusDaytimeStart:"Daytime starts", focusEveningStart:"Evening starts", focusSettingsHelp:"Morning < Daytime < Evening. Night continues until the next morning. Saved only in this browser.", focusInvalid:"Enter HH:MM times with Morning < Daytime < Evening.", focusMorningHelp:"Today's appointments, priority tasks and the suggested day plan.", focusDaytimeHelp:"Next appointment, remaining tasks and current or upcoming suggestions. Suggestions are not actuals.", focusEveningHelp:"Recorded completions, habits and journal. Unfinished work remains available.", focusStandardHelp:"Standard display. Auto uses workspace time; unavailable or stale time falls back here.", focusUpcoming:"Current / upcoming suggestion", focusNext:"Next appointment", focusCompleted:"Recorded completions", focusUnavailable:"Could not load completion evidence. Retry by reloading the day."},
     ja: {focusTitle:"今の注目", focusMode:"今日の強調表示", focusAuto:"自動", focusMorning:"朝", focusDaytime:"日中", focusEvening:"夜", focusStandard:"標準", focusTimes:"自動判定の時間帯（workspace時刻）", focusMorningStart:"朝の開始", focusDaytimeStart:"日中の開始", focusEveningStart:"夜の開始", focusSettingsHelp:"朝 < 日中 < 夜の順に設定します。夜は翌朝まで続きます。このブラウザーだけに保存します。", focusInvalid:"HH:MM形式で、朝 < 日中 < 夜の順に設定してください。", focusMorningHelp:"今日の予定・優先タスクと、1日の提案プランを確認します。", focusDaytimeHelp:"次の予定・残りタスクと、現在以降の提案を確認します。提案は実績ではありません。", focusEveningHelp:"記録された完了・習慣・日誌を振り返ります。未完了の作業も引き続き確認できます。", focusStandardHelp:"標準表示です。自動判定はworkspace時刻を使い、時刻が不明・古い場合はこの表示に戻ります。", focusUpcoming:"現在以降の提案", focusNext:"次の予定", focusCompleted:"記録された完了", focusUnavailable:"完了記録を読み込めませんでした。日表示を再読み込みしてください。"}
   };
+  const timeReviewCopy = {
+    en: {
+      timeReviewTitle: "Time-based review", timeReviewHelp: "Choose any review period. Selections are temporary, reset when the day reloads, and do not change your records.",
+      timeReviewMode: "Review period", timeReviewMorning: "Morning", timeReviewMidday: "Midday", timeReviewEvening: "Evening", timeReviewNight: "Night",
+      timeReviewActuals: "Recorded completions (whole selected day)", timeReviewCandidates: "Important task candidates (choose up to 3)",
+      timeReviewFlow: "Open Suggested Daily Flow", timeReviewCount: "Temporarily selected", timeReviewEmpty: "No matching task candidates.",
+      timeReviewNoEvidence: "No completion records returned.", timeReviewLoading: "Loading day data…", timeReviewUnavailable: "Could not load day data. Reload the day to retry.",
+      timeReviewEvidenceUnavailable: "Completion evidence unavailable. Reload the day to retry.",
+      timeReviewComplete: "Returned review has no reported completeness limitations.", timeReviewPartial: "Partial completion evidence — other activity may be missing.",
+      timeReviewPrompts: {
+        morning: ["What matters most today?", "Which tasks would make today meaningful?"],
+        midday: ["What have you accomplished so far?", "What needs adjusting for the afternoon?"],
+        evening: ["What did you achieve today?", "Which remaining tasks deserve attention tonight?"],
+        night: ["What did you learn today?", "What should you carry forward to tomorrow?"]
+      }
+    },
+    ja: {
+      timeReviewTitle: "時間帯別レビュー", timeReviewHelp: "任意の時間帯を選んで振り返ります。選択は一時的で、日表示の再読み込みで解除され、記録は変更されません。",
+      timeReviewMode: "レビューする時間帯", timeReviewMorning: "朝", timeReviewMidday: "昼", timeReviewEvening: "夕", timeReviewNight: "夜",
+      timeReviewActuals: "記録された完了（選択日全体）", timeReviewCandidates: "重要タスク候補（最大3件）",
+      timeReviewFlow: "今日のおすすめ / Daily Flow を開く", timeReviewCount: "一時選択中", timeReviewEmpty: "該当するタスク候補はありません。",
+      timeReviewNoEvidence: "取得された完了記録はありません。", timeReviewLoading: "日表示のデータを取得中…", timeReviewUnavailable: "日表示のデータを取得できませんでした。再読み込みしてください。",
+      timeReviewEvidenceUnavailable: "完了実績を取得できませんでした。日表示を再読み込みしてください。",
+      timeReviewComplete: "取得したレビューに完全性の制限は報告されていません。", timeReviewPartial: "完了実績は一部のみです。他の活動が欠けている可能性があります。",
+      timeReviewPrompts: {
+        morning: ["今日、最も大切にしたいことは何ですか？", "今日を充実させるために選ぶタスクは何ですか？"],
+        midday: ["ここまでに何を達成しましたか？", "午後の計画で調整したいことは何ですか？"],
+        evening: ["今日、何を達成しましたか？", "夜に優先したい残タスクは何ですか？"],
+        night: ["今日、何を学びましたか？", "明日へ何を引き継ぎたいですか？"]
+      }
+    }
+  };
+  const timeReviewSelected = new Set();
+  function renderTimeReviewPrompts() {
+    const mode = $("time-review-mode").value;
+    $("time-review-prompts").replaceChildren(...(t.timeReviewPrompts[mode] || t.timeReviewPrompts.morning).map(question => mk("li", "", question)));
+  }
+  function resetTimeReview() {
+    const enabled = view === "day" && date && date === today && !preference().hidden_sections.includes("review");
+    $("time-review-panel").hidden = !enabled;
+    timeReviewSelected.clear();
+    $("time-review-evidence").textContent = t.timeReviewLoading;
+    $("time-review-completions").replaceChildren();
+    $("time-review-count").textContent = t.timeReviewLoading;
+    $("time-review-tasks").replaceChildren();
+    $("time-review-flow").disabled = true;
+    renderTimeReviewPrompts();
+  }
+  function renderTimeReview(day, tasks, review) {
+    if (view !== "day" || date !== today) return;
+    const evidence = $("time-review-evidence");
+    evidence.textContent = !review ? t.timeReviewEvidenceUnavailable :
+      [review.complete === true ? t.timeReviewComplete : t.timeReviewPartial, ...(review.limitations || [])].join(" · ");
+    if (review) {
+      const completed = review.completed || [];
+      $("time-review-completions").replaceChildren(...(completed.length ?
+        completed.map(row => mk("li", "", row.target?.title || row.title || row.event || t.flowUnknown)) :
+        [mk("li", "", t.timeReviewNoEvidence)]));
+    }
+    const refs = [...(day.due_today || []), ...(day.next_actions || [])].filter(ref => ref.kind === "T" && !ref.blocked);
+    // Require a source and line match (null source denotes the single-file API),
+    // not title alone, or an explicit ID.
+    // The command center already applies the selected scope.
+    const candidates = (tasks.items || []).filter(item => refs.some(ref =>
+      ref.title === item.title && ((ref.id && ref.id === item.id && (!ref.source || ref.source === item.source)) ||
+        (ref.source === item.source && ref.line != null && ref.line === item.line))));
+    const target = $("time-review-tasks"), controls = [];
+    target.replaceChildren();
+    function updateSelection() {
+      $("time-review-count").textContent = t.timeReviewCount + ": " + timeReviewSelected.size + " / 3";
+      for (const control of controls) control.disabled = !control.checked && timeReviewSelected.size >= 3;
+    }
+    for (const item of candidates) {
+      const row = mk("div", "time-review-task"), label = mk("label"), check = mk("input");
+      check.type = "checkbox";
+      check.onchange = () => {
+        if (check.checked && timeReviewSelected.size < 3) timeReviewSelected.add(item);
+        else { timeReviewSelected.delete(item); check.checked = false; }
+        updateSelection();
+      };
+      controls.push(check);
+      label.append(check, mk("span", "", item.title));
+      const detail = mk("button", "", t.detail);
+      detail.type = "button";
+      detail.setAttribute("aria-label", t.detail + ": " + item.title);
+      detail.onclick = () => showDetail(item);
+      row.append(label, detail);
+      target.append(row);
+    }
+    if (!candidates.length) target.append(mk("p", "empty", t.timeReviewEmpty));
+    updateSelection();
+    $("time-review-flow").disabled = false;
+  }
+  function openTimeReviewFlow() {
+    $("flow-disclosure").open = true;
+    $("flow-heading").focus();
+  }
   const defaultTimeBands = {morning:"05:00", daytime:"11:00", evening:"18:00"};
   let focusMode = "auto", workspaceClock = null, clockSyncPending = false;
   let focusAgenda = [], focusReview = null, focusDataReady = false;
@@ -481,7 +578,7 @@
       }
     }
   }
-  function translate(){t=copy[lang];Object.assign(t,flowCopy[lang],focusCopy[lang]);Object.assign(t,lang==="ja"?{emptyNotes:"通常のメモはありません。",moreNotes:"さらに表示",editNote:"編集",viewSelector:"Plannerの表示",anchorDate:"表示の基準日",month:"月",monthTitle:"月間プランナー",previousMonth:"前の月",nextMonth:"次の月",densityNone:"予定なし",densityLow:"少ない",densityMedium:"普通",densityHigh:"多い",items:"件",outsideMonth:"表示月の外",scope:"スコープ",all:"すべて",customize:"カスタマイズ",sections:"Dayセクション",density:"密度",comfortable:"標準",compact:"コンパクト",apply:"適用",reset:"workspaceの既定値に戻す",moveUp:"上へ",moveDown:"下へ",showSection:"表示"}:{emptyNotes:"No ordinary Notes.",moreNotes:"Load more",editNote:"Edit",viewSelector:"Planner view",anchorDate:"View anchor date",month:"Month",monthTitle:"Month Planner",previousMonth:"Previous month",nextMonth:"Next month",densityNone:"No dated items",densityLow:"Low density",densityMedium:"Medium density",densityHigh:"High density",items:"items",outsideMonth:"Outside selected month",scope:"Scope",all:"All",customize:"Customize",sections:"Day sections",density:"Density",comfortable:"Comfortable",compact:"Compact",apply:"Apply",reset:"Reset to workspace defaults",moveUp:"Move up",moveDown:"Move down",showSection:"Show"});document.documentElement.lang=lang;document.querySelectorAll("[data-i18n]").forEach(n=>n.textContent=t[n.dataset.i18n]||n.textContent);$('view-switch').setAttribute("aria-label",t.viewSelector);document.title=(view==="week"?t.weekTitle:view==="month"?t.monthTitle:t.title)+" · life.txt"}
+  function translate(){t=copy[lang];Object.assign(t,flowCopy[lang],focusCopy[lang],timeReviewCopy[lang]);Object.assign(t,lang==="ja"?{emptyNotes:"通常のメモはありません。",moreNotes:"さらに表示",editNote:"編集",viewSelector:"Plannerの表示",anchorDate:"表示の基準日",month:"月",monthTitle:"月間プランナー",previousMonth:"前の月",nextMonth:"次の月",densityNone:"予定なし",densityLow:"少ない",densityMedium:"普通",densityHigh:"多い",items:"件",outsideMonth:"表示月の外",scope:"スコープ",all:"すべて",customize:"カスタマイズ",sections:"Dayセクション",density:"密度",comfortable:"標準",compact:"コンパクト",apply:"適用",reset:"workspaceの既定値に戻す",moveUp:"上へ",moveDown:"下へ",showSection:"表示"}:{emptyNotes:"No ordinary Notes.",moreNotes:"Load more",editNote:"Edit",viewSelector:"Planner view",anchorDate:"View anchor date",month:"Month",monthTitle:"Month Planner",previousMonth:"Previous month",nextMonth:"Next month",densityNone:"No dated items",densityLow:"Low density",densityMedium:"Medium density",densityHigh:"High density",items:"items",outsideMonth:"Outside selected month",scope:"Scope",all:"All",customize:"Customize",sections:"Day sections",density:"Density",comfortable:"Comfortable",compact:"Compact",apply:"Apply",reset:"Reset to workspace defaults",moveUp:"Move up",moveDown:"Move down",showSection:"Show"});document.documentElement.lang=lang;document.querySelectorAll("[data-i18n]").forEach(n=>n.textContent=t[n.dataset.i18n]||n.textContent);$('view-switch').setAttribute("aria-label",t.viewSelector);document.title=(view==="week"?t.weekTitle:view==="month"?t.monthTitle:t.title)+" · life.txt"}
   let revision = null, captureRevision = null;
   const recordRevisions = new WeakMap();
   function revisionError(conflict=false) {
@@ -664,7 +761,7 @@
     }catch(e){if(generation===loadGeneration)$('feedback').textContent=t.error+e.message}
     finally{if(generation===loadGeneration){notesBusy=false;renderNotes()}}
   }
-  async function load(){focusDataReady=false;focusAgenda=[];focusReview=null;renderReview(null);resetFlow();updateFocus();const generation=++loadGeneration;notesBusy=false;notesPage=null;noteRows=[];renderNotes();if(!date)return;$('date').value=date;updateTemporalContext();$('date').setAttribute("aria-label",view!=="day"?t.anchorDate:t.choose);updateUrl();$('day-view').hidden=view!=="day";$('week-view').hidden=view!=="week";$('month-view').hidden=view!=="month";$('dock').hidden=view!=="day";$('view-day').setAttribute("aria-pressed",String(view==="day"));$('view-week').setAttribute("aria-pressed",String(view==="week"));$('view-month').setAttribute("aria-pressed",String(view==="month"));$('title').textContent=view==="week"?t.weekTitle:view==="month"?t.monthTitle:t.title;$('prev').setAttribute("aria-label",view==="week"?t.previousWeek:view==="month"?t.previousMonth:t.previousDay);$('next').setAttribute("aria-label",view==="week"?t.nextWeek:view==="month"?t.nextMonth:t.nextDay);if(view==="week"){await loadWeek();return}if(view==="month"){await loadMonth();return}$('feedback').textContent=t.loading;
+  async function load(){focusDataReady=false;focusAgenda=[];focusReview=null;renderReview(null);resetFlow();updateFocus();const generation=++loadGeneration;resetTimeReview();notesBusy=false;notesPage=null;noteRows=[];renderNotes();if(!date)return;$('date').value=date;updateTemporalContext();$('date').setAttribute("aria-label",view!=="day"?t.anchorDate:t.choose);updateUrl();$('day-view').hidden=view!=="day";$('week-view').hidden=view!=="week";$('month-view').hidden=view!=="month";$('dock').hidden=view!=="day";$('view-day').setAttribute("aria-pressed",String(view==="day"));$('view-week').setAttribute("aria-pressed",String(view==="week"));$('view-month').setAttribute("aria-pressed",String(view==="month"));$('title').textContent=view==="week"?t.weekTitle:view==="month"?t.monthTitle:t.title;$('prev').setAttribute("aria-label",view==="week"?t.previousWeek:view==="month"?t.previousMonth:t.previousDay);$('next').setAttribute("aria-label",view==="week"?t.nextWeek:view==="month"?t.nextMonth:t.nextDay);if(view==="week"){await loadWeek();return}if(view==="month"){await loadMonth();return}$('feedback').textContent=t.loading;
     try{const [day,agenda,habits,notes,journals,tasks,review]=await Promise.all([api('/api/command-center?date='+date+scopeQuery()),api('/api/agenda?from='+date+'&to='+date+scopeQuery()),api('/api/items?type=H&open_only=true'),api('/api/notes?date='+date+'&limit='+NOTE_PAGE_SIZE+scopeQuery()),api('/api/items?type=J'),api('/api/items?type=T&open_only=true'),dayPosition()!=="future"?api('/api/temporal-review?date='+date+'&limit=100'+scopeQuery()).catch(()=>null):Promise.resolve(null)]);
       if(generation!==loadGeneration)return;
       focusAgenda=agenda.records||[];focusReview=review;focusDataReady=true;
@@ -725,14 +822,15 @@
       $('review-panel').dataset.expanded="false";renderReview(review);
       const j=(journals.items||[]).find(i=>vals(i,'on').some(d=>String(d).slice(0,10)===date));$('journal').textContent=j?(vals(j,'body')[0]||j.title):t.empty;$('edit-journal').dataset.id=j?.id||'';$('edit-journal').disabled=!writable;
       applyPlannerPreference();
+      renderTimeReview(day,tasks,review);
       $('feedback').textContent=date===today?t.today:date;
-    }catch(e){if(generation===loadGeneration)$('feedback').textContent=t.error+' '+e.message}}
+    }catch(e){if(generation===loadGeneration){$('feedback').textContent=t.error+' '+e.message;$('time-review-evidence').textContent=t.timeReviewUnavailable;$('time-review-count').textContent=t.timeReviewUnavailable}}}
   function shift(n){date=view==="month"?monthShift(monthStart(date),n):dayDate(date,n*(view==="week"?7:1));load()}
   const sectionIds=["schedule","tasks","habits","notes","journal","review"];
   let plannerDefaults={sections:sectionIds,hidden_sections:[],density:"comfortable"},plannerPreference=null;
   function normalizePlannerPreference(value){const source=value||plannerDefaults,sections=Array.isArray(source.sections)?source.sections:sectionIds,ordered=[...new Set(sections.filter(id=>sectionIds.includes(id))),...sectionIds.filter(id=>!sections.includes(id))];return {sections:ordered,hidden_sections:[...new Set((Array.isArray(source.hidden_sections)?source.hidden_sections:[]).filter(id=>sectionIds.includes(id)))],density:["comfortable","compact"].includes(source.density)?source.density:"comfortable",time_bands:validTimeBands(source.time_bands)?{...source.time_bands}:{...defaultTimeBands}}}
   function preference(){if(plannerPreference)return plannerPreference;try{const raw=localStorage.getItem("lifetxt_planner_prefs_v1");plannerPreference=raw?normalizePlannerPreference(JSON.parse(raw)):normalizePlannerPreference(plannerDefaults)}catch(_){plannerPreference=normalizePlannerPreference(plannerDefaults)}return plannerPreference}
-  function applyPlannerPreference(){const pref=preference(),day=$('day-view');day.classList.toggle('density-compact',pref.density==='compact');for(const id of sectionIds){const node=focusTarget(id);if(node)node.hidden=pref.hidden_sections.includes(id)}for(const id of pref.sections){const node=focusTarget(id);if(node)day.append(node)} if(focusDataReady)renderReview(focusReview);updateFocus(); }
+  function applyPlannerPreference(){const pref=preference(),day=$('day-view');day.classList.toggle('density-compact',pref.density==='compact');for(const id of sectionIds){const node=focusTarget(id);if(node)node.hidden=pref.hidden_sections.includes(id)}for(const id of pref.sections){const node=focusTarget(id);if(node)day.append(node)} if(focusDataReady)renderReview(focusReview);$("time-review-panel").hidden=view!=="day"||date!==today||pref.hidden_sections.includes("review");updateFocus(); }
   function renderPreferenceControls(){const pref=preference(),target=$('section-preferences');target.replaceChildren();for(const id of pref.sections){const row=document.createElement('div');row.className='preference-row';row.dataset.section=id;const label=document.createElement('label'),check=document.createElement('input');check.type='checkbox';check.checked=!pref.hidden_sections.includes(id);check.dataset.section=id;label.append(check,' ',id);const up=document.createElement('button'),down=document.createElement('button');up.type=down.type='button';up.textContent=t.moveUp;down.textContent=t.moveDown;up.setAttribute('aria-label',t.moveUp+' '+id);down.setAttribute('aria-label',t.moveDown+' '+id);up.onclick=()=>{const before=row.previousElementSibling;if(before)target.insertBefore(row,before)};down.onclick=()=>{const after=row.nextElementSibling;if(after)target.insertBefore(after,row)};row.append(label,up,down);target.append(row)}$('density').value=pref.density;for(const k of ["morning","daytime","evening"])$("focus-"+k).value=pref.time_bands[k];$("focus-settings-error").textContent="";}
   function savePlannerPreference(value){plannerPreference=normalizePlannerPreference(value);try{localStorage.setItem("lifetxt_planner_prefs_v1",JSON.stringify(plannerPreference))}catch(_){ }applyPlannerPreference()}
   function openEditor(kind,item=null){if(!writable)return;edit={kind,item,revision:item?(recordRevisions.get(item)||null):revision};$('editor-heading').textContent=kind==='J'?t.journal:t.notes;$('editor-title').value=item?.title||(kind==='J'?'Journal '+date:'');$('editor-body').value=vals(item,'body')[0]||'';$('editor-feedback').textContent='';$('editor').showModal();$('editor-title').focus()}
@@ -740,6 +838,7 @@
     $('open-capture').onclick=()=>{if(!writable)return;captureRevision=sourceRevision?'"'+sourceRevision+'"':revision;$('capture-feedback').textContent='';$('capture-dialog').showModal()};$('capture-form').onsubmit=async e=>{e.preventDefault();if(pending||!writable)return;pending=true;const b=$('capture-form').querySelector('[type=submit]');b.disabled=true;try{await api('/api/items/capture',{expectedRevision:captureRevision,method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:$('capture-text').value,expected_source_revision:(captureRevision||'').replace(/^"|"$/g,'')})});$('capture-text').value='';$('capture-dialog').close();$('feedback').textContent=t.captured;await load()}catch(err){$('capture-feedback').textContent=t.captureError+err.message}finally{pending=false;b.disabled=false}};
     $('new-note').onclick=()=>openEditor('N');$('edit-journal').onclick=async()=>{const j=(await api('/api/items?type=J')).items||[];openEditor('J',j.find(i=>vals(i,'on').some(d=>String(d).slice(0,10)===date))||null)};
     $('editor-form').onsubmit=async e=>{e.preventDefault();if(!edit||pending)return;const {kind,item,revision:expectedRevision}=edit,body=$('editor-body').value.trim();if(kind==='J'&&!body){$('editor-feedback').textContent=t.journalRequired;return}const details={...(item?.details||{})};if(body)details.body=[body];else delete details.body;if(kind==='J'&&!details.on)details.on=[date];const payload={status:'[N]',type:kind,title:$('editor-title').value.trim(),details};pending=true;const button=$('editor-form').querySelector('[type=submit]');button.disabled=true;try{await api(item?pathFor(item):'/api/items',{expectedRevision,method:item?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});$('editor').close();$('feedback').textContent=t.saved;await load()}catch(err){$('editor-feedback').textContent=t.saveError+err.message}finally{pending=false;button.disabled=false}};
+    $('time-review-mode').onchange=renderTimeReviewPrompts;$('time-review-flow').onclick=openTimeReviewFlow;
     document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>$(b.dataset.close).close());const [config,health,areas,views]=await Promise.all([api('/api/config'),api('/api/health'),api('/api/areas'),api('/api/saved-views')]);today=config.today;acceptWorkspaceClock(config,clockStarted);plannerDefaults=normalizePlannerPreference(config.web?.planner);const scopeSelect=$("scope");(areas.areas||[]).forEach(a=>{const o=document.createElement("option");o.value="area:"+a.name;o.textContent="Area: "+a.name;scopeSelect.append(o)});(views.views||[]).forEach(v=>{const o=document.createElement("option");o.value="saved_view:"+v.name;o.textContent="Saved View: "+v.name;scopeSelect.append(o)});scopeSelect.value=scopeArea?("area:"+scopeArea):scopeView?("saved_view:"+scopeView):"";scopeSelect.onchange=()=>{const value=scopeSelect.value;scopeArea=value.startsWith("area:")?value.slice(5):"";scopeView=value.startsWith("saved_view:")?value.slice(11):"";updateUrl();load()};writable=!health.read_only&&(health.can_write ?? Boolean(health.writable_path));['open-capture','new-note','edit-journal'].forEach(id=>$(id).disabled=!writable);if(!writable)$('feedback').textContent=t.readonly;date=/^\d{4}-\d\d-\d\d$/.test(params.get('date')||'')?params.get('date'):today;applyPlannerPreference();await load();document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")resumeClock();else{workspaceClock=null;updateFocus();}});window.addEventListener("focus",resumeClock);todaySyncTimer=setInterval(syncToday,60000)}
   function bootError(e){$('feedback').textContent=t.error+e.message;['open-capture','new-note','edit-journal'].forEach(id=>$(id).disabled=true)}
   $('flow-form').addEventListener('submit',requestFlow);['flow-start','flow-end'].forEach(id=>$(id).addEventListener('input',resetFlow));$('flow-disclosure').addEventListener('toggle',()=>{if(!$('flow-disclosure').open)resetFlow()});

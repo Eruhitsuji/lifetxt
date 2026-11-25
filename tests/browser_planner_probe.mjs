@@ -11,6 +11,14 @@ window.__flowCalls=[];window.__flowMode='normal';window.__flowQueue=[];window.__
 const previousFetch=window.fetch;
 window.fetch=async (input,options={})=>{const url=String(input);window.__allMethods.push(options.method||'GET');
 if(url.includes('/api/config')){window.__configCalls=(window.__configCalls||0)+1;const result={today:window.__clockDate||'2031-02-03',current_datetime:window.__clockValue===undefined?'2031-02-03T08:00:00+09:00':window.__clockValue,web:{language:'en'}};if(window.__clockError)return new Response('{}',{status:503});if(window.__clockDelay)return new Promise(resolve=>{window.__releaseClock=()=>resolve(new Response(JSON.stringify(result)))});return new Response(JSON.stringify(result))}
+if(new URL(location.href).searchParams.has('review-test')){
+ const qs=new URL(url,location.href).searchParams;
+ const reviewRows=Array.from({length:5},(_,i)=>({id:'review-'+i,title:i===0?'Long_'+('x'.repeat(130)):'Review task '+i,type:'T',status:'[ ]',source:'fixture.life.txt',line:i+1,details:{},editable:true}));
+ if(url.includes('/api/areas'))return new Response(JSON.stringify({areas:[{name:'Work'},{name:'Home'}]}));
+ if(url.includes('/api/items?type=T'))return new Response(JSON.stringify({items:[...reviewRows,{...reviewRows[0],id:'outside',source:'other.life.txt'}]}));
+ if(url.includes('/api/command-center')){const refs=(qs.get('area')==='Home'?reviewRows.slice(4):reviewRows.slice(0,4)).map(x=>({...x,kind:'T'}));if(window.__reviewMode==='day-error')return new Response('{}',{status:503});return new Response(JSON.stringify({due_today:refs,next_actions:refs,blocked:[]}))}
+ if(url.includes('/api/temporal-review')){const body={complete:window.__reviewMode!=='partial',limitations:window.__reviewMode==='partial'?['event_limit_truncated']:[],completed:window.__reviewMode==='empty'?[]:[{target:{title:'Recorded review completion'}}]};if(window.__reviewMode==='error')return new Response('{}',{status:503});if(window.__reviewMode==='delay')return new Promise(resolve=>window.__releaseReview=()=>resolve(new Response(JSON.stringify(body))));return new Response(JSON.stringify(body))}
+}
 if(url.includes('/api/temporal-review'))return new Response(JSON.stringify({counts:{events:1},complete:true,completed:[{target:{title:'Authored completion'},event:'completed'}]}));
 if(url.includes('/api/items/id/'))return new Response(JSON.stringify({item:{id:'task-a',type:'T',title:'Current task details',details:{est:['30m']}}}));
 if(!url.includes('/api/daily-flow?'))return previousFetch(input,options);
@@ -183,6 +191,47 @@ try {
   await chooseMode('auto');await clockAt('08:00');await evaljs("window.__clockDelay=true;window.__clockValue='2031-02-03T18:00:00+09:00';window.dispatchEvent(new Event('focus'))");await wait(50);focusStates.pending=await evaljs("document.querySelector('#today-focus').dataset.mode");await evaljs("document.querySelector('#next').click();window.__releaseClock()");await wait(80);focusStates.future=await evaljs("({hidden:document.querySelector('#today-focus').hidden,emphasis:document.querySelectorAll('.focus-emphasis').length})");
   await evaljs("window.__clockDelay=false;window.__clockDate='2031-02-04';window.__clockValue='2031-02-04T08:00:00+09:00';window.dispatchEvent(new Event('focus'))");await wait(100);focusStates.newDay=await evaljs("({mode:document.querySelector('#today-focus').dataset.mode,temporal:document.querySelector('#temporal-context').textContent})");
   await evaljs("localStorage.setItem('lifetxt_planner_prefs_v1',JSON.stringify({sections:['tasks'],hidden_sections:['schedule'],density:'compact',time_bands:{morning:'bad'}}))");await openPage(`http://127.0.0.1:${server.address().port}/planner?lang=en`);await wait(80);await evaljs("document.querySelector('#customize').click()");focusStates.malformed=await evaljs("({morning:document.querySelector('#focus-morning').value,daytime:document.querySelector('#focus-daytime').value,evening:document.querySelector('#focus-evening').value,compact:document.querySelector('#day-view').classList.contains('density-compact'),scheduleHidden:document.querySelector('#schedule').closest('section').hidden})");await evaljs("document.querySelector('#reset-customization').click();document.querySelector('#customize-dialog').close()");
+  const reviewMatrix=[];
+  async function reviewReady(n=4) {
+    for(let i=0;i<100;i++){if(await evaljs(`document.querySelectorAll('#time-review-tasks input').length===${n}&&!document.querySelector('#time-review-flow').disabled`))return;await wait(30)}
+    throw Error('Time review did not load');
+  }
+  for(const [width,lang] of [[320,'en'],[360,'ja'],[390,'en'],[430,'ja'],[1000,'en']]){
+    await cmd('Emulation.setDeviceMetricsOverride',{width,height:844,deviceScaleFactor:1,mobile:width<500,screenWidth:width,screenHeight:844});
+    await openPage(`http://127.0.0.1:${server.address().port}/planner?review-test=1&readonly=1&lang=${lang}&area=Work`);
+    await reviewReady();
+    const closed=await evaljs("!document.querySelector('#time-review-disclosure').open");
+    await evaljs("document.querySelector('#time-review-heading').click()");
+    const prompts=[];
+    for(const mode of ['morning','midday','evening','night']){
+      prompts.push(await evaljs(`(()=>{const select=document.querySelector('#time-review-mode');select.value='${mode}';select.dispatchEvent(new Event('change'));return document.querySelector('#time-review-prompts').textContent})()`));
+    }
+    const picked=await evaljs(`(()=>{const checks=[...document.querySelectorAll('#time-review-tasks input')];checks.forEach(x=>x.click());return {checked:checks.filter(x=>x.checked).length,disabled:checks[3].disabled,count:document.querySelector('#time-review-count').textContent}})()`);
+    const replaced=await evaljs(`(()=>{const checks=[...document.querySelectorAll('#time-review-tasks input')];checks[0].click();checks[3].click();return checks.map(x=>x.checked)})()`);
+    const geometry=await evaljs(`({width:innerWidth,scrollWidth:document.documentElement.scrollWidth,labelHeight:document.querySelector('.time-review-task label').getBoundingClientRect().height,heading:document.querySelector('#time-review-heading').textContent,evidence:document.querySelector('#time-review-evidence').textContent,actual:document.querySelector('#time-review-completions').textContent,candidateCount:document.querySelectorAll('.time-review-task').length})`);
+    await evaljs("document.querySelector('.time-review-task button').click()");
+    const detail=await evaljs("({open:document.querySelector('#detail-dialog').open,title:document.querySelector('#detail-heading').textContent,actions:document.querySelector('#detail-actions').childElementCount})");
+    await evaljs("document.querySelector('#detail-dialog').close();document.querySelector('#time-review-flow').click()");
+    const flow=await evaljs("({open:document.querySelector('#flow-disclosure').open,focused:document.activeElement.id,calls:window.__flowCalls.length,methods:window.__allMethods})");
+    await evaljs("document.querySelector('#scope').value='area:Home';document.querySelector('#scope').dispatchEvent(new Event('change'))");await reviewReady(1);
+    const scoped=await evaljs("({title:document.querySelector('.time-review-task span').textContent,checked:document.querySelectorAll('#time-review-tasks input:checked').length})");
+    reviewMatrix.push({closed,prompts,picked,replaced,geometry,detail,flow,scoped,lang});
+  }
+  await openPage(`http://127.0.0.1:${server.address().port}/planner?review-test=1&lang=en`);await reviewReady();
+  const reviewStates={};
+  for(const mode of ['partial','empty','error']){
+    await evaljs(`window.__reviewMode='${mode}';document.querySelector('#today').click()`);await reviewReady();
+    reviewStates[mode]=await evaljs("({evidence:document.querySelector('#time-review-evidence').textContent,actual:document.querySelector('#time-review-completions').textContent})");
+  }
+  await evaljs("window.__reviewMode='delay';document.querySelector('#today').click()");await wait(50);
+  await evaljs("document.querySelector('#next').click();window.__releaseReview()");await wait(80);
+  reviewStates.race=await evaljs("({hidden:document.querySelector('#time-review-panel').hidden,count:document.querySelectorAll('#time-review-tasks input').length,actual:document.querySelector('#time-review-completions').textContent})");
+  await evaljs("window.__reviewMode='normal';document.querySelector('#today').click()");await reviewReady();
+  await evaljs("document.querySelector('#view-week').click()");await wait(50);
+  reviewStates.week=await evaljs("document.querySelector('#time-review-panel').hidden");
+  await evaljs("document.querySelector('#view-day').click()");await reviewReady();
+  await evaljs("window.__reviewMode='day-error';document.querySelector('#today').click()");await wait(80);
+  reviewStates.failure=await evaljs("({count:document.querySelector('#time-review-count').textContent,disabled:document.querySelector('#time-review-flow').disabled,rows:document.querySelectorAll('#time-review-tasks input').length})");
   const flowMatrix=[];
   async function flowReady(){for(let i=0;i<100;i++){if(await evaljs("document.querySelector('#flow-result').getAttribute('aria-busy')==='false'"))return;await wait(30)}throw Error('Flow did not finish')}
   async function requestFlow(mode='normal'){await evaljs(`window.__flowMode='${mode}';document.querySelector('#flow-disclosure').open=true;document.querySelector('#flow-start').value='09:00';document.querySelector('#flow-end').value='17:00';document.querySelector('#flow-form').requestSubmit()`);await wait(30);if(mode!=='delay')await flowReady()}
@@ -210,7 +259,7 @@ try {
   await requestFlow('normal');await evaljs("document.querySelector('#flow-end').value='08:00';document.querySelector('#flow-end').dispatchEvent(new Event('input'));document.querySelector('#flow-form').dispatchEvent(new Event('submit',{cancelable:true}))");flowStates.windowInvalid=await evaljs("({status:document.querySelector('#flow-status').textContent,cards:document.querySelectorAll('.flow-timeline .flow-card').length})");
   await requestFlow('delay');await evaljs("document.querySelector('#view-week').click();window.__flowQueue.shift()()");await wait(50);flowStates.weekRace=await evaljs("document.querySelectorAll('.flow-timeline .flow-card').length");
   await openPage(`http://127.0.0.1:${server.address().port}/planner?date=2031-02-02&lang=ja`);flowStates.past=await evaljs("({disabled:document.querySelector('#flow-request').disabled,status:document.querySelector('#flow-status').textContent,calls:window.__flowCalls.length})");
-  process.stdout.write(JSON.stringify({focusMatrix,focusStates,flowMatrix,flowStates,matrix, notesMatrix, notesError, notesRevision, notesRace, notesEmpty, weekMatrix, monthMatrix, monthNext, monthDayTransition, nav, navBack, returnToToday, dayTransition, yearBoundary, monthBoundary, readOnly}));
+  process.stdout.write(JSON.stringify({reviewMatrix,reviewStates,focusMatrix,focusStates,flowMatrix,flowStates,matrix, notesMatrix, notesError, notesRevision, notesRace, notesEmpty, weekMatrix, monthMatrix, monthNext, monthDayTransition, nav, navBack, returnToToday, dayTransition, yearBoundary, monthBoundary, readOnly}));
 } finally {
   if (ws) ws.close();
   if (proc.exitCode === null && proc.signalCode === null) { proc.kill("SIGTERM"); await new Promise(ok => proc.once("exit", ok)); }

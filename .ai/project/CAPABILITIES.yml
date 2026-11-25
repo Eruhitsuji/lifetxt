@@ -814,6 +814,7 @@ capabilities:
       - req-web-planner-flow-form-spacing
       - req-web-planner-card-actions
       - req-planner-web-revision-contract
+      - req-planner-time-based-review-mvp
       - req-planner-time-of-day-adaptive-today
       - req-planner-day-experience
       - req-planner-day-schedule
@@ -863,6 +864,7 @@ capabilities:
       - tests.test_web_assets
       - tests.test_web_i18n
     related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/1727
       - https://github.com/Eruhitsuji/lifetxt/issues/1162
       - https://github.com/Eruhitsuji/lifetxt/issues/1149
       - https://github.com/Eruhitsuji/lifetxt/issues/1020

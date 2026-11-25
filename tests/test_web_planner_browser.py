@@ -58,6 +58,42 @@ class PlannerBrowserTests(unittest.TestCase):
             os.unlink(filename)
         self.assertEqual(0, run.returncode, run.stderr or run.stdout)
         result = json.loads(run.stdout)
+        for item in result["reviewMatrix"]:
+            with self.subTest(
+                review_viewport=item["geometry"]["width"], lang=item["lang"]
+            ):
+                self.assertTrue(item["closed"])
+                self.assertEqual(4, len(set(item["prompts"])))
+                self.assertEqual(3, item["picked"]["checked"])
+                self.assertTrue(item["picked"]["disabled"])
+                self.assertIn("3 / 3", item["picked"]["count"])
+                self.assertEqual([False, True, True, True], item["replaced"])
+                geometry = item["geometry"]
+                self.assertLessEqual(geometry["scrollWidth"], geometry["width"])
+                self.assertGreaterEqual(geometry["labelHeight"], 44)
+                self.assertEqual(4, geometry["candidateCount"])
+                self.assertEqual(
+                    "時間帯別レビュー" if item["lang"] == "ja" else "Time-based review",
+                    geometry["heading"],
+                )
+                self.assertIn("Recorded review completion", geometry["actual"])
+                self.assertTrue(item["detail"]["open"])
+                self.assertTrue(item["detail"]["title"].startswith("Long_"))
+                self.assertEqual(0, item["detail"]["actions"])
+                self.assertTrue(item["flow"]["open"])
+                self.assertEqual("flow-heading", item["flow"]["focused"])
+                self.assertEqual(0, item["flow"]["calls"])
+                self.assertEqual({"GET"}, set(item["flow"]["methods"]))
+                self.assertEqual({"title": "Review task 4", "checked": 0}, item["scoped"])
+        review = result["reviewStates"]
+        self.assertIn("event_limit_truncated", review["partial"]["evidence"])
+        self.assertIn("No completion records", review["empty"]["actual"])
+        self.assertIn("unavailable", review["error"]["evidence"])
+        self.assertEqual({"hidden": True, "count": 0, "actual": ""}, review["race"])
+        self.assertTrue(review["week"])
+        self.assertIn("Could not load", review["failure"]["count"])
+        self.assertTrue(review["failure"]["disabled"])
+        self.assertEqual(0, review["failure"]["rows"])
         for item in result["focusMatrix"]:
             with self.subTest(focus_viewport=(item["width"], item["height"])):
                 self.assertEqual("morning", item["initial"])

@@ -22,7 +22,10 @@ The built-in temporal fields check calendar dates (`YYYY-MM-DD`), datetimes
 (`YYYY-MM-DDTHH:MM`), or times (`HH:MM`), depending on the key. The check
 uses ASCII digits and accepts optional seconds, fractional seconds, and
 UTC offsets in times and datetimes. The diagnostic gives the item line and
-field name. Use `lifetxt check` for date-range ordering and other item rules.
+field name. Events with both `from:` and `to:` are checked for an end earlier
+than the start, using the first value of each key. Datetimes with UTC offsets
+are converted to the runtime's local wall clock before comparison, as in
+Python Core. An event with an earlier end gets a warning.
 
 An indented item inherits `parent:` from the first `id:` value of the nearest
 less-indented item unless it already has a parent value. An indented item

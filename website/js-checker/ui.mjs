@@ -31,6 +31,7 @@ const messages = {
         'invalid-date-or-datetime': '日付 YYYY-MM-DD または日時 YYYY-MM-DDTHH:MM を指定してください。',
         'invalid-time-or-datetime': '時刻 HH:MM または日時 YYYY-MM-DDTHH:MM を指定してください。',
         'detail-expects-text': '文字列の値を指定してください。',
+        'event-end-before-start': 'イベントの終了日時が開始日時より前です。',
     },
     en: {
         errors: 'Errors found.',
@@ -62,6 +63,7 @@ const messages = {
         'invalid-date-or-datetime': 'Enter a date in YYYY-MM-DD format or a datetime in YYYY-MM-DDTHH:MM format.',
         'invalid-time-or-datetime': 'Enter a time in HH:MM format or a datetime in YYYY-MM-DDTHH:MM format.',
         'detail-expects-text': 'Enter a text value.',
+        'event-end-before-start': 'The event ends before it starts.',
     },
 };
 

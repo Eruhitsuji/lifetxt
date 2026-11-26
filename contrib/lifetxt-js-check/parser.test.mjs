@@ -196,6 +196,23 @@ test('reports one type error per affected temporal field and keeps the record', 
     assert.equal(result.items.length, 1);
 });
 
+test('warns about reversed event ranges at fractional-second precision', () => {
+    const result = parse([
+        '[ ] E EarlierEnd from:2026-12-01T09:00:00.000002 to:2026-12-01T09:00:00.000001',
+        '[ ] E Equal from:2026-12-01T09:00 to:2026-12-01T09:00:00.000000',
+        '[ ] E FirstValues from:2026-12-01T09:00 to:2026-12-01T09:01 to:2026-12-01T08:00',
+        '[ ] T Task from:2026-12-01T09:00 to:2026-12-01T08:00',
+        '[ ] E Missing from:2026-12-01T09:00',
+        '[ ] E Empty from:2026-12-01T09:00 to:json<< [] >>',
+        '[ ] E Invalid from:2026-12-01T09:00 to:2026-12-01T24:00',
+    ].join('\n'));
+    assert.deepEqual(result.diagnostics, [
+        { severity: 'warning', code: 'event-end-before-start', line: 1, key: 'to' },
+        { severity: 'warning', code: 'invalid-datetime', line: 7, key: 'to' },
+    ]);
+    assert.equal(result.hasErrors, false);
+});
+
 test('excludes unknown format versions', () => {
     const future = parse('#! format_version: 2\nanything');
     assert.equal(future.incomplete, true);

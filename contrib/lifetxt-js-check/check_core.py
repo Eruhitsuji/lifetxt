@@ -2,9 +2,12 @@
 
 from dataclasses import dataclass
 import json
+import os
 from pathlib import Path
 import subprocess
+import time
 import unittest
+from unittest.mock import patch
 
 from lifetxt.model import DATETIME_KEYS, DATE_KEYS, DATE_OR_DATETIME_KEYS, TIME_OR_DATETIME_KEYS
 from lifetxt.parser import parse_text
@@ -25,6 +28,7 @@ JS_CODES = {
     "W202": "invalid-datetime",
     "W203": "invalid-date-or-datetime",
     "W204": "invalid-time-or-datetime",
+    "W206": "event-end-before-start",
     "W220": "indent-no-parent",
     "W221": "indent-parent-no-id",
 }
@@ -201,6 +205,29 @@ def cases():
                   ("error", "E022", 3, 1)),
             temporal_keys=("due", "due"),
         ),
+        Case(
+            "event end is earlier by one microsecond",
+            "[ ] E title from:2026-12-01T09:00:00.000002 to:2026-12-01T09:00:00.000001",
+            core=(("warning", "W206", 1, None),),
+            temporal_keys=("to",),
+        ),
+        Case(
+            "event compares the first endpoint values and accepts equal datetimes",
+            "[ ] E title from:0001-01-01T00:00:00.0 "
+            "to:0001-01-01T00:00 to:0001-01-01T00:00:00.000001",
+        ),
+        Case(
+            "invalid event endpoint is reported without a range warning",
+            "[ ] E title from:2026-12-01T09:00 to:2026-12-01T24:00",
+            core=(("warning", "W202", 1, None),),
+            temporal_keys=("to",),
+        ),
+        Case(
+            "wrong temporal value type suppresses the range warning",
+            "[ ] E title from:2026-12-01T09:00 to:json<< [\"2026-12-01T08:00\",null] >>",
+            core=(("error", "E025", 1, None),),
+            temporal_keys=("to",),
+        ),
         # These expectations document gaps for the staged Core-compatible checker.
         Case(
             "JSON integer outside JavaScript's safe integer range",
@@ -270,7 +297,30 @@ def parse_js(inputs):
 
 class CoreComparisonTests(unittest.TestCase):
     def test_records_and_diagnostics(self):
-        fixtures = cases()
+        self.check_cases(cases())
+
+    @unittest.skipUnless(hasattr(time, "tzset"), "requires a configurable local timezone")
+    def test_event_ranges_use_core_local_wall_clock(self):
+        # The same input has different ordering in UTC and during the New York
+        # fall-back hour. Scope the timezone change to these fixtures.
+        mixed = "[ ] E title from:2026-02-01T08:00 to:2026-02-01T12:30Z"
+        fold = "[ ] E title from:2026-11-01T01:55:00.000001-0400 to:2026-11-01T01:10-05:00"
+        equal = "[ ] E title from:2026-02-01T09:00+0900 to:2026-02-01T00:00Z"
+        for zone in ("UTC", "America/New_York"):
+            expected = (("warning", "W206", 1, None),) if zone == "America/New_York" else ()
+            keys = ("to",) if expected else ()
+            try:
+                with patch.dict(os.environ, {"TZ": zone}):
+                    time.tzset()
+                    self.check_cases([
+                        Case(f"{zone}: mixed offsets", mixed, core=expected, temporal_keys=keys),
+                        Case(f"{zone}: fall-back hour", fold, core=expected, temporal_keys=keys),
+                        Case(f"{zone}: equal instants", equal),
+                    ])
+            finally:
+                time.tzset()
+
+    def check_cases(self, fixtures):
         js_results = parse_js([case.text for case in fixtures])
         self.assertEqual(len(js_results), len(fixtures))
         for case, js in zip(fixtures, js_results, strict=True):

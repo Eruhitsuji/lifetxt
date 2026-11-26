@@ -24,6 +24,8 @@ const messages = {
         'line-join-into-body': '縦棒で始まる本文行へはバックスラッシュで連結できません。',
         'orphan-body': '本文行の直前に項目が必要です。',
         'ambiguous-body': '本文行の前に指定できる body: は、文字列1つまでです。',
+        'indent-no-parent': 'インデントの浅い親項目が見つかりません。parent: を指定するか、行頭の空白を削除してください。',
+        'indent-parent-no-id': '直近の親候補に id: がありません。親候補に id: を付けるか、子項目に parent: を指定してください。',
     },
     en: {
         errors: 'Syntax errors found.',
@@ -48,6 +50,8 @@ const messages = {
         'line-join-into-body': 'A backslash cannot join into a pipe-prefixed body line.',
         'orphan-body': 'A body line needs a preceding item.',
         'ambiguous-body': 'A body line can follow at most one text body: value.',
+        'indent-no-parent': 'No less-indented parent item was found. Add parent: or move the item to column 1.',
+        'indent-parent-no-id': 'The nearest less-indented item has no id:. Give it an id: or specify parent: on the child.',
     },
 };
 

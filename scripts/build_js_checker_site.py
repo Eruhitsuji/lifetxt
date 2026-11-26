@@ -26,6 +26,7 @@ COPY = {
         "日本語ホーム",
         "状態・種類・タイトル・key:value・JSON詳細値・引用符・行継続・縦棒で始まる本文の書式を確認します。",
         "未対応の形式バージョンと、JavaScriptの安全な整数範囲を超えるJSON整数は検査対象外です。"
+        "インデントから既定の id: を使って親子関係を推定します。"
         "日時やID・参照などを含む完全な検査には lifetxt check を使用してください。",
         "UTF-8で16 KiBまで、診断は最大100件。本文はブラウザ内で処理し、送信や永続保存は行いません。",
         "life.txtのテキスト",
@@ -48,6 +49,7 @@ COPY = {
         "English home",
         "Checks statuses, types, titles, key:value and JSON details, quotes, backslash line joins, and pipe-prefixed body lines.",
         "Unsupported format versions and JSON integers outside the JavaScript safe range are not checked. "
+        "Infers parents from indentation using the default id: key. "
         "Use lifetxt check for full validation, including dates, IDs, and references.",
         "Up to 16 KiB in UTF-8 and 100 diagnostics. Text is processed in your browser without transmission or persistent storage.",
         "life.txt text",

@@ -231,7 +231,27 @@ function readItem(line, lineNumber, report, probe = false) {
     };
 }
 
-/** Check the supported Format 1 syntax without applying Core semantic rules.
+function inferParent(item, ancestor, report) {
+    const parent = item.details.find(([name]) => name === 'parent');
+    if (item.indent === 0 || parent?.[1].length) return;
+
+    if (!ancestor) {
+        report('warning', 'indent-no-parent', item.line);
+        return;
+    }
+    const ids = ancestor.details.find(([name]) => name === 'id')?.[1];
+    if (!ids?.length) {
+        report('warning', 'indent-parent-no-id', item.line);
+        return;
+    }
+    if (parent) {
+        parent[1].push(ids[0]);
+    } else {
+        item.details.push(['parent', [ids[0]]]);
+    }
+}
+
+/** Check supported Format 1 syntax and infer hierarchy using the default ID key.
  * @param {string} text
  * @returns {ParseResult}
  */
@@ -275,6 +295,8 @@ export function parse(text) {
 
     /** @type {Item | null} */
     let previous = null;
+    /** @type {Item[]} */
+    const ancestors = [];
     // Collect join diagnostics before parsing the assembled lines, as Core does.
     const joinedLines = Array.from(logicalLines(lines, report));
     for (const { line, lineNumber } of joinedLines) {
@@ -302,7 +324,14 @@ export function parse(text) {
                 report(severity, code, lineNumber + offset);
             });
             previous = item === UNCLOSED_JSON ? null : item;
-            if (previous) result.items.push(previous);
+            if (previous) {
+                while (ancestors.length && ancestors.at(-1).indent >= previous.indent) {
+                    ancestors.pop();
+                }
+                inferParent(previous, ancestors.at(-1), report);
+                ancestors.push(previous);
+                result.items.push(previous);
+            }
         }
     }
     return result;

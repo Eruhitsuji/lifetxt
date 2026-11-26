@@ -17,7 +17,9 @@ test('preserves Unicode, repeated and special keys, and body text', () => {
     const text = '\uFEFF#! format_version: 1\r\n# note\r  [N] N "日本語😀 \\"引用\\"" ' +
         'custom:"A B" custom:C __proto__:safe body:Start\n  | 続き\n|Last';
     const result = parse(text);
-    assert.deepEqual(result.diagnostics, []);
+    assert.deepEqual(result.diagnostics, [
+        { severity: 'warning', code: 'indent-no-parent', line: 3 },
+    ]);
     assert.deepEqual(result.items, [{
         line: 3, indent: 2, status: '[N]', type: 'N', title: '日本語😀 "引用"',
         details: [['custom', ['A B', 'C']], ['__proto__', ['safe']], ['body', ['Start\n続き\nLast']]],
@@ -120,6 +122,38 @@ test('flags JSON integers that would lose precision', () => {
     assert.equal(result.incomplete, true);
     assert.equal(result.hasErrors, false);
     assert.deepEqual(result.items[0].details, [['options', []], ['tag', ['after']]]);
+});
+
+test('uses the nearest less-indented item and keeps explicit parent values', () => {
+    const result = parse([
+        '[ ] T Root id:root id:second',
+        '  [ ] T Child id:child',
+        '    | Child body',
+        '# separator',
+        '',
+        '    [ ] T Grandchild tag:before parent:json<< [] >> tag:after',
+        '  [ ] T Sibling parent:second',
+        '[ ] T Other id:other',
+        '  [ ] T UnderOther',
+    ].join('\n'));
+    assert.deepEqual(result.diagnostics, []);
+    const parents = result.items.map(item => item.details.find(([key]) => key === 'parent')?.[1]);
+    assert.deepEqual(parents, [undefined, ['root'], ['child'], ['second'], undefined, ['other']]);
+    assert.deepEqual(result.items[2].details, [
+        ['tag', ['before', 'after']], ['parent', ['child']],
+    ]);
+});
+
+test('warns if no parent can be inferred without falling back to a distant ancestor', () => {
+    const result = parse('  [ ] T Orphan\n[ ] T Root id:root\n' +
+        '  [ ] T WithoutId\n    [ ] T Grandchild\n  [ ] T Sibling');
+    assert.deepEqual(result.diagnostics, [
+        { severity: 'warning', code: 'indent-no-parent', line: 1 },
+        { severity: 'warning', code: 'indent-parent-no-id', line: 4 },
+    ]);
+    assert.equal(result.hasErrors, false);
+    assert.deepEqual(result.items[3].details, []);
+    assert.deepEqual(result.items[4].details, [['parent', ['root']]]);
 });
 
 test('excludes unknown format versions', () => {

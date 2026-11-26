@@ -10,11 +10,14 @@ from lifetxt.parser import parse_text
 
 
 JS_CODES = {
+    "E006": "json-detail-separator",
     "E010": "invalid-detail",
     "E018": "unclosed-quote",
     "E019": "orphan-body",
     "E020": "dangling-line-join",
     "E021": "line-join-into-body",
+    "E022": "ambiguous-body",
+    "E023": "invalid-json-detail",
     "W005": "unknown-escape",
 }
 
@@ -90,15 +93,63 @@ def cases():
             "[ ] T title\\\n  |body\n[ ] T next\n",
             core=(("error", "E021", 2, 1),),
         ),
+        Case(
+            "multiline JSON object, tabs, quoted marker and following detail",
+            '[ ] T title options:json<<\r\n\t{"note":"a >> b","nested":[1,true,null]}\r\n'
+            '>> tag:after\r\n[ ] T next',
+            core=(("warning", "W106", 1, None),),
+            js=(),
+        ),
+        Case(
+            "JSON top-level array, empty array and nested array",
+            '[ ] T title tag:a tag:json<< ["b","c"] >> tag:d '
+            'options:json<< [] >> map:json<< [["a"]] >>',
+            core=(("warning", "W106", 1, None), ("warning", "W106", 1, None)),
+            js=(),
+        ),
+        Case(
+            "malformed JSON recovers at a following detail",
+            '[ ] T title tag:json<<\n  ["inside >> string",]\n>> tag:after\n[ ] T next',
+            core=(("error", "E023", 1, 17),),
+        ),
+        Case(
+            "unclosed JSON recovers at the next item",
+            '[ ] T title tag:json<<\n  ["inside >> string"]\n[ ] T next',
+            core=(("error", "E023", 1, 17),),
+        ),
+        Case(
+            "duplicate JSON key after escape decoding",
+            '[ ] T title tag:json<< {"k":1,"\\u006b":2} >>',
+            core=(("error", "E023", 1, 17),),
+        ),
+        Case(
+            "non-finite JSON number",
+            "[ ] T title tag:json<< 1e999 >>",
+            core=(("error", "E023", 1, 17),),
+        ),
+        Case(
+            "JSON marker literals",
+            "[ ] T title tag:json<< tag:after\n[ ] T next tag:json<<",
+        ),
+        Case(
+            "JSON with backslash line joins and a body line",
+            '[ ] T title \\\n tag:json<<\n ["one"]\n >> \\\n tag:two\n| body',
+        ),
+        Case(
+            "empty JSON body value list may be followed by a body line",
+            "[ ] T title body:json<< [] >>\n| body",
+        ),
+        Case(
+            "non-text JSON body cannot be followed by a body line",
+            "[ ] T title body:json<< null >>\n| body",
+            core=(("error", "E022", 2, 1),),
+        ),
         # These expectations document gaps for the staged Core-compatible checker.
         Case(
-            "multiline JSON detail",
-            '[ ] T title tag:json<< [\n  "one", "two"\n] >>\n',
-            js=(
-                ("error", "invalid-detail", 1),
-                ("error", "invalid-item-start", 2),
-                ("error", "invalid-item-start", 3),
-            ),
+            "JSON integer outside JavaScript's safe integer range",
+            "[ ] T title options:json<< 9007199254740993 >>",
+            core=(("warning", "W106", 1, None),),
+            js=(("unsupported", "json-integer-precision", 1),),
             same_items=False,
         ),
         Case(

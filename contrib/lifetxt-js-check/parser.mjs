@@ -1,21 +1,63 @@
 /** @typedef {{severity: 'error'|'warning'|'unsupported', code: string, line: number}} Diagnostic */
-/** @typedef {{line: number, indent: number, status: string, type: string, title: string, details: [string, string[]][]}} Item */
+/** @typedef {null|boolean|number|string|JsonValue[]|{[key: string]: JsonValue}} JsonValue */
+/** @typedef {{line: number, indent: number, status: string, type: string, title: string, details: [string, JsonValue[]][]}} Item */
 /** @typedef {{items: Item[], diagnostics: Diagnostic[], diagnosticCount: number, hasErrors: boolean, incomplete: boolean}} ParseResult */
 
 export const MAX_BYTES = 16_384;
 const MAX_DIAGNOSTICS = 100;
 const ITEM_START = /^( *)\[([ /x>N?-])\] +([TEDRHNSMJ]) +/;
+const NEXT_RECORD = /^ *(?:\[[ /x>N?-]\] |[#|])/;
 const DIRECTIVE = /^#!\s+([A-Za-z_][A-Za-z0-9_]*):\s*(.*?)\s*$/;
 const LINE_BREAK = /\r\n|[\n\r\v\f\x1c-\x1e\x85\u2028\u2029]/;
 const JOIN = /\\ *$/;
+const DETAIL = /^[^ :"\t]+:/;
+const JSON_START = /^json<<(?:[ \t\r\n]|$)/;
+const JSON_SPACE = /[ \t\r\n]/;
+const UNCLOSED_JSON = Symbol('unclosed JSON detail');
 const encoder = new TextEncoder();
+
+function jsonClose(text) {
+    // The same string-token rule applies when recovering from malformed JSON.
+    for (const token of text.matchAll(/"(?:[^"\\\n]|\\[^\n])*"|(>>)/g)) {
+        if (token[1]) return token.index;
+    }
+    return -1;
+}
+
+function extendJson(lines, index, candidate, lineNumber) {
+    const parts = [candidate];
+    let end = index;
+    for (let next = index + 1; next < lines.length; next++) {
+        const following = lines[next];
+        if (NEXT_RECORD.test(following)) break;
+        parts.push(following);
+        if (!following.trim()) continue;
+        end = next;
+        if (jsonClose(following) !== -1) {
+            const combined = parts.join('\n');
+            if (readItem(combined, lineNumber, () => {}, true) !== UNCLOSED_JSON) {
+                return { line: combined, end };
+            }
+        }
+    }
+    return { line: parts.slice(0, end - index + 1).join('\n'), end };
+}
 
 function* logicalLines(lines, report) {
     for (let index = 0; index < lines.length; index++) {
         const lineNumber = index + 1;
-        const parts = [];
+        let parts = [];
         let current = lines[index];
-        while (JOIN.test(current)) {
+        while (true) {
+            const candidate = parts.join('') + current;
+            if (candidate.includes('json<<') &&
+                readItem(candidate, lineNumber, () => {}, true) === UNCLOSED_JSON) {
+                const extended = extendJson(lines, index, candidate, lineNumber);
+                current = extended.line;
+                index = extended.end;
+                parts = [];
+            }
+            if (!JOIN.test(current)) break;
             parts.push(current.replace(JOIN, ''));
             index++;
             if (index === lines.length) {
@@ -30,6 +72,64 @@ function* logicalLines(lines, report) {
         }
         parts.push(current);
         yield { line: parts.join(''), lineNumber };
+    }
+}
+
+function validateJsonValues(payload) {
+    // JSON.parse checks syntax, but silently accepts duplicate keys and rounds integers.
+    const containers = [];
+    let unsafeInteger = false;
+    for (const [token, keySuffix] of payload.matchAll(
+        /"(?:[^"\\]|\\.)*"([ \t\r\n]*:)?|[{}\[\]]|-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?/g,
+    )) {
+        if (token === '{' || token === '[') {
+            containers.push(token === '{' ? new Set() : null);
+        } else if (token === '}' || token === ']') {
+            containers.pop();
+        } else if (keySuffix) {
+            const keys = containers.at(-1);
+            const key = JSON.parse(token.slice(0, -keySuffix.length));
+            if (keys.has(key)) throw new SyntaxError('Duplicate JSON object key');
+            keys.add(key);
+        } else if (token[0] !== '"') {
+            const number = Number(token);
+            if (/[.eE]/.test(token)) {
+                if (!Number.isFinite(number)) throw new SyntaxError('Non-finite JSON number');
+            } else {
+                unsafeInteger ||= !Number.isSafeInteger(number);
+            }
+        }
+    }
+    return !unsafeInteger;
+}
+
+function readJson(line, pos, probe, report) {
+    const start = pos + 'json<<'.length;
+    const tail = line.slice(start);
+    const sameLine = tail.split('\n', 1)[0].replace(/^[ \t]*/, '');
+    if ((!sameLine.includes('>>') && DETAIL.test(sameLine)) || (!tail && !probe)) {
+        return { values: ['json<<'], end: start };
+    }
+    const close = jsonClose(tail);
+    if (close === -1 && probe) return UNCLOSED_JSON;
+    const end = close === -1 ? line.length : start + close + 2;
+    if (probe) return { values: [], end };
+    const offset = line.slice(0, pos).split('\n').length - 1;
+    try {
+        const payload = tail.slice(0, close);
+        if (close === -1 || !JSON_SPACE.test(payload.at(-1) ?? '')) {
+            throw new SyntaxError('Missing JSON closing delimiter or whitespace');
+        }
+        const value = JSON.parse(payload);
+        if (!validateJsonValues(payload)) {
+            report('unsupported', 'json-integer-precision', offset);
+            return { values: [], end };
+        }
+        return { values: Array.isArray(value) ? value : [value], end };
+    } catch (error) {
+        if (!(error instanceof SyntaxError)) throw error;
+        report('error', 'invalid-json-detail', offset);
+        return { values: [], end };
     }
 }
 
@@ -71,8 +171,8 @@ function readValue(line, start, report) {
     return null;
 }
 
-function readItem(line, lineNumber, report) {
-    if (line.includes('\t')) {
+function readItem(line, lineNumber, report, probe = false) {
+    if (!line.includes('json<<') && line.includes('\t')) {
         report('error', 'tab-in-item');
         return null;
     }
@@ -83,23 +183,43 @@ function readItem(line, lineNumber, report) {
     }
     const title = readValue(line, start[0].length, report);
     if (!title) return null;
+    if (line.slice(0, title.end).includes('\t')) {
+        report('error', 'tab-in-item');
+        return null;
+    }
 
     const details = new Map();
     let pos = title.end;
     while (pos < line.length) {
         while (line[pos] === ' ') pos++;
         if (pos === line.length) break;
-        const key = /^[^ :"\t]+:/.exec(line.slice(pos));
+        const key = DETAIL.exec(line.slice(pos));
         if (!key) {
-            report('error', 'invalid-detail');
+            report('error', line[pos] === '\t' ? 'tab-in-item' : 'invalid-detail');
             return null;
         }
         const name = key[0].slice(0, -1);
-        const value = readValue(line, pos + key[0].length, report);
-        if (!value) return null;
+        const valueStart = pos + key[0].length;
+        let detail;
+        if (JSON_START.test(line.slice(valueStart))) {
+            detail = readJson(line, valueStart, probe, report);
+            if (detail === UNCLOSED_JSON) return detail;
+        } else {
+            const value = readValue(line, valueStart, report);
+            if (!value) return null;
+            if (value.value.includes('\t')) {
+                report('error', 'tab-in-item');
+                return null;
+            }
+            detail = { values: [value.value], end: value.end };
+        }
         if (!details.has(name)) details.set(name, []);
-        details.get(name).push(value.value);
-        pos = value.end;
+        for (const value of detail.values) details.get(name).push(value);
+        pos = detail.end;
+        if (pos < line.length && line[pos] !== ' ') {
+            report('error', line[pos] === '\t' ? 'tab-in-item' : 'json-detail-separator');
+            break;
+        }
     }
     return {
         line: lineNumber,
@@ -168,7 +288,9 @@ export function parse(text) {
             const content = visible.replace(/^\| ?/, '');
             if (!body) {
                 previous.details.push(['body', [content]]);
-            } else if (body[1].length === 1) {
+            } else if (body[1].length === 0) {
+                body[1].push(content);
+            } else if (body[1].length === 1 && typeof body[1][0] === 'string') {
                 body[1][0] += '\n' + content;
             } else {
                 report('error', 'ambiguous-body', lineNumber);
@@ -176,7 +298,10 @@ export function parse(text) {
         } else if (/^[ \t]*$/.test(line) || visible.startsWith('#')) {
             previous = null;
         } else {
-            previous = readItem(line, lineNumber, (severity, code) => report(severity, code, lineNumber));
+            const item = readItem(line, lineNumber, (severity, code, offset = 0) => {
+                report(severity, code, lineNumber + offset);
+            });
+            previous = item === UNCLOSED_JSON ? null : item;
             if (previous) result.items.push(previous);
         }
     }

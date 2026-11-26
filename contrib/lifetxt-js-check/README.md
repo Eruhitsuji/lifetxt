@@ -1,6 +1,6 @@
 # life.txt JavaScript syntax checker
 
-A read-only checker for a subset of Format 1 syntax. The shared `parser.mjs`
+A read-only checker for supported Format 1 syntax and values. The shared `parser.mjs`
 module uses browser APIs available in Node.js and takes a string. The Node.js
 CLI requires Node.js 22 or later.
 
@@ -8,14 +8,21 @@ CLI requires Node.js 22 or later.
 node check.mjs life.txt
 ```
 
-Exit codes are 0 for no errors in checked syntax, 1 for syntax errors, 2 for
-usage or input errors, and 3 for incomplete checks without syntax errors.
+Exit codes are 0 for no errors in checked input (warnings are allowed), 1 for
+validation errors, 2 for usage or input errors, and 3 for incomplete checks
+without validation errors.
 Inputs are limited to 16,384 UTF-8 bytes and output to 100 diagnostics.
 
 The checker reads item headers, titles, details, backslash line joins, and
 `|` body lines. It preserves unknown and repeated detail keys. Unsupported
-format versions are reported as unchecked. Dates, ID checks and reference
-resolution require `lifetxt check`.
+format versions are reported as unchecked. ID checks and reference resolution
+require `lifetxt check`.
+
+The built-in temporal fields check calendar dates (`YYYY-MM-DD`), datetimes
+(`YYYY-MM-DDTHH:MM`), or times (`HH:MM`), depending on the key. The check
+uses ASCII digits and accepts optional seconds, fractional seconds, and
+UTC offsets in times and datetimes. The diagnostic gives the item line and
+field name. Use `lifetxt check` for date-range ordering and other item rules.
 
 An indented item inherits `parent:` from the first `id:` value of the nearest
 less-indented item unless it already has a parent value. An indented item
@@ -51,6 +58,6 @@ explicit mapping from Core codes to JS codes. Core columns are checked against
 fixture expectations. The current JS diagnostic format has no column field.
 
 Fixtures also document the current engine-specific results for known gaps,
-including oversized JSON integers, dates, requirements, and ID
+including oversized JSON integers, requirements, and ID
 references. A changed diagnostic fails CI with the fixture name and engine.
 Update the corresponding expectations when a gap is resolved (#1731).

@@ -4,7 +4,7 @@ import { MAX_BYTES, parse } from './parser.mjs';
 
 const args = process.argv.slice(2);
 if (args.length === 1 && args[0] === '--help') {
-    console.log('Usage: node check.mjs FILE\nChecks supported life.txt syntax only.');
+    console.log('Usage: node check.mjs FILE\nChecks supported life.txt syntax and values.');
 } else if (args.length !== 1) {
     console.error('Usage: node check.mjs FILE');
     process.exitCode = 2;
@@ -26,16 +26,17 @@ if (args.length === 1 && args[0] === '--help') {
         } finally {
             await file.close();
         }
-        for (const { severity, code, line } of result.diagnostics) {
-            console.log(`Line ${line}: ${severity} ${code}`);
+        for (const { severity, code, line, key } of result.diagnostics) {
+            const field = key ? ` (${key}:)` : '';
+            console.log(`Line ${line}: ${severity} ${code}${field}`);
         }
         if (result.diagnosticCount > result.diagnostics.length) {
             console.log(`${result.diagnosticCount - result.diagnostics.length} additional diagnostics omitted.`);
         }
-        if (result.incomplete) console.log('Some syntax was not checked. Use lifetxt check for full validation.');
+        if (result.incomplete) console.log('Some input was not checked. Use lifetxt check for full validation.');
         if (result.hasErrors) process.exitCode = 1;
         else if (result.incomplete) process.exitCode = 3;
-        else console.log('No errors in the checked syntax. Semantic checks require lifetxt check.');
+        else console.log('No errors in the checked input. Use lifetxt check for full validation.');
     } catch (error) {
         console.error(error.message);
         process.exitCode = 2;

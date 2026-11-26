@@ -156,6 +156,46 @@ test('warns if no parent can be inferred without falling back to a distant ances
     assert.deepEqual(result.items[4].details, [['parent', ['root']]]);
 });
 
+test('checks calendar boundaries, clock values, fractions and offsets', () => {
+    for (const detail of [
+        'on:2000-02-29', 'on:0001-01-01', 'due:9999-12-31',
+        'from:2024-02-29T23:59:59.000001+2359', 'at:08:30:05.1-03:30', 'at:08:30Z',
+    ]) {
+        assert.deepEqual(parse('[ ] T title ' + detail).diagnostics, [], detail);
+    }
+    for (const [key, value, code] of [
+        ['on', '0000-01-01', 'invalid-date'],
+        ['on', '1900-02-29', 'invalid-date'],
+        ['on', '2024-13-01', 'invalid-date'],
+        ['due', '2024-04-31', 'invalid-date-or-datetime'],
+        ['at', '24:00', 'invalid-time-or-datetime'],
+        ['at', '12:60', 'invalid-time-or-datetime'],
+        ['at', '12:00:60', 'invalid-time-or-datetime'],
+        ['at', '12:00:00.1234567', 'invalid-time-or-datetime'],
+        ['at', '12:00+24:00', 'invalid-time-or-datetime'],
+        ['at', '12:00+0060', 'invalid-time-or-datetime'],
+        ['from', '2024-01-01', 'invalid-datetime'],
+        ['to', '"2024-02-29 12:00"', 'invalid-datetime'],
+        ['due', 'json<< "2024-02-29\\n" >>', 'invalid-date-or-datetime'],
+    ]) {
+        const detail = key + ':' + value;
+        const result = parse('# comment\n[ ] T title ' + detail);
+        assert.deepEqual(result.diagnostics, [
+            { severity: 'warning', code, line: 2, key },
+        ], detail);
+        assert.equal(result.hasErrors, false, detail);
+    }
+});
+
+test('reports one type error per affected temporal field and keeps the record', () => {
+    const result = parse('[ ] T title due:invalid due:json<< [null, 1] >> at:json<< [] >>');
+    assert.deepEqual(result.diagnostics, [
+        { severity: 'error', code: 'detail-expects-text', line: 1, key: 'due' },
+    ]);
+    assert.equal(result.hasErrors, true);
+    assert.equal(result.items.length, 1);
+});
+
 test('excludes unknown format versions', () => {
     const future = parse('#! format_version: 2\nanything');
     assert.equal(future.incomplete, true);

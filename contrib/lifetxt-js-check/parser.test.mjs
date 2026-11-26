@@ -82,6 +82,46 @@ test('reports malformed joins at the affected physical line', () => {
     }
 });
 
+test('reads multiline JSON details and keeps JSON string delimiters literal', () => {
+    const result = parse([
+        '[ ] T title tag:first options:json<<',
+        '\t{"text":"embedded >> marker","list":[null,{"same":true}]}',
+        '>> tag:json<< ["second","third"] >> empty:json<< [] >>',
+        '[ ] T next',
+    ].join('\n'));
+    assert.deepEqual(result.diagnostics, []);
+    assert.deepEqual(result.items[0].details, [
+        ['tag', ['first', 'second', 'third']],
+        ['options', [{ text: 'embedded >> marker', list: [null, { same: true }] }]],
+        ['empty', []],
+    ]);
+    assert.equal(result.items[1].line, 4);
+});
+
+test('reports JSON errors and preserves the following details and items', () => {
+    const result = parse('[ ] T title tag:json<<\n ["ok"]\n' +
+        '>> options:json<< ["bad",] >> tag:after\n[ ] T next');
+    assert.deepEqual(result.diagnostics, [
+        { severity: 'error', code: 'invalid-json-detail', line: 3 },
+    ]);
+    assert.deepEqual(result.items[0].details, [['tag', ['ok', 'after']], ['options', []]]);
+    assert.equal(result.items[1].line, 4);
+
+    const unclosed = parse('[ ] T title tag:json<<\n ["not closed >>"]\n[ ] T next');
+    assert.equal(unclosed.diagnostics[0].code, 'invalid-json-detail');
+    assert.equal(unclosed.items[1].line, 3);
+});
+
+test('flags JSON integers that would lose precision', () => {
+    const result = parse('[ ] T title options:json<< {"large":9007199254740993} >> tag:after');
+    assert.deepEqual(result.diagnostics, [
+        { severity: 'unsupported', code: 'json-integer-precision', line: 1 },
+    ]);
+    assert.equal(result.incomplete, true);
+    assert.equal(result.hasErrors, false);
+    assert.deepEqual(result.items[0].details, [['options', []], ['tag', ['after']]]);
+});
+
 test('excludes unknown format versions', () => {
     const future = parse('#! format_version: 2\nanything');
     assert.equal(future.incomplete, true);

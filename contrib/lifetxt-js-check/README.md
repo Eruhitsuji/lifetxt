@@ -22,6 +22,13 @@ Leave a space before the backslash when the next line starts a new detail.
 A trailing backslash without another line or a join into a `|` body line
 reports an error at the affected physical line.
 
+JSON details use `key:json<< … >>` with whitespace around the JSON, including
+line breaks. A top-level array supplies the list of values for the key. An
+empty array supplies zero values, and an array nested inside the top-level
+array is kept as one value. A JSON integer outside the JavaScript safe range
+(−(2^53 − 1) through 2^53 − 1) leaves the check incomplete. Use
+`lifetxt check` for those values and for key-specific validation.
+
 The distribution ZIP contains the parser, CLI, this README, and LICENSE.
 
 ## Core comparison
@@ -39,6 +46,6 @@ explicit mapping from Core codes to JS codes. Core columns are checked against
 fixture expectations. The current JS diagnostic format has no column field.
 
 Fixtures also document the current engine-specific results for known gaps,
-including multiline JSON, hierarchy, dates, requirements, and ID
+including oversized JSON integers, hierarchy, dates, requirements, and ID
 references. A changed diagnostic fails CI with the fixture name and engine.
 Update the corresponding expectations when a gap is resolved (#1731).

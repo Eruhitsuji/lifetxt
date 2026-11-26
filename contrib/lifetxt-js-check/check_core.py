@@ -19,6 +19,8 @@ JS_CODES = {
     "E022": "ambiguous-body",
     "E023": "invalid-json-detail",
     "W005": "unknown-escape",
+    "W220": "indent-no-parent",
+    "W221": "indent-parent-no-id",
 }
 
 
@@ -144,17 +146,30 @@ def cases():
             "[ ] T title body:json<< null >>\n| body",
             core=(("error", "E022", 2, 1),),
         ),
+        Case(
+            "nearest parent across comments, body lines, siblings and roots",
+            "[ ] T Root id:root\n  [ ] T Child id:child\n    | child body\n"
+            "# separator\n\n    [ ] T Grandchild\n  [ ] T Sibling\n"
+            "[ ] T New id:new\n  [ ] T Child\n",
+        ),
+        Case(
+            "explicit parent takes precedence and empty JSON parent can be inferred",
+            "[N] N Other id:other\n[ ] T Parent id:parent\n"
+            "  [ ] T Overrides parent:other\n"
+            "  [ ] T Empty parent:json<< [] >> tag:keep\n",
+        ),
+        Case(
+            "unavailable parent warnings and no fallback to a more distant ancestor",
+            "  [ ] T Orphan\n[ ] T Root id:root\n"
+            "  [ ] T WithoutId\n    [ ] T Grandchild\n  [ ] T Sibling\n",
+            core=(("warning", "W220", 1, 3), ("warning", "W221", 4, 5)),
+        ),
         # These expectations document gaps for the staged Core-compatible checker.
         Case(
             "JSON integer outside JavaScript's safe integer range",
             "[ ] T title options:json<< 9007199254740993 >>",
             core=(("warning", "W106", 1, None),),
             js=(("unsupported", "json-integer-precision", 1),),
-            same_items=False,
-        ),
-        Case(
-            "implicit parent",
-            "[ ] T parent id:parent\n  [ ] T child\n",
             same_items=False,
         ),
         Case(

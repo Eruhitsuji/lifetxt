@@ -14,8 +14,13 @@ Inputs are limited to 16,384 UTF-8 bytes and output to 100 diagnostics.
 
 The checker reads item headers, titles, details, backslash line joins, and
 `|` body lines. It preserves unknown and repeated detail keys. Unsupported
-format versions are reported as unchecked. Dates, IDs, references and inferred
-hierarchy are outside the checked scope. Use `lifetxt check` for full validation.
+format versions are reported as unchecked. Dates, ID checks and reference
+resolution require `lifetxt check`.
+
+An indented item inherits `parent:` from the first `id:` value of the nearest
+less-indented item unless it already has a parent value. An indented item
+without an ancestor, or with an ancestor that has no ID, produces a warning.
+The checker uses the default `id:` key and leaves the input text intact.
 
 A backslash at the end of a physical line joins it to the next line.
 Leave a space before the backslash when the next line starts a new detail.
@@ -46,6 +51,6 @@ explicit mapping from Core codes to JS codes. Core columns are checked against
 fixture expectations. The current JS diagnostic format has no column field.
 
 Fixtures also document the current engine-specific results for known gaps,
-including oversized JSON integers, hierarchy, dates, requirements, and ID
+including oversized JSON integers, dates, requirements, and ID
 references. A changed diagnostic fails CI with the fixture name and engine.
 Update the corresponding expectations when a gap is resolved (#1731).

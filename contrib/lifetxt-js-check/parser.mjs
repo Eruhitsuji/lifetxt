@@ -6,8 +6,32 @@ export const MAX_BYTES = 16_384;
 const MAX_DIAGNOSTICS = 100;
 const ITEM_START = /^( *)\[([ /x>N?-])\] +([TEDRHNSMJ]) +/;
 const DIRECTIVE = /^#!\s+([A-Za-z_][A-Za-z0-9_]*):\s*(.*?)\s*$/;
+const LINE_BREAK = /\r\n|[\n\r\v\f\x1c-\x1e\x85\u2028\u2029]/;
 const JOIN = /\\ *$/;
 const encoder = new TextEncoder();
+
+function* logicalLines(lines, report) {
+    for (let index = 0; index < lines.length; index++) {
+        const lineNumber = index + 1;
+        const parts = [];
+        let current = lines[index];
+        while (JOIN.test(current)) {
+            parts.push(current.replace(JOIN, ''));
+            index++;
+            if (index === lines.length) {
+                report('error', 'dangling-line-join', index);
+                current = '';
+                break;
+            }
+            current = lines[index].replace(/^ */, '');
+            if (current.startsWith('|')) {
+                report('error', 'line-join-into-body', index + 1);
+            }
+        }
+        parts.push(current);
+        yield { line: parts.join(''), lineNumber };
+    }
+}
 
 function readValue(line, start, report) {
     if (line[start] !== '"') {
@@ -111,7 +135,9 @@ export function parse(text) {
         return result;
     }
 
-    const lines = text.replace(/^\uFEFF/, '').split(/\r\n|[\r\n]/);
+    const lines = text.replace(/^\uFEFF/, '').split(LINE_BREAK);
+    // A final newline terminates the preceding line without adding a blank line.
+    if (lines.at(-1) === '') lines.pop();
     let version;
     let versionLine = 1;
     for (const [index, line] of lines.entries()) {
@@ -127,18 +153,13 @@ export function parse(text) {
         return result;
     }
 
-    /** @type {Item | 'skipped' | null} */
+    /** @type {Item | null} */
     let previous = null;
-    for (let index = 0; index < lines.length; index++) {
-        const line = lines[index];
-        const lineNumber = index + 1;
+    // Collect join diagnostics before parsing the assembled lines, as Core does.
+    const joinedLines = Array.from(logicalLines(lines, report));
+    for (const { line, lineNumber } of joinedLines) {
         const visible = line.replace(/^ */, '');
-        if (JOIN.test(line)) {
-            report('unsupported', 'line-join', lineNumber);
-            while (index + 1 < lines.length && JOIN.test(lines[index])) index++;
-            previous = 'skipped';
-        } else if (visible.startsWith('|')) {
-            if (previous === 'skipped') continue;
+        if (visible.startsWith('|')) {
             if (!previous) {
                 report('error', 'orphan-body', lineNumber);
                 continue;

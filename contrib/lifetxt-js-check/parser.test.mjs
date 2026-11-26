@@ -44,13 +44,45 @@ test('reports bounded syntax errors with physical line numbers', () => {
     }
 });
 
-test('excludes joined spans and unknown format versions', () => {
-    const joined = '[ ] T title \\' + '\n tag:a \\' + '\n custom:b\n| body\n[ ] T keep';
-    const result = parse(joined);
-    assert.equal(result.hasErrors, false);
-    assert.equal(result.incomplete, true);
-    assert.deepEqual(result.diagnostics, [{ severity: 'unsupported', code: 'line-join', line: 1 }]);
-    assert.equal(result.items[0].line, 5);
+test('joins physical lines before parsing and attaches subsequent body lines', () => {
+    const result = parse([
+        '[ ] T "long\\  ',
+        '  title" \\ ',
+        ' tag:a',
+        ' | body',
+        '[ ] T next',
+    ].join('\r\n'));
+    assert.deepEqual(result.diagnostics, []);
+    assert.equal(result.incomplete, false);
+    assert.deepEqual(result.items, [
+        {
+            line: 1, indent: 0, status: '[ ]', type: 'T', title: 'longtitle',
+            details: [['tag', ['a']], ['body', ['body']]],
+        },
+        { line: 5, indent: 0, status: '[ ]', type: 'T', title: 'next', details: [] },
+    ]);
+});
+
+test('reports malformed joins at the affected physical line', () => {
+    const nextLineIsBody = parse('[ ] T title\\\n  |body\n[ ] T next');
+    assert.deepEqual(nextLineIsBody.diagnostics, [
+        { severity: 'error', code: 'line-join-into-body', line: 2 },
+    ]);
+    assert.equal(nextLineIsBody.items[1].line, 3);
+
+    for (const ending of ['', '\n', '\r\n', '\r', '\u2028']) {
+        const text = '[ ] T title \\\n tag:a\\ ';
+        const result = parse(text + ending);
+        assert.deepEqual(result.diagnostics, [
+            { severity: 'error', code: 'dangling-line-join', line: 2 },
+        ]);
+        assert.equal(result.hasErrors, true);
+        assert.equal(result.incomplete, false);
+        assert.deepEqual(parse(text + ending + '\n\n').diagnostics, []);
+    }
+});
+
+test('excludes unknown format versions', () => {
     const future = parse('#! format_version: 2\nanything');
     assert.equal(future.incomplete, true);
     assert.equal(future.items.length, 0);

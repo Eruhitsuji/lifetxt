@@ -24,8 +24,8 @@ COPY = {
     "ja": (
         "書式チェック",
         "日本語ホーム",
-        "状態・種類・タイトル・key:value・引用符・縦棒で始まる本文の書式を確認します。",
-        "バックスラッシュによる行継続と未対応の形式バージョンは検査対象外です。"
+        "状態・種類・タイトル・key:value・引用符・バックスラッシュによる行継続・縦棒で始まる本文の書式を確認します。",
+        "未対応の形式バージョンは検査対象外です。"
         "日時やID・参照などを含む完全な検査には lifetxt check を使用してください。",
         "UTF-8で16 KiBまで、診断は最大100件。本文はブラウザ内で処理し、送信や永続保存は行いません。",
         "life.txtのテキスト",
@@ -46,8 +46,8 @@ COPY = {
     "en": (
         "Syntax check",
         "English home",
-        "Checks the syntax of statuses, types, titles, key:value details, quotes, and pipe-prefixed body lines.",
-        "Backslash line joins and unsupported format versions are not checked. "
+        "Checks statuses, types, titles, key:value details, quotes, backslash line joins, and pipe-prefixed body lines.",
+        "Unsupported format versions are not checked. "
         "Use lifetxt check for full validation, including dates, IDs, and references.",
         "Up to 16 KiB in UTF-8 and 100 diagnostics. Text is processed in your browser without transmission or persistent storage.",
         "life.txt text",

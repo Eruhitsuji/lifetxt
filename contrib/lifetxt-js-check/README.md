@@ -12,10 +12,15 @@ Exit codes are 0 for no errors in checked syntax, 1 for syntax errors, 2 for
 usage or input errors, and 3 for incomplete checks without syntax errors.
 Inputs are limited to 16,384 UTF-8 bytes and output to 100 diagnostics.
 
-The checker reads item headers, titles, details, and `|` body lines. It preserves
-unknown and repeated detail keys. Joined lines and unsupported format versions
-are reported as unchecked. Dates, IDs, references and inferred hierarchy are
-outside the checked scope. Use `lifetxt check` for full validation.
+The checker reads item headers, titles, details, backslash line joins, and
+`|` body lines. It preserves unknown and repeated detail keys. Unsupported
+format versions are reported as unchecked. Dates, IDs, references and inferred
+hierarchy are outside the checked scope. Use `lifetxt check` for full validation.
+
+A backslash at the end of a physical line joins it to the next line.
+Leave a space before the backslash when the next line starts a new detail.
+A trailing backslash without another line or a join into a `|` body line
+reports an error at the affected physical line.
 
 The distribution ZIP contains the parser, CLI, this README, and LICENSE.
 
@@ -34,6 +39,6 @@ explicit mapping from Core codes to JS codes. Core columns are checked against
 fixture expectations. The current JS diagnostic format has no column field.
 
 Fixtures also document the current engine-specific results for known gaps,
-including line joins, multiline JSON, hierarchy, dates, requirements, and ID
+including multiline JSON, hierarchy, dates, requirements, and ID
 references. A changed diagnostic fails CI with the fixture name and engine.
 Update the corresponding expectations when a gap is resolved (#1731).

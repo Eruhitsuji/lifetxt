@@ -13,6 +13,8 @@ JS_CODES = {
     "E010": "invalid-detail",
     "E018": "unclosed-quote",
     "E019": "orphan-body",
+    "E020": "dangling-line-join",
+    "E021": "line-join-into-body",
     "W005": "unknown-escape",
 }
 
@@ -73,13 +75,22 @@ def cases():
             '# comment\n[ ] T "\\q"\n',
             core=(("warning", "W005", 2, 8),),
         ),
-        # These expectations document gaps for the staged Core-compatible checker.
         Case(
-            "backslash line join",
-            "# comment\n[ ] T title \\\n tag:one\n[ ] T next\n",
-            js=(("unsupported", "line-join", 2),),
-            same_items=False,
+            "chained backslash joins with CRLF and a subsequent body line",
+            '# comment\r\n[ ] T "long\\  \r\n  title" \\ \r\n'
+            ' tag:one\r\n| body\r\n[ ] T next\r\n',
         ),
+        Case(
+            "dangling backslash before a final newline",
+            "[ ] T title \\\n tag:one\\ \n",
+            core=(("error", "E020", 2, 8),),
+        ),
+        Case(
+            "backslash joins into a body line",
+            "[ ] T title\\\n  |body\n[ ] T next\n",
+            core=(("error", "E021", 2, 1),),
+        ),
+        # These expectations document gaps for the staged Core-compatible checker.
         Case(
             "multiline JSON detail",
             '[ ] T title tag:json<< [\n  "one", "two"\n] >>\n',

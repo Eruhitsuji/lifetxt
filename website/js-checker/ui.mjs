@@ -2,9 +2,9 @@ import { parse } from './parser.mjs';
 
 const messages = {
     ja: {
-        errors: '書式エラーがあります。',
-        incomplete: '検査対象外の構文があります。完全な検査には lifetxt check を使用してください。',
-        ok: '検査した範囲では書式エラーは見つかりませんでした。日時や参照の確認には lifetxt check を使用してください。',
+        errors: 'エラーがあります。',
+        incomplete: '検査対象外の入力があります。完全な検査には lifetxt check を使用してください。',
+        ok: '検査した範囲ではエラーは見つかりませんでした。完全な検査には lifetxt check を使用してください。',
         line: '行',
         omitted: '件の診断を省略しました。',
         labels: { error: 'エラー', warning: '警告', unsupported: '対象外' },
@@ -26,11 +26,16 @@ const messages = {
         'ambiguous-body': '本文行の前に指定できる body: は、文字列1つまでです。',
         'indent-no-parent': 'インデントの浅い親項目が見つかりません。parent: を指定するか、行頭の空白を削除してください。',
         'indent-parent-no-id': '直近の親候補に id: がありません。親候補に id: を付けるか、子項目に parent: を指定してください。',
+        'invalid-date': '実在する日付を YYYY-MM-DD で指定してください。',
+        'invalid-datetime': '日時を YYYY-MM-DDTHH:MM で指定してください。秒・小数秒・UTCオフセットを追加できます。',
+        'invalid-date-or-datetime': '日付 YYYY-MM-DD または日時 YYYY-MM-DDTHH:MM を指定してください。',
+        'invalid-time-or-datetime': '時刻 HH:MM または日時 YYYY-MM-DDTHH:MM を指定してください。',
+        'detail-expects-text': '文字列の値を指定してください。',
     },
     en: {
-        errors: 'Syntax errors found.',
-        incomplete: 'Some syntax was not checked. Use lifetxt check for full validation.',
-        ok: 'No errors found in the checked syntax. Use lifetxt check to validate dates and references.',
+        errors: 'Errors found.',
+        incomplete: 'Some input was not checked. Use lifetxt check for full validation.',
+        ok: 'No errors found in the checked input. Use lifetxt check for full validation.',
         line: 'Line',
         omitted: 'additional diagnostics omitted.',
         labels: { error: 'Error', warning: 'Warning', unsupported: 'Unchecked' },
@@ -52,6 +57,11 @@ const messages = {
         'ambiguous-body': 'A body line can follow at most one text body: value.',
         'indent-no-parent': 'No less-indented parent item was found. Add parent: or move the item to column 1.',
         'indent-parent-no-id': 'The nearest less-indented item has no id:. Give it an id: or specify parent: on the child.',
+        'invalid-date': 'Enter a valid calendar date in YYYY-MM-DD format.',
+        'invalid-datetime': 'Enter a datetime in YYYY-MM-DDTHH:MM format, optionally with seconds, fractional seconds, and a UTC offset.',
+        'invalid-date-or-datetime': 'Enter a date in YYYY-MM-DD format or a datetime in YYYY-MM-DDTHH:MM format.',
+        'invalid-time-or-datetime': 'Enter a time in HH:MM format or a datetime in YYYY-MM-DDTHH:MM format.',
+        'detail-expects-text': 'Enter a text value.',
     },
 };
 
@@ -96,9 +106,10 @@ button.addEventListener('click', () => {
     if (result.incomplete) summaries.push(copy.incomplete);
     status.textContent = summaries.length ? summaries.join(' ') : copy.ok;
 
-    const lines = result.diagnostics.map(({ severity, code, line }) => {
+    const lines = result.diagnostics.map(({ severity, code, line, key }) => {
         const location = lang === 'ja' ? `${line}${copy.line}` : `${copy.line} ${line}`;
-        return `${location} · ${copy.labels[severity]} · ${code} · ${copy[code] ?? code}`;
+        const field = key ? `${key}: ` : '';
+        return `${location} · ${copy.labels[severity]} · ${code} · ${field}${copy[code] ?? code}`;
     });
     const hidden = result.diagnosticCount - result.diagnostics.length;
     if (hidden) lines.push(lang === 'ja' ? `${hidden}${copy.omitted}` : `${hidden} ${copy.omitted}`);

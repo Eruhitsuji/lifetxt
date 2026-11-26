@@ -6,6 +6,7 @@ from pathlib import Path
 import subprocess
 import unittest
 
+from lifetxt.model import DATETIME_KEYS, DATE_KEYS, DATE_OR_DATETIME_KEYS, TIME_OR_DATETIME_KEYS
 from lifetxt.parser import parse_text
 
 
@@ -18,7 +19,12 @@ JS_CODES = {
     "E021": "line-join-into-body",
     "E022": "ambiguous-body",
     "E023": "invalid-json-detail",
+    "E025": "detail-expects-text",
     "W005": "unknown-escape",
+    "W201": "invalid-date",
+    "W202": "invalid-datetime",
+    "W203": "invalid-date-or-datetime",
+    "W204": "invalid-time-or-datetime",
     "W220": "indent-no-parent",
     "W221": "indent-parent-no-id",
 }
@@ -32,6 +38,7 @@ class Case:
     # None derives the JS expectations from the mapped Core codes.
     js: tuple[tuple[str, str, int], ...] | None = None
     same_items: bool = True
+    temporal_keys: tuple[str, ...] = ()
 
     def expected_js(self):
         if self.js is not None:
@@ -164,6 +171,36 @@ def cases():
             "  [ ] T WithoutId\n    [ ] T Grandchild\n  [ ] T Sibling\n",
             core=(("warning", "W220", 1, 3), ("warning", "W221", 4, 5)),
         ),
+        Case(
+            "valid leap dates and clock offsets in all supported shapes",
+            "[ ] T title on:2000-02-29 from:0001-01-01T00:00Z "
+            "to:9999-12-31T23:59:59.999999+2359 "
+            "due:2024-02-29 at:23:59:59.1-00:30 at:2024-02-29T12:00\n",
+        ),
+        Case(
+            "invalid calendar day, date-only and date-or-time distinctions",
+            "[ ] T title due:2026-02-30 on:2024-02-29T12:00 "
+            "from:2024-02-29 at:2024-02-29",
+            core=(
+                ("warning", "W203", 1, None), ("warning", "W201", 1, None),
+                ("warning", "W202", 1, None), ("warning", "W204", 1, None),
+            ),
+            temporal_keys=("due", "on", "from", "at"),
+        ),
+        Case(
+            "date values must be text with one error per field",
+            '[ ] T title due:json<< ["invalid", null, 1] >> on:json<< "2024-02-29" >>',
+            core=(("error", "E025", 1, None),),
+            temporal_keys=("due",),
+        ),
+        Case(
+            "repeat values are each checked, while malformed item syntax suppresses format warnings",
+            "[ ] T title due:2024-02-29 due:1900-02-29 due:2024-04-31\n"
+            "[ ] T malformed due:invalid body:a body:b\n| ambiguous",
+            core=(("warning", "W203", 1, None), ("warning", "W203", 1, None),
+                  ("error", "E022", 3, 1)),
+            temporal_keys=("due", "due"),
+        ),
         # These expectations document gaps for the staged Core-compatible checker.
         Case(
             "JSON integer outside JavaScript's safe integer range",
@@ -173,10 +210,10 @@ def cases():
             same_items=False,
         ),
         Case(
-            "invalid calendar date",
-            "[ ] T title due:2026-02-30\n",
-            core=(("warning", "W203", 1, None),),
-            js=(),
+            "non-ASCII digits accepted by Core outside the documented date format",
+            "[ ] T title on:２０２４-02-29",
+            js=(("warning", "invalid-date", 1),),
+            temporal_keys=("on",),
         ),
         Case(
             "invalid requires expression",
@@ -196,6 +233,20 @@ def cases():
             core=(("warning", "W215", 1, None),),
             js=(),
         ),
+    ] + [
+        Case(
+            f"temporal key group: {key}",
+            f"{'[x]' if key == 'done' else '[ ]'} T title {key}:invalid",
+            core=(("warning", code, 1, None),),
+            temporal_keys=(key,),
+        )
+        for keys, code in (
+            (DATE_KEYS, "W201"),
+            (DATETIME_KEYS, "W202"),
+            (DATE_OR_DATETIME_KEYS, "W203"),
+            (TIME_OR_DATETIME_KEYS, "W204"),
+        )
+        for key in keys
     ]
 
 
@@ -246,6 +297,10 @@ class CoreComparisonTests(unittest.TestCase):
                 self.assertEqual(core_diagnostics, case.core)
             with self.subTest(case=case.name, check="JS diagnostics"):
                 self.assertEqual(js_diagnostics, expected_js)
+                self.assertEqual(
+                    tuple(d["key"] for d in js["diagnostics"] if "key" in d),
+                    case.temporal_keys,
+                )
                 self.assertEqual(js["diagnosticCount"], len(expected_js))
                 severities = {severity for severity, _, _ in expected_js}
                 self.assertEqual(js["hasErrors"], "error" in severities)

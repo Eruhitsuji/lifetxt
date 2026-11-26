@@ -1,4 +1,4 @@
-/** @typedef {{severity: 'error'|'warning'|'unsupported', code: string, line: number}} Diagnostic */
+/** @typedef {{severity: 'error'|'warning'|'unsupported', code: string, line: number, key?: string}} Diagnostic */
 /** @typedef {null|boolean|number|string|JsonValue[]|{[key: string]: JsonValue}} JsonValue */
 /** @typedef {{line: number, indent: number, status: string, type: string, title: string, details: [string, JsonValue[]][]}} Item */
 /** @typedef {{items: Item[], diagnostics: Diagnostic[], diagnosticCount: number, hasErrors: boolean, incomplete: boolean}} ParseResult */
@@ -15,6 +15,62 @@ const JSON_START = /^json<<(?:[ \t\r\n]|$)/;
 const JSON_SPACE = /[ \t\r\n]/;
 const UNCLOSED_JSON = Symbol('unclosed JSON detail');
 const encoder = new TextEncoder();
+
+// Match Core's field groups in lifetxt/model.py.
+const DATE_OR_DATETIME_KEYS = new Set([
+    'created', 'updated', 'done', 'due', 'do', 'moved_to', 'notify_at',
+    'notify_from', 'notify_to', 'ack', 'snooze_until', 'until',
+]);
+const DATE_VALUE = /^(\d{4})-(\d{2})-(\d{2})$/;
+const TIME_VALUE = /^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d{1,6})?)?(?:Z|[+-](?:[01]\d|2[0-3]):?[0-5]\d)?$/;
+const MONTH_DAYS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+function isDate(value) {
+    const match = DATE_VALUE.exec(value);
+    if (!match) return false;
+    const [year, month, day] = match.slice(1).map(Number);
+    if (year === 0 || month < 1 || month > 12 || day < 1) return false;
+    const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+    return day <= (month === 2 && leap ? 29 : MONTH_DAYS[month - 1]);
+}
+
+function isTime(value) {
+    return TIME_VALUE.test(value);
+}
+
+function isDateTime(value) {
+    const [date, time, extra] = value.split('T');
+    return time !== undefined && extra === undefined && isDate(date) && isTime(time);
+}
+
+function validateTemporalDetails(item, report) {
+    for (const [key, values] of item.details) {
+        let code;
+        let accepts;
+        if (key === 'on') {
+            code = 'invalid-date';
+            accepts = isDate;
+        } else if (key === 'from' || key === 'to') {
+            code = 'invalid-datetime';
+            accepts = isDateTime;
+        } else if (DATE_OR_DATETIME_KEYS.has(key)) {
+            code = 'invalid-date-or-datetime';
+            accepts = value => isDate(value) || isDateTime(value);
+        } else if (key === 'at') {
+            code = 'invalid-time-or-datetime';
+            accepts = value => isTime(value) || isDateTime(value);
+        } else {
+            continue;
+        }
+        if (values.some(value => typeof value !== 'string')) {
+            report('error', 'detail-expects-text', item.line, key);
+            continue;
+        }
+        for (const value of values) {
+            if (!accepts(value)) report('warning', code, item.line, key);
+        }
+    }
+}
 
 function jsonClose(text) {
     // The same string-token rule applies when recovering from malformed JSON.
@@ -251,7 +307,7 @@ function inferParent(item, ancestor, report) {
     }
 }
 
-/** Check supported Format 1 syntax and infer hierarchy using the default ID key.
+/** Check supported Format 1 syntax, hierarchy and temporal values.
  * @param {string} text
  * @returns {ParseResult}
  */
@@ -261,12 +317,12 @@ export function parse(text) {
     const result = {
         items: [], diagnostics: [], diagnosticCount: 0, hasErrors: false, incomplete: false,
     };
-    function report(severity, code, line) {
+    function report(severity, code, line, key) {
         result.diagnosticCount++;
         result.hasErrors ||= severity === 'error';
         result.incomplete ||= severity === 'unsupported';
         if (result.diagnostics.length < MAX_DIAGNOSTICS) {
-            result.diagnostics.push({ severity, code, line });
+            result.diagnostics.push(key === undefined ? { severity, code, line } : { severity, code, line, key });
         }
     }
 
@@ -295,6 +351,12 @@ export function parse(text) {
 
     /** @type {Item | null} */
     let previous = null;
+    let previousHasError = false;
+    function finishItem() {
+        if (previous && !previousHasError) validateTemporalDetails(previous, report);
+        previous = null;
+        previousHasError = false;
+    }
     /** @type {Item[]} */
     const ancestors = [];
     // Collect join diagnostics before parsing the assembled lines, as Core does.
@@ -316,12 +378,14 @@ export function parse(text) {
                 body[1][0] += '\n' + content;
             } else {
                 report('error', 'ambiguous-body', lineNumber);
+                previousHasError = true;
             }
-        } else if (/^[ \t]*$/.test(line) || visible.startsWith('#')) {
-            previous = null;
         } else {
+            finishItem();
+            if (/^[ \t]*$/.test(line) || visible.startsWith('#')) continue;
             const item = readItem(line, lineNumber, (severity, code, offset = 0) => {
                 report(severity, code, lineNumber + offset);
+                previousHasError ||= severity === 'error';
             });
             previous = item === UNCLOSED_JSON ? null : item;
             if (previous) {
@@ -334,5 +398,6 @@ export function parse(text) {
             }
         }
     }
+    finishItem();
     return result;
 }

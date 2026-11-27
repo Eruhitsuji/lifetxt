@@ -1,7 +1,12 @@
-import { parse } from './parser.mjs';
+import { MAX_BYTES, MAX_FILES, parse, parseDocuments } from './parser.mjs';
 
 const messages = {
     ja: {
+        readingFiles: 'ファイルを読み込み中です。',
+        tooManyFiles: limit => `選択できるのは最大${limit}ファイルです。`,
+        fileTooLarge: name => `${name} は16 KiBを超えています。`,
+        fileReadError: name => `${name} をUTF-8ファイルとして読み込めませんでした。`,
+        fileLine: (name, line) => `${name} の${line}行目`,
         'item-event-missing': '項目イベントに必須フィールドがありません。',
         'item-event-cardinality': '必須フィールドを1回だけ指定してください。',
         'item-event-type': '未対応のイベント種別です。',
@@ -105,7 +110,10 @@ const messages = {
         'completed-with-open-dependency': value => `完了済みですが、前提項目 ${JSON.stringify(value)} が未完了です。`,
         'closed-parent-with-open-children': (value, { childCount }) => `完了・取消済みの親 ${JSON.stringify(value)} に未完了の子が ${childCount} 件あります。`,
         'temporal-reference-order': value => `ID ${JSON.stringify(value)} との参照関係が、項目に記載された日付順と矛盾しています。`,
-        'duplicate-id': (value, { firstLine }) => `${JSON.stringify(value)} は ${firstLine}行目で既に使われています。`,
+        'duplicate-id': (value, { firstLine, firstSource }) => {
+            const first = firstSource === undefined ? `${firstLine}行目` : copy.fileLine(JSON.stringify(firstSource), firstLine);
+            return `${JSON.stringify(value)} は ${first}で既に使われています。`;
+        },
         requires: {
             shape: 'ID=state、または id/state の組、all、any でJSON条件を指定してください。all と any には条件が1つ以上必要です。',
             id: '空白を含まないIDを指定してください。',
@@ -114,6 +122,11 @@ const messages = {
         },
     },
     en: {
+        readingFiles: 'Reading files…',
+        tooManyFiles: limit => `Select up to ${limit} files.`,
+        fileTooLarge: name => `${name} exceeds 16 KiB.`,
+        fileReadError: name => `Could not read ${name} as UTF-8.`,
+        fileLine: (name, line) => `${name}, line ${line}`,
         'item-event-missing': 'Required item event fields are missing.',
         'item-event-cardinality': 'Specify each required field exactly once.',
         'item-event-type': 'Unsupported item event type.',
@@ -217,7 +230,10 @@ const messages = {
         'completed-with-open-dependency': value => `This item is completed, but prerequisite ${JSON.stringify(value)} is still open.`,
         'closed-parent-with-open-children': (value, { childCount }) => `Completed or canceled parent ${JSON.stringify(value)} has ${childCount} open child items.`,
         'temporal-reference-order': value => `The relation to ID ${JSON.stringify(value)} conflicts with the items’ calendar date order.`,
-        'duplicate-id': (value, { firstLine }) => `${JSON.stringify(value)} first appears on line ${firstLine}.`,
+        'duplicate-id': (value, { firstLine, firstSource }) => {
+            const first = firstSource === undefined ? `on line ${firstLine}` : `at ${copy.fileLine(JSON.stringify(firstSource), firstLine)}`;
+            return `${JSON.stringify(value)} first appears ${first}.`;
+        },
         requires: {
             shape: 'Use ID=state or a JSON condition with id and state, all, or any. An all or any group needs at least one condition.',
             id: 'Enter a nonempty ID without whitespace.',
@@ -232,6 +248,8 @@ const copy = messages[lang];
 const input = document.getElementById('input');
 const button = document.getElementById('check');
 const loadSample = document.getElementById('load-sample');
+const files = document.getElementById('files');
+const clearFiles = document.getElementById('clear-files');
 const status = document.getElementById('status');
 const output = document.getElementById('output');
 
@@ -240,37 +258,57 @@ function clearResult() {
     output.textContent = '';
 }
 
-function syncSampleButton() {
-    loadSample.disabled = input.value !== '';
+let selectionRevision = 0;
+
+function syncInputs() {
+    const hasFiles = files.files.length > 0;
+    input.disabled = hasFiles;
+    loadSample.disabled = hasFiles || input.value !== '';
+    clearFiles.disabled = !hasFiles;
 }
+
+function resetFileResult() {
+    selectionRevision++;
+    button.disabled = false;
+    clearResult();
+    syncInputs();
+}
+
+files.addEventListener('change', resetFileResult);
+clearFiles.addEventListener('click', () => {
+    files.value = '';
+    resetFileResult();
+    input.focus();
+});
 
 input.addEventListener('input', () => {
     clearResult();
-    syncSampleButton();
+    syncInputs();
 });
 loadSample.addEventListener('click', () => {
-    if (input.value !== '') return;
+    if (loadSample.disabled) return;
     input.value = loadSample.dataset.sample;
     clearResult();
     input.focus();
-    syncSampleButton();
+    syncInputs();
 });
 window.addEventListener('pagehide', () => {
     input.value = '';
-    clearResult();
-    syncSampleButton();
+    files.value = '';
+    resetFileResult();
 });
 
-button.addEventListener('click', () => {
-    const result = parse(input.value);
+function displayResult(result) {
     const summaries = [];
     if (result.hasErrors) summaries.push(copy.errors);
     if (result.incomplete) summaries.push(copy.incomplete);
     status.textContent = summaries.length ? summaries.join(' ') : copy.ok;
 
     const lines = result.diagnostics.map(diagnostic => {
-        const { severity, code, line, key, part, value, path } = diagnostic;
-        const location = lang === 'ja' ? `${line}${copy.line}` : `${copy.line} ${line}`;
+        const { severity, code, line, key, part, value, path, source } = diagnostic;
+        const location = source === undefined
+            ? (lang === 'ja' ? `${line}${copy.line}` : `${copy.line} ${line}`)
+            : copy.fileLine(JSON.stringify(source), line);
         const isRequirement = code === 'invalid-requires';
         const field = key ? `${key}: ${part && !isRequirement ? `[${part}] ` : ''}` : '';
         let message = isRequirement ? copy.requires[part] : copy[code];
@@ -281,6 +319,46 @@ button.addEventListener('click', () => {
     const hidden = result.diagnosticCount - result.diagnostics.length;
     if (hidden) lines.push(lang === 'ja' ? `${hidden}${copy.omitted}` : `${hidden} ${copy.omitted}`);
     output.textContent = lines.join('\n');
+}
+
+button.addEventListener('click', async () => {
+    if (!files.files.length) {
+        displayResult(parse(input.value));
+        return;
+    }
+
+    clearResult();
+    const selected = Array.from(files.files);
+    if (selected.length > MAX_FILES) {
+        status.textContent = copy.tooManyFiles(MAX_FILES);
+        return;
+    }
+    const revision = selectionRevision;
+    button.disabled = true;
+    status.textContent = copy.readingFiles;
+    try {
+        const decoder = new TextDecoder('utf-8', { fatal: true });
+        const documents = [];
+        for (const file of selected) {
+            const name = JSON.stringify(file.name);
+            if (file.size > MAX_BYTES) {
+                status.textContent = copy.fileTooLarge(name);
+                return;
+            }
+            try {
+                const bytes = await file.arrayBuffer();
+                if (revision !== selectionRevision) return;
+                documents.push({ source: file.name, text: decoder.decode(bytes) });
+            } catch {
+                if (revision === selectionRevision) status.textContent = copy.fileReadError(name);
+                return;
+            }
+        }
+        displayResult(parseDocuments(documents));
+    } finally {
+        if (revision === selectionRevision) button.disabled = false;
+    }
 });
 button.disabled = false;
-syncSampleButton();
+files.disabled = false;
+syncInputs();

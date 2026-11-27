@@ -39,7 +39,9 @@ Only IDs with exactly one occurrence participate. For `follows:` and
 the predecessor. It uses the first comparable date from `due:`, `do:`,
 `on:`, or `from:`, in that order. For datetimes, it compares the calendar
 date as written. The Node CLI checks IDs, references, and related history across
-all supplied files. The browser checker accepts one document at a time.
+all supplied files. The browser checker accepts pasted text or up to 64
+selected files. It checks selected files together and shows their names in
+diagnostics. All file reads and checks run locally in the browser.
 
 A completed item with an open `depends_on:` prerequisite gets a warning.
 A completed or canceled parent with open direct children gets a warning on the

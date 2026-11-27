@@ -1,14 +1,14 @@
 (() => {
   "use strict";
   const copy = {
-    en: {statusNow: "Status", statusNone: "No status", statusChange: "Change status", statusEnd: "End current status", statusActivity: "Activity (optional)", statusCustom: "Custom status", statusSet: "Set custom status", statusForce: "Restart even if this status is already current", statusSame: "This status is already current; its start and title were kept.", statusRequired: "Enter a custom status.", since: "since {at} · {span}", spanMin: "{m} min", spanHour: "{h} h {m} min",
+    en: {fullscreenOn: "Full screen", fullscreenOff: "Exit full screen", fullscreenFailed: "Could not change full screen mode.", statusNow: "Status", statusNone: "No status", statusChange: "Change status", statusEnd: "End current status", statusActivity: "Activity (optional)", statusCustom: "Custom status", statusSet: "Set custom status", statusForce: "Restart even if this status is already current", statusSame: "This status is already current; its start and title were kept.", statusRequired: "Enter a custom status.", since: "since {at} · {span}", spanMin: "{m} min", spanHour: "{h} h {m} min",
       stateNames: ["Available", "Busy", "Focus", "Meeting", "Away", "Offline", "Commuting", "Working", "Sleeping"],
       skip: "Skip to tasks", title: "Desk", reasonToday: "due today", reasonOverdue: "{n} overdue (days)", top: "Top", calendar: "Calendar", planner: "Planner", tasks: "Tasks", captureLabel: "Quick add", capturePlaceholder: "Quick add: title @project !high ^tomorrow", add: "Add", preview: "Preview", confirmCapture: "Confirm capture", editBtn: "Edit", detailsLabel: "Details (key:value per line)", themeAuto: "Theme: auto", themeDark: "Theme: dark", themeLight: "Theme: light", reviewFirst: "Review the mapped fields, then confirm.",
       overdue: "Overdue", dueToday: "Due today", next: "Next actions", allDay: "All day", noEvents: "No events today.", noTasks: "Nothing to do right now.", start: "Start", stop: "Stop",
       markDone: "Mark as done", doneAt: "Completion date and time", completeNow: "Complete now", completeAt: "Complete at selected time", etaMin: "in {n} min", etaHour: "in {h} h {m} min", noNext: "No more events today", week: "Week {n}", dayOfYear: "Day {n}", loading: "Loading…",
       captured: "Added.", saved: "Updated.", readonly: "Read-only: changes are disabled.", error: "Could not load: ", conflict: "Data changed. Reload and try again.", noRevision: "Could not obtain a write revision. Reload and try again.", requestFailed: "Request failed", due: "due {d}",
       modeDay: "Today", modeWeek: "7 days", modeMonth: "Month", save: "Save", evTitle: "Title", evDate: "Date", evStart: "Start", evEnd: "End", badRange: "End must be after start.", requiredFields: "Enter a title, date, and time.", requiredTitle: "Enter a title.", requiredDate: "Choose a date.", dueDate: "Due date", changeDue: "Change due", openInPlanner: "Open in Planner", details: "Details", close: "Close", type: "Type", statusLabel: "Status", when: "When", openDetails: "Show details: "},
-    ja: {statusNow: "状態", statusNone: "現在設定なし", statusChange: "状態を切り替える", statusEnd: "現在の状態を終了", statusActivity: "活動名（任意）", statusCustom: "カスタム状態", statusSet: "カスタム状態を設定", statusForce: "同じ状態でも再開始する", statusSame: "すでに同じ状態です。開始時刻とタイトルは維持しました。", statusRequired: "カスタム状態を入力してください。", since: "{at} から · {span}", spanMin: "{m}分", spanHour: "{h}時間{m}分",
+    ja: {fullscreenOn: "全画面", fullscreenOff: "全画面を終了", fullscreenFailed: "全画面表示を切り替えられませんでした。", statusNow: "状態", statusNone: "現在設定なし", statusChange: "状態を切り替える", statusEnd: "現在の状態を終了", statusActivity: "活動名（任意）", statusCustom: "カスタム状態", statusSet: "カスタム状態を設定", statusForce: "同じ状態でも再開始する", statusSame: "すでに同じ状態です。開始時刻とタイトルは維持しました。", statusRequired: "カスタム状態を入力してください。", since: "{at} から · {span}", spanMin: "{m}分", spanHour: "{h}時間{m}分",
       stateNames: ["対応可能", "取り込み中", "集中", "会議中", "離席中", "オフライン", "移動中", "作業中", "睡眠中"],
       skip: "タスクへ移動", title: "Desk", reasonToday: "今日が期限", reasonOverdue: "{n}日超過", top: "トップ", calendar: "カレンダー", planner: "Planner", tasks: "タスク", captureLabel: "クイック追加", capturePlaceholder: "クイック追加: タイトル @project !高 ^明日", add: "追加", preview: "プレビュー", confirmCapture: "追加を確定", editBtn: "編集", detailsLabel: "詳細 (1行に key:value)", themeAuto: "テーマ: 自動", themeDark: "テーマ: ダーク", themeLight: "テーマ: ライト", reviewFirst: "変換結果を確認して確定してください。",
       overdue: "期限超過", dueToday: "今日", next: "次の一手", allDay: "終日", noEvents: "今日の予定はありません。", noTasks: "今やることはありません。", start: "開始", stop: "停止",
@@ -686,6 +686,19 @@
     applyTheme(m);
     $("theme-toggle").onclick = () => { const n = THEMES[(THEMES.indexOf($("theme-toggle").dataset.mode) + 1) % 3]; try { localStorage.setItem("desk-theme", n); } catch (_) {} applyTheme(n); };
   }
+  function initFullscreen() {
+    const b = $("fullscreen-toggle"), root = document.documentElement;
+    if (!document.fullscreenEnabled || !root.requestFullscreen) return;
+    const sync = () => {
+      const on = Boolean(document.fullscreenElement);
+      b.textContent = on ? t.fullscreenOff : t.fullscreenOn;
+      b.setAttribute("aria-pressed", String(on));
+    };
+    b.onclick = () => (document.fullscreenElement ? document.exitFullscreen() : root.requestFullscreen()).catch(() => say(t.fullscreenFailed));
+    document.addEventListener("fullscreenchange", sync);
+    sync();
+    b.hidden = false;
+  }
   async function boot() {
     translate(); say(t.loading);
     const started = performance.now();
@@ -697,6 +710,7 @@
     $("capture-form").onsubmit = capture;
     $("capture-text").oninput = livePreview; $("capture-syntax").onchange = livePreview;
     initTheme();
+    initFullscreen();
     $("status-card").onclick = showStatusDialog;
     $("mode-day").onclick = () => setMode("day");
     $("mode-week").onclick = () => setMode("week");

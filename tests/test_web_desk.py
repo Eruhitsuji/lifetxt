@@ -84,6 +84,9 @@ class DeskPageTests(unittest.TestCase):
     def test_status_card_present(self):
         self.assertIn('id="status-card"', self.client.get("/desk").text)
 
+    def test_fullscreen_toggle_present(self):
+        self.assertIn('id="fullscreen-toggle"', self.client.get("/desk").text)
+
     def test_manifest(self):
         r = self.client.get("/desk.webmanifest")
         self.assertEqual(r.status_code, 200)

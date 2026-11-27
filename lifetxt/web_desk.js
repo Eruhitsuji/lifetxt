@@ -1,14 +1,16 @@
 (() => {
   "use strict";
   const copy = {
-    en: {fullscreenOn: "Full screen", fullscreenOff: "Exit full screen", fullscreenFailed: "Could not change full screen mode.", statusNow: "Status", statusNone: "No status", statusChange: "Change status", statusEnd: "End current status", statusActivity: "Activity (optional)", statusCustom: "Custom status", statusSet: "Set custom status", statusForce: "Restart even if this status is already current", statusSame: "This status is already current; its start and title were kept.", statusRequired: "Enter a custom status.", since: "since {at} · {span}", spanMin: "{m} min", spanHour: "{h} h {m} min",
+    en: {layout: "Layout", layoutTitle: "Screen layout", layoutPreset: "Preset", layoutCustom: "Custom", presetNames: {standard: "Standard", clock: "Clock", tasks: "Tasks", calendar: "Calendar"}, blockNames: {clock: "Clock", status: "Status", next: "Next event", calendar: "Calendar", tasks: "Tasks", capture: "Quick add"}, layoutColumns: ["Left column", "Right column"], layoutUp: "Move up", layoutDown: "Move down", layoutRight: "Move to right column", layoutLeft: "Move to left column", layoutSwap: "Swap columns", layoutReset: "Reset to standard", layoutRatio: "Column width", ratioNames: {balanced: "Balanced", left: "Wider left", right: "Wider right"}, layoutFont: "Text size", fontNames: {s: "Small", m: "Medium", l: "Large"}, layoutShow: "Checked items are shown. Settings are saved in this browser.",
+      fullscreenOn: "Full screen", fullscreenOff: "Exit full screen", fullscreenFailed: "Could not change full screen mode.", statusNow: "Status", statusNone: "No status", statusChange: "Change status", statusEnd: "End current status", statusActivity: "Activity (optional)", statusCustom: "Custom status", statusSet: "Set custom status", statusForce: "Restart even if this status is already current", statusSame: "This status is already current; its start and title were kept.", statusRequired: "Enter a custom status.", since: "since {at} · {span}", spanMin: "{m} min", spanHour: "{h} h {m} min",
       stateNames: ["Available", "Busy", "Focus", "Meeting", "Away", "Offline", "Commuting", "Working", "Sleeping"],
       skip: "Skip to tasks", title: "Desk", reasonToday: "due today", reasonOverdue: "{n} overdue (days)", top: "Top", calendar: "Calendar", planner: "Planner", tasks: "Tasks", captureLabel: "Quick add", capturePlaceholder: "Quick add: title @project !high ^tomorrow", add: "Add", preview: "Preview", confirmCapture: "Confirm capture", editBtn: "Edit", detailsLabel: "Details (key:value per line)", themeAuto: "Theme: auto", themeDark: "Theme: dark", themeLight: "Theme: light", reviewFirst: "Review the mapped fields, then confirm.",
       overdue: "Overdue", dueToday: "Due today", next: "Next actions", allDay: "All day", noEvents: "No events today.", noTasks: "Nothing to do right now.", start: "Start", stop: "Stop",
       markDone: "Mark as done", doneAt: "Completion date and time", completeNow: "Complete now", completeAt: "Complete at selected time", etaMin: "in {n} min", etaHour: "in {h} h {m} min", noNext: "No more events today", week: "Week {n}", dayOfYear: "Day {n}", loading: "Loading…",
       captured: "Added.", saved: "Updated.", readonly: "Read-only: changes are disabled.", error: "Could not load: ", conflict: "Data changed. Reload and try again.", noRevision: "Could not obtain a write revision. Reload and try again.", requestFailed: "Request failed", due: "due {d}",
       modeDay: "Today", modeWeek: "7 days", modeMonth: "Month", save: "Save", evTitle: "Title", evDate: "Date", evStart: "Start", evEnd: "End", badRange: "End must be after start.", requiredFields: "Enter a title, date, and time.", requiredTitle: "Enter a title.", requiredDate: "Choose a date.", dueDate: "Due date", changeDue: "Change due", openInPlanner: "Open in Planner", details: "Details", close: "Close", type: "Type", statusLabel: "Status", when: "When", openDetails: "Show details: "},
-    ja: {fullscreenOn: "全画面", fullscreenOff: "全画面を終了", fullscreenFailed: "全画面表示を切り替えられませんでした。", statusNow: "状態", statusNone: "現在設定なし", statusChange: "状態を切り替える", statusEnd: "現在の状態を終了", statusActivity: "活動名（任意）", statusCustom: "カスタム状態", statusSet: "カスタム状態を設定", statusForce: "同じ状態でも再開始する", statusSame: "すでに同じ状態です。開始時刻とタイトルは維持しました。", statusRequired: "カスタム状態を入力してください。", since: "{at} から · {span}", spanMin: "{m}分", spanHour: "{h}時間{m}分",
+    ja: {layout: "画面構成", layoutTitle: "画面構成", layoutPreset: "プリセット", layoutCustom: "カスタム", presetNames: {standard: "標準", clock: "時計中心", tasks: "タスク中心", calendar: "カレンダー中心"}, blockNames: {clock: "時計", status: "状態", next: "次の予定", calendar: "カレンダー", tasks: "タスク", capture: "クイック追加"}, layoutColumns: ["左の列", "右の列"], layoutUp: "上へ", layoutDown: "下へ", layoutRight: "右の列へ", layoutLeft: "左の列へ", layoutSwap: "左右を入れ替える", layoutReset: "標準に戻す", layoutRatio: "列の幅", ratioNames: {balanced: "均等", left: "左を広く", right: "右を広く"}, layoutFont: "文字サイズ", fontNames: {s: "小", m: "中", l: "大"}, layoutShow: "チェックした項目を表示します。設定はこのブラウザに保存されます。",
+      fullscreenOn: "全画面", fullscreenOff: "全画面を終了", fullscreenFailed: "全画面表示を切り替えられませんでした。", statusNow: "状態", statusNone: "現在設定なし", statusChange: "状態を切り替える", statusEnd: "現在の状態を終了", statusActivity: "活動名（任意）", statusCustom: "カスタム状態", statusSet: "カスタム状態を設定", statusForce: "同じ状態でも再開始する", statusSame: "すでに同じ状態です。開始時刻とタイトルは維持しました。", statusRequired: "カスタム状態を入力してください。", since: "{at} から · {span}", spanMin: "{m}分", spanHour: "{h}時間{m}分",
       stateNames: ["対応可能", "取り込み中", "集中", "会議中", "離席中", "オフライン", "移動中", "作業中", "睡眠中"],
       skip: "タスクへ移動", title: "Desk", reasonToday: "今日が期限", reasonOverdue: "{n}日超過", top: "トップ", calendar: "カレンダー", planner: "Planner", tasks: "タスク", captureLabel: "クイック追加", capturePlaceholder: "クイック追加: タイトル @project !高 ^明日", add: "追加", preview: "プレビュー", confirmCapture: "追加を確定", editBtn: "編集", detailsLabel: "詳細 (1行に key:value)", themeAuto: "テーマ: 自動", themeDark: "テーマ: ダーク", themeLight: "テーマ: ライト", reviewFirst: "変換結果を確認して確定してください。",
       overdue: "期限超過", dueToday: "今日", next: "次の一手", allDay: "終日", noEvents: "今日の予定はありません。", noTasks: "今やることはありません。", start: "開始", stop: "停止",
@@ -600,7 +602,7 @@
       eventItems = elist.items || [];
       events = buildEvents(agenda.records || []);
       weekEvents = mode !== "day" ? buildWeek(agenda.records || []) : [];
-      renderStatus(status); renderTimeline(); renderTasks(day); updateNext(wallNow());
+      loaded = true; renderStatus(status); renderTimeline(); renderTasks(day); updateNext(wallNow());
       $("open-top").href = "/" + (lang === "ja" ? "?lang=ja" : "");
       $("open-planner").href = "/planner?date=" + today + (lang === "ja" ? "&lang=ja" : "");
     } catch (e) { if (mine === generation) say(t.error + e.message); }
@@ -675,6 +677,115 @@
     tick(); tickTimer = setInterval(tick, 1000);
     refreshTimer = setInterval(() => { syncConfig().then(load); }, REFRESH_MS);
   }
+  // ---- Layout: per-browser arrangement of the screen blocks ----
+  const BLOCKS = ["clock", "status", "next", "calendar", "tasks", "capture"];
+  const RATIOS = ["balanced", "left", "right"], FONTS = ["s", "m", "l"];
+  const preset = (left, right, hidden = [], ratio = "balanced", font = "m") => ({cols: [left, right], hidden, ratio, font});
+  const PRESETS = {
+    standard: preset(["clock", "status", "next", "calendar"], ["tasks", "capture"]),
+    clock: preset(["clock", "status", "next"], ["calendar", "tasks", "capture"], ["capture"], "left", "l"),
+    tasks: preset(["tasks", "capture"], ["clock", "status", "next", "calendar"], [], "left"),
+    calendar: preset(["calendar"], ["clock", "status", "next", "tasks", "capture"], [], "left")
+  };
+  const copyLayout = v => ({cols: v.cols.map(c => [...c]), hidden: [...v.hidden], ratio: v.ratio, font: v.font});
+  const validLayout = v => Boolean(v) && Array.isArray(v.cols) && v.cols.length === 2 && v.cols.every(Array.isArray) &&
+    v.cols.flat().length === BLOCKS.length && BLOCKS.every(b => v.cols.flat().includes(b)) &&
+    Array.isArray(v.hidden) && v.hidden.every(b => BLOCKS.includes(b)) && RATIOS.includes(v.ratio) && FONTS.includes(v.font);
+  let layout = copyLayout(PRESETS.standard), loaded = false;
+  function applyLayout() {
+    layout.cols.forEach((names, index) => {
+      const column = $("col-" + index);
+      const shown = names.filter(n => !layout.hidden.includes(n));
+      const flexible = shown.includes("calendar") || shown.includes("tasks");
+      for (const name of names) {
+        const zone = $(name + "-zone");
+        zone.hidden = !shown.includes(name);
+        column.append(zone);
+      }
+      if (names.includes("clock")) $("clock-zone").classList.toggle("grow", !flexible);
+      column.hidden = !shown.length;
+    });
+    $("cols").classList.toggle("single", $("col-0").hidden || $("col-1").hidden);
+    $("cols").dataset.ratio = layout.ratio;
+    $("desk").dataset.font = layout.font;
+    document.querySelector(".skip").hidden = layout.hidden.includes("tasks");
+    if (loaded) renderTimeline();
+  }
+  function changeLayout(next, focus) {
+    layout = next;
+    try { localStorage.setItem("desk-layout", JSON.stringify(layout)); } catch (_) {}
+    applyLayout();
+    renderLayoutDialog(focus);
+  }
+  function renderLayoutDialog(focus) {
+    const box = $("layout-content"), keep = box.scrollTop;
+    const button = (key, text, label, action, disabled) => {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "go"; b.textContent = text; b.dataset.key = key; b.disabled = Boolean(disabled);
+      b.setAttribute("aria-label", label); b.onclick = action;
+      return b;
+    };
+    const select = (key, label, options, value, action) => {
+      const s = document.createElement("select");
+      s.dataset.key = key;
+      for (const [v, text] of options) { const o = document.createElement("option"); o.value = v; o.textContent = text; s.append(o); }
+      s.value = value; s.onchange = () => action(s.value);
+      return detailField(label, s);
+    };
+    const edit = (key, change) => { const next = copyLayout(layout); change(next); changeLayout(next, key); };
+    const same = JSON.stringify(layout);
+    const current = Object.keys(PRESETS).find(n => JSON.stringify(PRESETS[n]) === same) || "";
+    const presets = Object.keys(PRESETS).map(n => [n, t.presetNames[n]]);
+    if (!current) presets.unshift(["", t.layoutCustom]);
+    const note = document.createElement("p");
+    note.className = "muted"; note.textContent = t.layoutShow;
+    const nodes = [detailFields(
+      select("preset", t.layoutPreset, presets, current, v => { if (PRESETS[v]) changeLayout(copyLayout(PRESETS[v]), "preset"); }),
+      select("ratio", t.layoutRatio, RATIOS.map(v => [v, t.ratioNames[v]]), layout.ratio, v => edit("ratio", n => { n.ratio = v; })),
+      select("font", t.layoutFont, FONTS.map(v => [v, t.fontNames[v]]), layout.font, v => edit("font", n => { n.font = v; }))), note];
+    layout.cols.forEach((names, c) => {
+      const group = document.createElement("fieldset"), legend = document.createElement("legend");
+      group.className = "layout-col"; legend.textContent = t.layoutColumns[c]; group.append(legend);
+      names.forEach((name, i) => {
+        const row = document.createElement("div"), label = document.createElement("label"), check = document.createElement("input");
+        row.className = "layout-row"; check.type = "checkbox"; check.checked = !layout.hidden.includes(name); check.dataset.key = name;
+        check.onchange = () => edit(name, n => { n.hidden = check.checked ? n.hidden.filter(x => x !== name) : [...n.hidden, name]; });
+        label.append(check, t.blockNames[name]);
+        const shift = by => edit(name + (by < 0 ? "-up" : "-down"), n => { const list = n.cols[c]; [list[i], list[i + by]] = [list[i + by], list[i]]; });
+        const other = c ? t.layoutLeft : t.layoutRight;
+        row.append(label,
+          button(name + "-up", "↑", t.blockNames[name] + ": " + t.layoutUp, () => shift(-1), i === 0),
+          button(name + "-down", "↓", t.blockNames[name] + ": " + t.layoutDown, () => shift(1), i === names.length - 1),
+          button(name + "-move", c ? "←" : "→", t.blockNames[name] + ": " + other,
+            () => edit(name + "-move", n => { n.cols[c].splice(i, 1); n.cols[1 - c].push(name); })));
+        group.append(row);
+      });
+      nodes.push(group);
+    });
+    const actions = document.createElement("div");
+    actions.className = "layout-actions";
+    actions.append(button("swap", t.layoutSwap, t.layoutSwap, () => edit("swap", n => { n.cols.reverse(); })),
+      button("reset", t.layoutReset, t.layoutReset, () => changeLayout(copyLayout(PRESETS.standard), "reset")));
+    nodes.push(actions);
+    box.replaceChildren(...nodes);
+    box.scrollTop = keep;
+    if (!focus) return;
+    // A button that became disabled hands focus to its block's checkbox.
+    const find = key => box.querySelector('[data-key="' + key + '"]');
+    const target = find(focus);
+    (target && !target.disabled ? target : find(focus.split("-")[0]))?.focus();
+  }
+  function initLayout() {
+    const wanted = params.get("preset");
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem("desk-layout")); } catch (_) {}
+    // A preset in the URL is shown without overwriting the saved arrangement.
+    if (Object.hasOwn(PRESETS, wanted || "")) layout = copyLayout(PRESETS[wanted]);
+    else if (validLayout(saved)) layout = copyLayout(saved);
+    applyLayout();
+    $("layout-open").onclick = () => { renderLayoutDialog(); $("layout-dialog").showModal(); $("layout-content").scrollTop = 0; $("layout-close").focus(); };
+    $("layout-close").onclick = () => $("layout-dialog").close();
+  }
   const THEMES = ["auto", "dark", "light"];
   function applyTheme(m) {
     if (m === "auto") document.documentElement.removeAttribute("data-theme"); else document.documentElement.setAttribute("data-theme", m);
@@ -711,6 +822,7 @@
     $("capture-text").oninput = livePreview; $("capture-syntax").onchange = livePreview;
     initTheme();
     initFullscreen();
+    initLayout();
     $("status-card").onclick = showStatusDialog;
     $("mode-day").onclick = () => setMode("day");
     $("mode-week").onclick = () => setMode("week");

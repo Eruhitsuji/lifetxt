@@ -1,6 +1,6 @@
 import { constants } from 'node:fs';
 import { open } from 'node:fs/promises';
-import { MAX_BYTES, parse, parseDocuments } from './parser.mjs';
+import { MAX_BYTES, MAX_FILES, parse, parseDocuments } from './parser.mjs';
 
 function escapeConsole(text) {
     return text.replace(/[^\x20-\x7e]/g, char =>
@@ -10,7 +10,6 @@ function escapeConsole(text) {
 function quoteId(value) {
     return escapeConsole(JSON.stringify(value));
 }
-const MAX_FILES = 64;
 const usage = 'Usage: node check.mjs FILE [FILE ...]';
 
 async function readInput(path) {

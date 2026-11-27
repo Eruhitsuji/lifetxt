@@ -104,6 +104,7 @@ class JSCheckerSiteTests(unittest.TestCase):
                     expect(page.locator("noscript")).to_be_visible()
                     expect(page.locator("#check")).to_be_disabled()
                     expect(page.locator("#load-sample")).to_be_disabled()
+                    expect(page.locator("#files")).to_be_disabled()
                     context.close()
                     browser.close()
             finally:
@@ -326,6 +327,65 @@ class JSCheckerSiteTests(unittest.TestCase):
             button.click()
             self.assertEqual(output.inner_text().count("invalid-item-start"), 100)
             expect(output).to_contain_text("1件" if lang == "ja" else "1 additional")
+            text.fill("[ ] T Paste survives")
+            files = page.locator("#files")
+            clear_files = page.locator("#clear-files")
+            expect(clear_files).to_be_disabled()
+            files.set_input_files([
+                {"name": "inbox.txt", "mimeType": "text/plain",
+                 "buffer": b"[ ] T A id:a depends_on:b\n[ ] T First id:dup"},
+                {"name": "work.txt", "mimeType": "text/plain",
+                 "buffer": b"[ ] T B id:b depends_on:a\n[ ] T Second id:dup"},
+            ])
+            expect(text).to_be_disabled()
+            expect(status).to_be_empty()
+            button.click()
+            expect(output).to_contain_text("reference-cycle")
+            expect(output).to_contain_text("duplicate-id")
+            expect(output).not_to_contain_text("missing-reference")
+            expect(output).to_contain_text('"work.txt" の2行目' if lang == "ja" else '"work.txt", line 2')
+            expect(output).to_contain_text('"inbox.txt" の2行目' if lang == "ja" else '"inbox.txt", line 2')
+            clear_files.click()
+            expect(text).to_be_focused()
+            expect(text).to_have_value("[ ] T Paste survives")
+            expect(output).to_be_empty()
+            button.click()
+            expect(output).to_be_empty()
+            for name, payload, message in (
+                ("invalid.txt", b"\xff", "UTF-8"),
+                ("large.txt", b"x" * 16_385, "16 KiB"),
+            ):
+                files.set_input_files({"name": name, "mimeType": "text/plain", "buffer": payload})
+                button.click()
+                expect(status).to_contain_text(name)
+                expect(status).to_contain_text(message)
+                expect(output).to_be_empty()
+            files.set_input_files([
+                {"name": f"file-{i}.txt", "mimeType": "text/plain", "buffer": b""}
+                for i in range(65)
+            ])
+            button.click()
+            expect(status).to_contain_text("64")
+            expect(output).to_be_empty()
+
+            # Hold a file read open until the selection is cleared.
+            page.evaluate("""() => {
+                const read = File.prototype.arrayBuffer;
+                File.prototype.arrayBuffer = function () {
+                    return new Promise(resolve => {
+                        window.finishFileRead = () => read.call(this).then(resolve);
+                    });
+                };
+            }""")
+            files.set_input_files({"name": "stale.txt", "mimeType": "text/plain", "buffer": b"bad"})
+            button.click()
+            expect(button).to_be_disabled()
+            clear_files.click()
+            page.evaluate("window.finishFileRead()")
+            expect(status).to_be_empty()
+            expect(output).to_be_empty()
+            expect(button).to_be_enabled()
+            expect(text).to_have_value("[ ] T Paste survives")
             self.assertEqual(
                 page.evaluate("[localStorage.length, sessionStorage.length]"), [0, 0]
             )

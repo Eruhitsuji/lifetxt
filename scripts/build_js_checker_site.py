@@ -29,7 +29,7 @@ COPY = {
         "日付・時刻、イベントの開始・終了日時、繰り返し、開始条件 requires: を検査し、インデントから親子関係を推定します。"
         "同じ入力内のID、参照先、参照の循環、時系列参照と日付順の矛盾を検査します。"
         "完了項目の前提や完了・取消済みの親の子に未完了が残っている場合は警告します。完全な検査には lifetxt check を使用してください。",
-        "UTF-8で16 KiBまで、診断は最大100件。本文はブラウザ内で処理し、送信や永続保存は行いません。",
+        "UTF-8で1ファイルまたは貼り付け本文につき16 KiBまで。診断は合計100件まで表示します。本文とファイル名はブラウザー内で処理し、送信や永続保存は行いません。",
         "life.txtのテキスト",
         "チェック",
         "サンプルを読み込む",
@@ -44,6 +44,9 @@ COPY = {
         "期限を付ける場合は due: の直後に YYYY-MM-DD 形式の日付を書きます。",
         "チェックの範囲と制限",
         "書式の詳細",
+        "life.txt ファイル",
+        "選択を解除",
+        "最大64ファイル。選択中はファイルを検査します。貼り付けに戻るには選択を解除してください。",
     ),
     "en": (
         "Syntax check",
@@ -53,7 +56,7 @@ COPY = {
         "Checks dates, times, event range ordering, recurrence values, and requires: conditions, and infers parents from indentation. "
         "Checks ID format, duplicates, reference targets, relation cycles, and temporal relation ordering within the input. "
         "Warns about open prerequisites of completed items and open children of completed or canceled parents. Use lifetxt check for full validation.",
-        "Up to 16 KiB in UTF-8 and 100 diagnostics. Text is processed in your browser without transmission or persistent storage.",
+        "Up to 16 KiB of UTF-8 per file or pasted document and 100 diagnostics in total. Your browser processes text and filenames locally without sending or saving them.",
         "life.txt text",
         "Check",
         "Load sample",
@@ -68,6 +71,9 @@ COPY = {
         "To add a deadline, put a YYYY-MM-DD date directly after due:.",
         "What the checker covers",
         "Format reference",
+        "life.txt files",
+        "Clear file selection",
+        "Select up to 64 files to check together. Clear the selection to return to pasted text.",
     ),
 }
 
@@ -76,6 +82,7 @@ def render(lang: str, base: str) -> str:
     (
         title, home, scope, excluded, limits, label, button, load, hint, guide, noscript,
         lesson, exercise, state_help, type_help, title_help, due_help, coverage, reference,
+        files_label, clear_files, files_hint,
     ) = map(escape, COPY[lang])
     example = (ROOT / "website/example.txt").read_text(encoding="utf-8")
     sample = escape(example)
@@ -114,6 +121,10 @@ def render(lang: str, base: str) -> str:
 <button class="button primary" id="check" type="button" disabled>{button}</button>
 <button class="button" id="load-sample" type="button" disabled aria-describedby="sample-hint" data-sample="{sample}">{load}</button>
 </div>
+<p><label for="files">{files_label}</label>
+<input id="files" type="file" multiple disabled aria-describedby="files-hint limits"></p>
+<button class="button" id="clear-files" type="button" disabled>{clear_files}</button>
+<p id="files-hint">{files_hint}</p>
 <p id="status" role="status"></p>
 <pre id="output" tabindex="0" aria-label="{title}"></pre>
 <noscript><p>{noscript}</p></noscript>

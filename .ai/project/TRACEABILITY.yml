@@ -5,6 +5,18 @@ traceability:
     - requirement_id: req-browser-local-check-v1
       capability_id: cap-official-website
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1731
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1769
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1770
+      changed_files_or_scope: [JavaScript checker duration and importance validation]
+      tests_or_evidence:
+        - contrib/lifetxt-js-check/parser.test.mjs
+        - contrib/lifetxt-js-check/check_core.py
+        - tests.test_js_checker_site
+      status: in_review
+
+    - requirement_id: req-browser-local-check-v1
+      capability_id: cap-official-website
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1731
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1767
       pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1768
       changed_files_or_scope: [JavaScript checker item markers and completion fields]

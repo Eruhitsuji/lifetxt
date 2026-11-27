@@ -4,7 +4,7 @@ button,input{font:inherit;color:var(--ink)}button:focus-visible,a:focus-visible,
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .skip{position:absolute;left:8px;top:-60px;z-index:10;padding:10px 14px;background:var(--panel);border:1px solid var(--accent);border-radius:8px;color:var(--ink)}.skip:focus{top:8px}
 .desk{height:100dvh;padding:16px;display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:16px}
-.left{display:grid;grid-template-rows:176px minmax(0,1fr);gap:16px;min-height:0;min-width:0}
+.left{display:grid;grid-template-rows:auto minmax(0,1fr);gap:16px;min-height:0;min-width:0}
 .zone{background:var(--panel);border:1px solid var(--line);border-radius:14px;display:flex;flex-direction:column;min-height:0;min-width:0;overflow:hidden}
 .zh{display:flex;align-items:center;gap:8px;padding:12px 16px 8px}.zh h2{margin:0;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}.spacer{flex:1}
 #calendar-zone .zh{flex-wrap:wrap}
@@ -30,7 +30,7 @@ button,input{font:inherit;color:var(--ink)}button:focus-visible,a:focus-visible,
 .empty{color:var(--muted);font-size:13px;padding:12px 0}
 .capture{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--line);background:var(--raise)}.capture input{flex:1;min-width:0;height:40px;border-radius:9px;border:1px solid var(--ctl-line);background:var(--field);padding:0 12px;font-size:14px}.capture .go{min-height:40px}
 .feedback{position:fixed;left:50%;bottom:8px;transform:translateX(-50%);margin:0;max-width:90vw;padding:6px 12px;border-radius:8px;background:var(--raise);border:1px solid var(--line);font-size:12px;color:var(--sub)}.feedback:empty{display:none}
-@media(max-width:720px){.desk{grid-template-columns:minmax(0,1fr);grid-template-rows:132px minmax(0,1fr) minmax(0,1.2fr);padding:12px;gap:12px}.left{display:contents}
+@media(max-width:720px){.desk{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) minmax(0,1.2fr);padding:12px;gap:12px}.left{display:contents}
 .clock-main{gap:14px;padding:0 16px}.clock-time{font-size:56px}.clock-time small{display:none}.clock-date{font-size:15px}.next-row{padding:7px 16px;font-size:12px;min-height:34px}.tm{width:38px}}
 @media(prefers-reduced-motion:no-preference){.zb{scroll-behavior:smooth}}
 
@@ -187,3 +187,8 @@ button,input{font:inherit;color:var(--ink)}button:focus-visible,a:focus-visible,
 .cap-prev{height:16px;padding:4px 20px 8px}
 #mode-day,#mode-week,#mode-month{margin-right:-1px;min-width:48px}#mode-month{margin-right:0}#mode-week{border-radius:0}
 .go{box-shadow:none}
+
+.status-card{display:flex;flex:none;align-items:center;gap:12px;width:100%;min-height:48px;padding:8px 28px;border:0;border-top:1px solid var(--line);background:transparent;text-align:left;cursor:pointer}.status-card:hover:not(:disabled){background:var(--raise)}.status-card:disabled{cursor:default}
+.status-label{font-size:12px;font-weight:700;color:var(--muted)}.status-card .pill{font-size:15px;padding:5px 14px}.status-title{flex:1;min-width:0;font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.status-since{white-space:nowrap}
+.state-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:8px;margin:12px 0}.state-tiles .go{min-height:44px}.state-tiles .go[aria-pressed=true]{border-color:var(--accent);background:var(--accent-bg);color:var(--ink)}
+.detail-body .fld.check{flex-direction:row-reverse;justify-content:flex-end;align-items:center;margin-top:12px}.detail-body .fld.check input{width:auto;min-height:0}

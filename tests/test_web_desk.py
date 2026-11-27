@@ -81,6 +81,9 @@ class DeskPageTests(unittest.TestCase):
                 self.assertEqual(self.complete_repeat(done_at=value).status_code, 400)
         self.assertEqual(self.client.get("/api/items/id/repeat-1").json()["item"]["status"], "[ ]")
 
+    def test_status_card_present(self):
+        self.assertIn('id="status-card"', self.client.get("/desk").text)
+
     def test_manifest(self):
         r = self.client.get("/desk.webmanifest")
         self.assertEqual(r.status_code, 200)

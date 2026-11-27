@@ -1,12 +1,16 @@
 (() => {
   "use strict";
   const copy = {
-    en: {skip: "Skip to tasks", title: "Desk", reasonToday: "due today", reasonOverdue: "{n} overdue (days)", top: "Top", calendar: "Calendar", planner: "Planner", tasks: "Tasks", captureLabel: "Quick add", capturePlaceholder: "Quick add: title @project !high ^tomorrow", add: "Add", preview: "Preview", confirmCapture: "Confirm capture", editBtn: "Edit", detailsLabel: "Details (key:value per line)", themeAuto: "Theme: auto", themeDark: "Theme: dark", themeLight: "Theme: light", reviewFirst: "Review the mapped fields, then confirm.",
+    en: {statusNow: "Status", statusNone: "No status", statusChange: "Change status", statusEnd: "End current status", statusActivity: "Activity (optional)", statusCustom: "Custom status", statusSet: "Set custom status", statusForce: "Restart even if this status is already current", statusSame: "This status is already current; its start and title were kept.", statusRequired: "Enter a custom status.", since: "since {at} · {span}", spanMin: "{m} min", spanHour: "{h} h {m} min",
+      stateNames: ["Available", "Busy", "Focus", "Meeting", "Away", "Offline", "Commuting", "Working", "Sleeping"],
+      skip: "Skip to tasks", title: "Desk", reasonToday: "due today", reasonOverdue: "{n} overdue (days)", top: "Top", calendar: "Calendar", planner: "Planner", tasks: "Tasks", captureLabel: "Quick add", capturePlaceholder: "Quick add: title @project !high ^tomorrow", add: "Add", preview: "Preview", confirmCapture: "Confirm capture", editBtn: "Edit", detailsLabel: "Details (key:value per line)", themeAuto: "Theme: auto", themeDark: "Theme: dark", themeLight: "Theme: light", reviewFirst: "Review the mapped fields, then confirm.",
       overdue: "Overdue", dueToday: "Due today", next: "Next actions", allDay: "All day", noEvents: "No events today.", noTasks: "Nothing to do right now.", start: "Start", stop: "Stop",
       markDone: "Mark as done", doneAt: "Completion date and time", completeNow: "Complete now", completeAt: "Complete at selected time", etaMin: "in {n} min", etaHour: "in {h} h {m} min", noNext: "No more events today", week: "Week {n}", dayOfYear: "Day {n}", loading: "Loading…",
       captured: "Added.", saved: "Updated.", readonly: "Read-only: changes are disabled.", error: "Could not load: ", conflict: "Data changed. Reload and try again.", noRevision: "Could not obtain a write revision. Reload and try again.", requestFailed: "Request failed", due: "due {d}",
       modeDay: "Today", modeWeek: "7 days", modeMonth: "Month", save: "Save", evTitle: "Title", evDate: "Date", evStart: "Start", evEnd: "End", badRange: "End must be after start.", requiredFields: "Enter a title, date, and time.", requiredTitle: "Enter a title.", requiredDate: "Choose a date.", dueDate: "Due date", changeDue: "Change due", openInPlanner: "Open in Planner", details: "Details", close: "Close", type: "Type", statusLabel: "Status", when: "When", openDetails: "Show details: "},
-    ja: {skip: "タスクへ移動", title: "Desk", reasonToday: "今日が期限", reasonOverdue: "{n}日超過", top: "トップ", calendar: "カレンダー", planner: "Planner", tasks: "タスク", captureLabel: "クイック追加", capturePlaceholder: "クイック追加: タイトル @project !高 ^明日", add: "追加", preview: "プレビュー", confirmCapture: "追加を確定", editBtn: "編集", detailsLabel: "詳細 (1行に key:value)", themeAuto: "テーマ: 自動", themeDark: "テーマ: ダーク", themeLight: "テーマ: ライト", reviewFirst: "変換結果を確認して確定してください。",
+    ja: {statusNow: "状態", statusNone: "現在設定なし", statusChange: "状態を切り替える", statusEnd: "現在の状態を終了", statusActivity: "活動名（任意）", statusCustom: "カスタム状態", statusSet: "カスタム状態を設定", statusForce: "同じ状態でも再開始する", statusSame: "すでに同じ状態です。開始時刻とタイトルは維持しました。", statusRequired: "カスタム状態を入力してください。", since: "{at} から · {span}", spanMin: "{m}分", spanHour: "{h}時間{m}分",
+      stateNames: ["対応可能", "取り込み中", "集中", "会議中", "離席中", "オフライン", "移動中", "作業中", "睡眠中"],
+      skip: "タスクへ移動", title: "Desk", reasonToday: "今日が期限", reasonOverdue: "{n}日超過", top: "トップ", calendar: "カレンダー", planner: "Planner", tasks: "タスク", captureLabel: "クイック追加", capturePlaceholder: "クイック追加: タイトル @project !高 ^明日", add: "追加", preview: "プレビュー", confirmCapture: "追加を確定", editBtn: "編集", detailsLabel: "詳細 (1行に key:value)", themeAuto: "テーマ: 自動", themeDark: "テーマ: ダーク", themeLight: "テーマ: ライト", reviewFirst: "変換結果を確認して確定してください。",
       overdue: "期限超過", dueToday: "今日", next: "次の一手", allDay: "終日", noEvents: "今日の予定はありません。", noTasks: "今やることはありません。", start: "開始", stop: "停止",
       markDone: "完了にする", doneAt: "完了日時", completeNow: "今すぐ完了", completeAt: "指定した日時で完了", etaMin: "あと {n}分", etaHour: "あと {h}時間{m}分", noNext: "今日の予定はもうありません", week: "第{n}週", dayOfYear: "年内 {n}日目", loading: "読み込み中…",
       captured: "追加しました。", saved: "更新しました。", readonly: "読み取り専用のため変更できません。", error: "読み込めませんでした: ", conflict: "データが更新されています。再読み込みしてやり直してください。", noRevision: "更新用リビジョンを取得できません。再読み込みしてください。", requestFailed: "リクエストに失敗しました", due: "期限 {d}",
@@ -273,6 +277,7 @@
     nowIso = isoDay(d) + "T" + hhmm(d);
     if (today && isoDay(d) !== today) syncConfig().then(load);
     updateNext(d);
+    renderElapsed(d);
     const n = $("now-line");
     if (n) n.firstChild.textContent = hhmm(d);
   }
@@ -406,7 +411,7 @@
   async function mutate(action) {
     if (pending) return;
     pending = true;
-    try { await action(); say(t.saved); pending = false; await load(); } catch (e) { say(e.message); } finally { pending = false; }
+    try { const message = await action(); say(typeof message === "string" ? message : t.saved); pending = false; await load(); } catch (e) { say(e.message); } finally { pending = false; }
   }
   const putBody = (i, status) => JSON.stringify({status, type: i.type, title: i.title, details: i.details || {}});
   const nowStamp = () => {
@@ -506,11 +511,76 @@
     section(box, "info", t.next, nxt, false);
     box.scrollTop = keep;
   }
-  function renderStatus(day) {
-    const s = Array.isArray(day.now) && day.now[0], pill = $("status-pill");
-    pill.hidden = !s;
-    pill.textContent = s ? "● " + (s.state || s.status || "") : "";
-    $("status-title").textContent = s ? (s.title || s.activity || "") : "";
+  // ---- Status: the current person's presence ----
+  const STATES = ["available", "busy", "focus", "meeting", "away", "offline", "commuting", "working", "sleeping"];
+  const stateLabel = s => t.stateNames[STATES.indexOf(s)] || String(s || "");
+  let currentStatus = null, statusRevision = null;
+  function renderStatus(data) {
+    statusRevision = recordRevisions.get(data) || null;
+    currentStatus = (data.records || []).find(r => r.active && !r.to) || null;
+    $("status-state").textContent = currentStatus ? stateLabel(currentStatus.state) : t.statusNone;
+    $("status-state").className = "pill " + (currentStatus ? "pill-ok" : "pill-info");
+    $("status-title").textContent = currentStatus?.title || "";
+    $("status-card").disabled = !writable;
+    renderElapsed(wallNow());
+  }
+  function renderElapsed(d) {
+    const from = String(currentStatus?.from || "");
+    // Timestamps without an offset are workspace wall-clock time, like wallNow().
+    const zoned = /(Z|[+-]\d\d:\d\d)$/.test(from);
+    const started = Date.parse(zoned || !from.includes("T") ? from : from + "Z");
+    const now = zoned ? (clock ? clock.epoch + performance.now() - clock.received : Date.now()) : d.getTime();
+    const minutes = Math.floor((now - started) / 60000);
+    if (!from.includes("T") || !(minutes >= 0)) { $("status-since").textContent = ""; return; }
+    const at = from.slice(0, 10) === isoDay(d) ? from.slice(11, 16) : from.slice(5, 16).replace("T", " ");
+    const span = minutes < 60 ? fmt(t.spanMin, {m: minutes}) : fmt(t.spanHour, {h: Math.floor(minutes / 60), m: minutes % 60});
+    $("status-since").textContent = fmt(t.since, {at, span});
+  }
+  function showStatusDialog() {
+    if (pending || !writable) return;
+    // The revision of the status shown when the dialog opened; never upgraded.
+    const expected = statusRevision, current = currentStatus;
+    const activity = detailInput("detail-activity", "text", current?.title || "");
+    const custom = detailInput("detail-custom-state", "text", current && !STATES.includes(current.state) ? current.state : "");
+    const force = detailInput("detail-force", "checkbox", "on");
+    const forceRow = detailField(t.statusForce, force);
+    forceRow.classList.add("check");
+    const send = body => {
+      if (pending) return;
+      $("detail-dialog").close();
+      mutate(async () => {
+        try {
+          const result = await api("/api/status", {expectedRevision: expected, method: "POST",
+            headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
+          return result.unchanged ? t.statusSame : t.saved;
+        } catch (e) { load(); throw e; }
+      });
+    };
+    const choose = state => send(Object.assign({state, title: activity.value.trim()}, force.checked ? {force: true} : {}));
+    const button = (label, action) => {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "go"; b.textContent = label; b.onclick = action;
+      return b;
+    };
+    const tiles = document.createElement("div");
+    tiles.className = "state-tiles";
+    for (const state of STATES) {
+      const b = button(stateLabel(state), () => choose(state));
+      b.setAttribute("aria-pressed", String(current?.state === state));
+      tiles.append(b);
+    }
+    $("detail-heading").textContent = t.statusChange;
+    $("detail-content").replaceChildren(detailField(t.statusActivity, activity), tiles, detailField(t.statusCustom, custom), forceRow);
+    const actions = [button(t.statusSet, () => {
+      if (!custom.value.trim()) { showDetailError(t.statusRequired); return; }
+      choose(custom.value.trim());
+    })];
+    if (current) actions.push(button(t.statusEnd, () => send({end: true})));
+    $("detail-actions").replaceChildren(...actions);
+    $("detail-error").textContent = "";
+    $("detail-dialog").showModal();
+    $("detail-content").parentElement.scrollTop = 0;
+    $("detail-close").focus();
   }
 
   function addDays(iso, n) {
@@ -521,15 +591,16 @@
   async function load() {
     const mine = ++generation;
     try {
-      const [day, agenda, list, elist] = await Promise.all([
+      const [day, agenda, list, elist, status] = await Promise.all([
         api("/api/command-center?date=" + today), api("/api/agenda?from=" + (mode === "month" ? monthRange().from : today) + "&to=" + (mode === "week" ? addDays(today, 6) : mode === "month" ? monthRange().to : today)),
-        api("/api/items?type=T&open_only=true"), api("/api/items?type=E")]);
+        api("/api/items?type=T&open_only=true"), api("/api/items?type=E"),
+        api("/api/status?person=self&active=true")]);
       if (mine !== generation) return;
       items = list.items || [];
       eventItems = elist.items || [];
       events = buildEvents(agenda.records || []);
       weekEvents = mode !== "day" ? buildWeek(agenda.records || []) : [];
-      renderStatus(day); renderTimeline(); renderTasks(day); updateNext(wallNow());
+      renderStatus(status); renderTimeline(); renderTasks(day); updateNext(wallNow());
       $("open-top").href = "/" + (lang === "ja" ? "?lang=ja" : "");
       $("open-planner").href = "/planner?date=" + today + (lang === "ja" ? "&lang=ja" : "");
     } catch (e) { if (mine === generation) say(t.error + e.message); }
@@ -626,6 +697,7 @@
     $("capture-form").onsubmit = capture;
     $("capture-text").oninput = livePreview; $("capture-syntax").onchange = livePreview;
     initTheme();
+    $("status-card").onclick = showStatusDialog;
     $("mode-day").onclick = () => setMode("day");
     $("mode-week").onclick = () => setMode("week");
     $("mode-month").onclick = () => setMode("month");

@@ -31,6 +31,10 @@ const REFERENCE_KEYS = [
     'duplicate_of', 'replaced_by', 'follows', 'realizes',
 ];
 const OPEN_STATUSES = new Set(['[ ]', '[/]', '[>]', '[?]']);
+const STATUS_STATES = new Set([
+    'available', 'busy', 'away', 'offline', 'dnd', 'focus', 'sleeping',
+    'commuting', 'working', 'studying', 'meeting', 'custom',
+]);
 const SIMPLE_REPEATS = new Set(['daily', 'weekly', 'monthly', 'yearly', 'weekdays']);
 const RRULE_FREQUENCIES = new Set(['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY']);
 const RRULE_PARTS = new Set(['FREQ', 'INTERVAL', 'COUNT', 'UNTIL', 'BYDAY', 'BYMONTHDAY', 'BYMONTH', 'WKST']);
@@ -208,6 +212,25 @@ function validateEventRange(item, report) {
     }
 }
 
+function validateStatusItem(item, report) {
+    const details = new Map(item.details);
+    const start = details.get('from');
+    const end = details.get('to');
+    if (!start) report('error', 'status-missing-from', item.line, 'from');
+    for (const value of start ?? []) {
+        if (!isDateTime(value)) report('error', 'status-invalid-from', item.line, 'from');
+    }
+    if (!details.has('state')) report('error', 'status-missing-state', item.line, 'state');
+    for (const value of end ?? []) {
+        if (!isDateTime(value)) report('error', 'status-invalid-to', item.line, 'to');
+    }
+    if (end && item.status !== '[x]') {
+        report('warning', 'status-closed-marker', item.line, 'to');
+    } else if (!end && item.status !== '[/]') {
+        report('warning', 'status-open-marker', item.line, 'to');
+    }
+}
+
 function validateItemDetails(item, report) {
     let hasTypeError = false;
     for (const [key, values] of item.details) {
@@ -238,6 +261,9 @@ function validateItemDetails(item, report) {
         } else if (key === 'id') {
             code = 'invalid-id';
             accepts = value => ID_VALUE.test(value);
+        } else if (key === 'state') {
+            code = 'unknown-state';
+            accepts = value => STATUS_STATES.has(value);
         } else if (REFERENCE_KEYS.includes(key)) {
             code = 'invalid-reference-id';
             accepts = value => ID_VALUE.test(value);
@@ -255,6 +281,7 @@ function validateItemDetails(item, report) {
         }
     }
     if (item.type === 'E' && !hasTypeError) validateEventRange(item, report);
+    if (item.type === 'S' && !hasTypeError) validateStatusItem(item, report);
 }
 
 function indexIds(items, report) {

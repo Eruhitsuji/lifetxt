@@ -47,6 +47,10 @@ than the start, using the first value of each key. Datetimes with UTC offsets
 are converted to the runtime's local wall clock before comparison, as in
 Python Core. An event with an earlier end gets a warning.
 
+Status items (`S`) require `from:` and `state:`. The checker validates
+the status datetimes and recommends `[/]` for an ongoing status or `[x]`
+when `to:` is present. Unknown `state:` values produce a warning.
+
 Recurrence checks cover `repeat:daily`, `weekly`, `monthly`, `yearly`, and
 `weekdays`, as well as positive `interval:` and `count:` values. The checked
 `RRULE:` subset is `FREQ`, `INTERVAL`, `COUNT`, `UNTIL`, `BYDAY`,

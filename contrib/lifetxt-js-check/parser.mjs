@@ -5,7 +5,7 @@
 
 export const MAX_BYTES = 16_384;
 export const MAX_FILES = 64;
-const MAX_DIAGNOSTICS = 100;
+export const MAX_DIAGNOSTICS = 100;
 const ITEM_START = /^( *)\[([ /x>N?-])\] +([TEDRHNSMJ]) +/;
 const NEXT_RECORD = /^ *(?:\[[ /x>N?-]\] |[#|])/;
 const DIRECTIVE = /^#!\s+([A-Za-z_][A-Za-z0-9_]*):\s*(.*?)\s*$/;

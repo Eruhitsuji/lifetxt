@@ -778,7 +778,7 @@ def parse_js(inputs):
             "-e",
             "import {readFileSync} from 'node:fs';"
             "import {parse} from './contrib/lifetxt-js-check/parser.mjs';"
-            "console.log(JSON.stringify(JSON.parse(readFileSync(0, 'utf8')).map(parse)));",
+            "console.log(JSON.stringify(JSON.parse(readFileSync(0, 'utf8')).map(text => parse(text))));",
         ],
         input=json.dumps(inputs),
         stdout=subprocess.PIPE,
@@ -838,6 +838,61 @@ class CoreComparisonTests(unittest.TestCase):
             self.assertEqual(invalid.returncode, 2)
             self.assertEqual(invalid.stdout, "")
             self.assertIn(json.dumps(paths[1]), invalid.stderr)
+
+    def test_cli_configured_id_key_matches_core(self):
+        checker = Path("contrib/lifetxt-js-check/check.mjs").resolve()
+        with TemporaryDirectory() as directory:
+            config = Path(directory) / "config.json"
+            first = Path(directory) / "first.txt"
+            second = Path(directory) / "second.txt"
+            first.write_text(
+                "[x] T Parent uid:root id:p done:2026-11-01\n"
+                "  [ ] T Child uid:child\n[ ] T Dup uid:dup\n",
+                encoding="utf-8",
+            )
+            second.write_text(
+                "[ ] T Lookup uid:lookup id:p ref:child requires:root=done\n"
+                "[ ] T Dup uid:dup\n",
+                encoding="utf-8",
+            )
+            paths = [str(first), str(second)]
+            options = ["--config", str(config)]
+            for settings in (
+                {"ids": {"key": "uid"}, "api": {"id_key": "source"}},
+                {"ids": {"key": ""}, "api": {"id_key": "uid"}},
+            ):
+                with self.subTest(config=settings):
+                    config.write_text(json.dumps(settings), encoding="utf-8-sig")
+                    core = subprocess.run(
+                        [sys.executable, "-m", "lifetxt", *options,
+                         "check", "--no-files", "--format", "json", *paths],
+                        capture_output=True, encoding="utf-8", check=True,
+                    )
+                    rows = json.loads(core.stdout)
+                    self.assertEqual(
+                        [(row["severity"], row["code"], row["line"]) for row in rows],
+                        [("warning", "W213", 2), ("warning", "W225", 1)],
+                    )
+                    js = subprocess.run(
+                        ["node", checker, *options, *paths],
+                        capture_output=True, encoding="utf-8", check=True,
+                    )
+                    self.assertEqual(js.stderr, "")
+                    self.assertEqual(js.stdout.splitlines()[:2], [
+                        f'{json.dumps(paths[1])}: line 2: warning duplicate-id (uid:) "dup", '
+                        f'first seen at {json.dumps(paths[0])}: line 3',
+                        f'{json.dumps(paths[0])}: line 1: warning closed-parent-with-open-children '
+                        '(uid:) "root", 1 open child item(s)',
+                    ])
+                    self.assertEqual(len(js.stdout.splitlines()), 3)
+
+            config.write_text("[]", encoding="utf-8")
+            invalid = subprocess.run(
+                ["node", checker, *options, *paths], capture_output=True, encoding="utf-8",
+            )
+            self.assertEqual(invalid.returncode, 2)
+            self.assertEqual(invalid.stdout, "")
+            self.assertIn("Expected a JSON object", invalid.stderr)
 
     def test_event_ranges_use_core_local_wall_clock(self):
         # The same input has different ordering in UTC and during the New York

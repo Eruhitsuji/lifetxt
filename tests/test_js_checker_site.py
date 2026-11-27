@@ -105,6 +105,7 @@ class JSCheckerSiteTests(unittest.TestCase):
                     expect(page.locator("#check")).to_be_disabled()
                     expect(page.locator("#load-sample")).to_be_disabled()
                     expect(page.locator("#files")).to_be_disabled()
+                    expect(page.locator("#checker-config")).to_be_disabled()
                     context.close()
                     browser.close()
             finally:
@@ -368,6 +369,48 @@ class JSCheckerSiteTests(unittest.TestCase):
             expect(status).to_contain_text("64")
             expect(output).to_be_empty()
 
+            clear_files.click()
+            page.locator("#checker-settings summary").click()
+            config = page.locator("#checker-config")
+            clear_config = page.locator("#clear-config")
+            expect(clear_config).to_be_disabled()
+            text.fill("[ ] T Target uid:a\n[ ] T Lookup ref:a")
+            button.click()
+            expect(output).to_contain_text("missing-reference")
+            config.set_input_files({
+                "name": "settings.json", "mimeType": "application/json",
+                "buffer": b'\xef\xbb\xbf{"ids":{"key":"uid"},"api":{"id_key":"source"}}',
+            })
+            button.click()
+            expect(status).to_contain_text("見つかりません" if lang == "ja" else "No errors found")
+            expect(output).to_be_empty()
+            files.set_input_files([
+                {"name": "target.txt", "mimeType": "text/plain", "buffer": b"[ ] T Target uid:a"},
+                {"name": "lookup.txt", "mimeType": "text/plain", "buffer": b"[ ] T Lookup ref:a"},
+            ])
+            button.click()
+            expect(status).to_contain_text("見つかりません" if lang == "ja" else "No errors found")
+            expect(output).to_be_empty()
+            clear_config.click()
+            button.click()
+            expect(output).to_contain_text("missing-reference")
+            clear_files.click()
+            for payload, message in (
+                (b'{"ids":{"key":5}}', "無効" if lang == "ja" else "invalid configuration"),
+                (b"invalid", "無効" if lang == "ja" else "invalid configuration"),
+                (b"\xff", "UTF-8"),
+                (b" " * 16_385, "16 KiB"),
+            ):
+                config.set_input_files({
+                    "name": "bad-settings.json", "mimeType": "application/json", "buffer": payload,
+                })
+                button.click()
+                expect(status).to_contain_text("bad-settings.json")
+                expect(status).to_contain_text(message)
+                expect(output).to_be_empty()
+            clear_config.click()
+            text.fill("[ ] T Paste-survives")
+
             # Hold a file read open until the selection is cleared.
             page.evaluate("""() => {
                 const read = File.prototype.arrayBuffer;
@@ -386,6 +429,17 @@ class JSCheckerSiteTests(unittest.TestCase):
             expect(output).to_be_empty()
             expect(button).to_be_enabled()
             expect(text).to_have_value("[ ] T Paste-survives")
+            config.set_input_files({
+                "name": "stale-settings.json", "mimeType": "application/json", "buffer": b"invalid",
+            })
+            button.click()
+            expect(button).to_be_disabled()
+            text.fill("[ ] T Edited")
+            page.evaluate("window.finishFileRead()")
+            expect(status).to_be_empty()
+            expect(output).to_be_empty()
+            expect(button).to_be_enabled()
+            clear_config.click()
             self.assertEqual(
                 page.evaluate("[localStorage.length, sessionStorage.length]"), [0, 0]
             )

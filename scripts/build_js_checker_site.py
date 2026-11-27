@@ -47,6 +47,10 @@ COPY = {
         "life.txt ファイル",
         "選択を解除",
         "最大64ファイル。選択中はファイルを検査します。貼り付けに戻るには選択を解除してください。",
+        "チェッカー設定",
+        "設定JSON（任意）",
+        "設定を解除",
+        "UTF-8のJSONを1ファイル（16 KiBまで）。貼り付け本文と選択ファイルの検査に、ids.key または api.id_key を適用します。",
     ),
     "en": (
         "Syntax check",
@@ -74,6 +78,10 @@ COPY = {
         "life.txt files",
         "Clear file selection",
         "Select up to 64 files to check together. Clear the selection to return to pasted text.",
+        "Checker settings",
+        "JSON configuration (optional)",
+        "Clear configuration",
+        "Choose one UTF-8 JSON file up to 16 KiB. Applies ids.key or api.id_key to pasted text and selected files.",
     ),
 }
 
@@ -82,7 +90,7 @@ def render(lang: str, base: str) -> str:
     (
         title, home, scope, excluded, limits, label, button, load, hint, guide, noscript,
         lesson, exercise, state_help, type_help, title_help, due_help, coverage, reference,
-        files_label, clear_files, files_hint,
+        files_label, clear_files, files_hint, settings, config_label, clear_config, config_hint,
     ) = map(escape, COPY[lang])
     example = (ROOT / "website/example.txt").read_text(encoding="utf-8")
     sample = escape(example)
@@ -125,6 +133,13 @@ def render(lang: str, base: str) -> str:
 <input id="files" type="file" multiple disabled aria-describedby="files-hint limits"></p>
 <button class="button" id="clear-files" type="button" disabled>{clear_files}</button>
 <p id="files-hint">{files_hint}</p>
+<details id="checker-settings">
+<summary>{settings}</summary>
+<p><label for="checker-config">{config_label}</label>
+<input id="checker-config" type="file" accept=".json,application/json" disabled aria-describedby="config-hint limits"></p>
+<button class="button" id="clear-config" type="button" disabled>{clear_config}</button>
+<p id="config-hint">{config_hint}</p>
+</details>
 <p id="status" role="status"></p>
 <pre id="output" tabindex="0" aria-label="{title}"></pre>
 <noscript><p>{noscript}</p></noscript>

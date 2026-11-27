@@ -351,7 +351,7 @@ const PROGRESS_EVENT_FIELDS = [
     'source_revision', 'operation', 'after_progress',
 ];
 
-function progressTimestamp(value) {
+function normalizedEventTimestamp(value) {
     if (typeof value !== 'string') return null;
     const text = value.trim().replace(' ', 'T');
     if (!isDateTime(text) || !/(?:Z|[+-]\d{2}:?\d{2})$/.test(text)) return null;
@@ -359,6 +359,16 @@ function progressTimestamp(value) {
     if (!Number.isFinite(epoch)) return null;
     const utc = new Date(epoch).toISOString();
     return utc.length === 24 && !utc.startsWith('0000') ? utc.replace('.000Z', 'Z') : null;
+}
+
+function eventSequence(value) {
+    const text = String(value).trim();
+    return /^[+-]?\d(?:_?\d)*$/.test(text) ? BigInt(text.replaceAll('_', '')) : 0n;
+}
+
+function historyEventId(prefix, parent, sequence) {
+    const safeParent = String(parent).replace(/[^A-Za-z0-9_.-]+/g, '-').replace(/^-+|-+$/g, '') || 'item';
+    return prefix + '-' + safeParent + '-' + String(sequence).padStart(6, '0');
 }
 
 function reportProgressHistory(items, report) {
@@ -392,12 +402,9 @@ function reportProgressHistory(items, report) {
 
         const parent = first('parent');
         if (parent && parents.get(parent)?.length !== 1) warn('progress-event-parent', 'parent');
-        const timestamp = progressTimestamp(first('at'));
+        const timestamp = normalizedEventTimestamp(first('at'));
         if (timestamp === null || timestamp !== first('at')) warn('progress-event-timestamp', 'at');
-        const rawSequence = first('sequence');
-        const sequenceText = typeof rawSequence === 'string' ? rawSequence.trim() : String(rawSequence);
-        const sequence = /^[+-]?\d(?:_?\d)*$/.test(sequenceText) ?
-            BigInt(sequenceText.replaceAll('_', '')) : 0n;
+        const sequence = eventSequence(first('sequence'));
         if (sequence <= 0n) warn('progress-event-sequence', 'sequence');
         const revision = first('source_revision');
         if (revision && !/^[0-9a-f]{64}\n?$/.test(revision)) warn('progress-event-revision', 'source_revision');
@@ -435,8 +442,7 @@ function reportProgressHistory(items, report) {
         if (history.sequences.has(sequence)) warn('progress-event-duplicate', 'sequence');
         history.sequences.add(sequence);
         history.rows.push({ line: item.line, timestamp, sequence, before, after });
-        const safeParent = String(parent).replace(/[^A-Za-z0-9_.-]+/g, '-').replace(/^-+|-+$/g, '') || 'item';
-        const expectedId = 'PE-' + safeParent + '-' + String(sequence).padStart(6, '0');
+        const expectedId = historyEventId('PE', parent, sequence);
         if (id && id !== expectedId) warn('progress-event-id-mismatch', 'id');
     }
 
@@ -460,6 +466,154 @@ function reportProgressHistory(items, report) {
         if (latest.after.length && matches?.length === 1 &&
             matches[0].get('progress')?.[0] !== latest.after[0]) {
             report('warning', 'progress-history-current-mismatch', latest.line, 'progress');
+        }
+    }
+}
+
+const ITEM_EVENT_FIELDS = ['record', 'id', 'parent', 'event', 'at', 'sequence', 'transaction', 'source_revision'];
+const ITEM_EVENT_OPTIONAL = ['actor', 'source', 'remote_operation', 'remote_request_hash'];
+const STATUS_CHANGE_EVENTS = new Set(['status_changed', 'completed', 'reopened', 'canceled']);
+const ITEM_EVENT_PAYLOAD = new Map([
+    ['created', ['item_kind', 'item_title', 'after_status']],
+    ['edited', ['item_kind', 'item_title', 'after_status']],
+    ['deleted', ['item_kind', 'item_title', 'before_status']],
+    ...Array.from(STATUS_CHANGE_EVENTS, type => [type, ['before_status', 'after_status']]),
+    ['relation_added', ['relation', 'target']],
+    ['relation_removed', ['relation', 'target']],
+    ['schedule_changed', ['field']],
+]);
+
+function validateItemEvent(details, type, sequence, warn) {
+    const values = key => details.get(key) ?? [];
+    const first = key => values(key)[0];
+    const warnFields = (code, fields) => {
+        if (fields.length) warn(code, 'record', fields.join(', '));
+    };
+    warnFields('item-event-missing', ITEM_EVENT_FIELDS.filter(key => !values(key).length));
+    warnFields('item-event-cardinality', ITEM_EVENT_FIELDS.filter(key => values(key).length !== 1));
+
+    const payload = ITEM_EVENT_PAYLOAD.get(type);
+    if (type && !payload) warn('item-event-type', 'event');
+    const allowed = new Set([...ITEM_EVENT_FIELDS, ...ITEM_EVENT_OPTIONAL, ...(payload ?? [])]);
+    if (type === 'completed') allowed.add('completed_at');
+    if (type === 'schedule_changed') {
+        for (const key of ['before', 'after', 'before_missing', 'after_missing']) allowed.add(key);
+    }
+    if (payload) warnFields('item-event-payload', payload.filter(key => values(key).length !== 1));
+    warnFields('item-event-unknown-field', [...details.keys()].filter(key => !allowed.has(key)).sort());
+    warnFields('item-event-repeated', [...allowed].filter(key => values(key).length > 1).sort());
+
+    const timestamp = normalizedEventTimestamp(first('at'));
+    if (!timestamp || timestamp !== first('at')) warn('item-event-timestamp', 'at');
+    if (sequence <= 0n) warn('item-event-sequence', 'sequence');
+    if (first('source_revision') && !/^[0-9a-f]{64}\n?$/.test(first('source_revision'))) {
+        warn('item-event-revision', 'source_revision');
+    }
+    if (type === 'relation_added' || type === 'relation_removed') {
+        const relation = first('relation');
+        if (relation && !['follows', 'realizes', 'replaced_by'].includes(relation)) {
+            warn('item-event-field', 'relation');
+        }
+    }
+    if (type === 'schedule_changed') {
+        const field = first('field');
+        if (field && !['on', 'due', 'from', 'to', 'at'].includes(field)) warn('item-event-field', 'field');
+        for (const side of ['before', 'after']) {
+            const flags = values(side + '_missing');
+            const validMissing = flags.length === 1 && flags[0] === 'true';
+            if ((values(side).length === 1) === validMissing || (flags.length && !validMissing)) {
+                warn('item-event-schedule-value', side);
+            }
+        }
+    }
+    if (STATUS_CHANGE_EVENTS.has(type) && first('before_status') &&
+        first('before_status') === first('after_status')) warn('item-event-unchanged-status', 'after_status');
+}
+
+function itemEventDateTime(value) {
+    if (typeof value !== 'string') return null;
+    const text = value.trim().replace(' ', 'T');
+    if (isDate(text)) return text + 'T00:00';
+    return isDateTime(text) ? text : null;
+}
+
+function reportItemEventHistory(items, report) {
+    const parents = new Map();
+    const events = [];
+    for (const item of items) {
+        const details = new Map(item.details);
+        if (item.type === 'N' && details.get('record')?.includes('item_event')) {
+            events.push({ item, details });
+            continue;
+        }
+        for (const value of details.get('id') ?? []) {
+            if (typeof value !== 'string') continue;
+            const matches = parents.get(value) ?? [];
+            matches.push(item);
+            parents.set(value, matches);
+        }
+    }
+
+    const ids = new Set();
+    const transactions = new Set();
+    const histories = new Map();
+    for (const { item, details } of events) {
+        const first = key => details.get(key)?.[0];
+        const warn = (code, key, part) => report('warning', code, item.line, key, part ? { part } : undefined);
+        const sequence = eventSequence(first('sequence'));
+        const type = first('event');
+        validateItemEvent(details, type, sequence, warn);
+        const parent = first('parent');
+        if (parent && parents.get(parent)?.length !== 1) warn('item-event-parent', 'parent');
+        const id = first('id');
+        for (const [key, value, seen] of [['id', id, ids], ['transaction', first('transaction'), transactions]]) {
+            if (!value) continue;
+            if (seen.has(value)) warn('item-event-duplicate', key);
+            seen.add(value);
+        }
+        if (!parent || sequence <= 0n) continue;
+        let history = histories.get(parent);
+        if (!history) {
+            history = { sequences: new Set(), rows: [] };
+            histories.set(parent, history);
+        }
+        if (history.sequences.has(sequence)) warn('item-event-duplicate', 'sequence');
+        history.sequences.add(sequence);
+        if (id && id !== historyEventId('IE', parent, sequence)) warn('item-event-id-mismatch', 'id');
+        history.rows.push({
+            line: item.line, sequence, type, at: itemEventDateTime(first('at')),
+            before: first('before_status') ?? '', after: first('after_status') ?? '',
+        });
+    }
+
+    for (const [parent, { sequences, rows }] of histories) {
+        rows.sort((a, b) => a.sequence < b.sequence ? -1 : Number(a.sequence > b.sequence));
+        const earliest = rows[0];
+        const latest = rows.at(-1);
+        const start = earliest.type === 'created' ? 1n : earliest.sequence;
+        if (latest.sequence - start + 1n !== BigInt(sequences.size)) {
+            report('warning', 'item-history-gap', latest.line, 'sequence');
+        }
+        let previousStatus;
+        let previousAt;
+        for (const event of rows) {
+            if (isReversedRange(previousAt, event.at)) report('warning', 'item-history-time-order', event.line, 'at');
+            if (event.at) previousAt = event.at;
+            if (event.type === 'created') {
+                if (event !== earliest || event.sequence !== 1n) {
+                    report('warning', 'item-history-creation-order', event.line, 'sequence');
+                }
+                previousStatus = event.after;
+            } else if (STATUS_CHANGE_EVENTS.has(event.type)) {
+                if (previousStatus !== undefined && previousStatus !== event.before) {
+                    report('warning', 'item-history-discontinuous', event.line, 'before_status');
+                }
+                previousStatus = event.after;
+            }
+        }
+        const matches = parents.get(parent);
+        if (matches?.length === 1 && previousStatus !== undefined && matches[0].status !== previousStatus) {
+            report('warning', 'item-history-current-mismatch', latest.line, 'after_status');
         }
     }
 }
@@ -961,5 +1115,6 @@ export function parse(text) {
     reportReferences(result.items, idIndex, report);
     reportClosedParents(result.items, report);
     reportProgressHistory(result.items, report);
+    reportItemEventHistory(result.items, report);
     return result;
 }

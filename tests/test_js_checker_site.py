@@ -251,6 +251,12 @@ class JSCheckerSiteTests(unittest.TestCase):
             expect(output).to_contain_text("invalid-progress")
             expect(output).to_contain_text("progress-event-missing")
             expect(output).to_contain_text("progress-event-timestamp")
+            text.fill("[ ] T Work id:work\n"
+                      "[N] N Event record:item_event parent:work event:completed")
+            button.click()
+            expect(output).to_contain_text("item-event-missing")
+            expect(output).to_contain_text("item-event-payload")
+            expect(output).to_contain_text("item-event-timestamp")
             text.fill('[ ] T "unfinished')
             expect(status).to_be_empty()
             expect(output).to_be_empty()

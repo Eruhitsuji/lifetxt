@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { parse } from './parser.mjs';
+import { parse, parseDocuments } from './parser.mjs';
 
 test('recognizes every Format 1 status and type', () => {
     for (const status of ['[ ]', '[/]', '[x]', '[-]', '[>]', '[?]', '[N]']) {
@@ -510,5 +510,33 @@ test('enforces UTF-8 size and tracks errors beyond the display cap', () => {
     const result = parse(('[ ] T "\\q"\n').repeat(101) + 'bad');
     assert.equal(result.diagnostics.length, 100);
     assert.equal(result.diagnosticCount, 102);
+    assert.equal(result.hasErrors, true);
+});
+
+test('keeps independent document boundaries while resolving shared references', () => {
+    const result = parseDocuments([
+        { source: 'first', text: '[ ] T Root id:root\n  [ ] T Child id:child' },
+        { source: 'second', text: '| orphan\n  [ ] T Next ref:child' },
+        { source: 'third', text: '#! format_version: 2\n[ ] T Ignored' },
+    ]);
+    assert.deepEqual(result.items.map(({ source, line }) => [source, line]), [
+        ['first', 1], ['first', 2], ['second', 2],
+    ]);
+    assert.deepEqual(result.diagnostics, [
+        { severity: 'error', code: 'orphan-body', source: 'second', line: 1 },
+        { severity: 'warning', code: 'indent-no-parent', source: 'second', line: 2 },
+        { severity: 'unsupported', code: 'unsupported-format', source: 'third', line: 1 },
+    ]);
+    assert.equal(result.hasErrors, true);
+    assert.equal(result.incomplete, true);
+});
+
+test('shares the diagnostic cap and tracks errors from later documents', () => {
+    const result = parseDocuments([
+        { source: 'warnings', text: '[ ] T Example custom:x\n'.repeat(100) },
+        { source: 'error', text: '| orphan' },
+    ]);
+    assert.equal(result.diagnostics.length, 100);
+    assert.equal(result.diagnosticCount, 101);
     assert.equal(result.hasErrors, true);
 });

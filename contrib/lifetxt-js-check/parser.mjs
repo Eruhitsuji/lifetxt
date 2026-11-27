@@ -1,4 +1,4 @@
-/** @typedef {{severity: 'error'|'warning'|'unsupported', code: string, line: number, key?: string, part?: string, firstLine?: number, value?: string, path?: string[], childCount?: number}} Diagnostic */
+/** @typedef {{severity: 'error'|'warning'|'unsupported', code: string, line: number, key?: string, part?: string, firstLine?: number, source?: string, firstSource?: string, value?: string, path?: string[], childCount?: number}} Diagnostic */
 /** @typedef {null|boolean|number|string|JsonValue[]|{[key: string]: JsonValue}} JsonValue */
 /** @typedef {{line: number, indent: number, status: string, type: string, title: string, details: [string, JsonValue[]][]}} Item */
 /** @typedef {{items: Item[], diagnostics: Diagnostic[], diagnosticCount: number, hasErrors: boolean, incomplete: boolean}} ParseResult */
@@ -1098,12 +1098,7 @@ function inferParent(item, ancestor, report) {
     }
 }
 
-/** Check supported Format 1 syntax, hierarchy and selected field values.
- * @param {string} text
- * @returns {ParseResult}
- */
-export function parse(text) {
-    if (typeof text !== 'string') throw new TypeError('Expected text');
+function collectDiagnostics() {
     /** @type {ParseResult} */
     const result = {
         items: [], diagnostics: [], diagnosticCount: 0, hasErrors: false, incomplete: false,
@@ -1118,10 +1113,16 @@ export function parse(text) {
             result.diagnostics.push(diagnostic);
         }
     }
+    return { result, report };
+}
 
+function parseDocument(text, report) {
+    if (typeof text !== 'string') throw new TypeError('Expected text');
+    /** @type {Item[]} */
+    const items = [];
     if (text.length > MAX_BYTES || encoder.encode(text).length > MAX_BYTES) {
         report('error', 'input-too-large', 1);
-        return result;
+        return items;
     }
 
     const lines = text.replace(/^\uFEFF/, '').split(LINE_BREAK);
@@ -1139,7 +1140,7 @@ export function parse(text) {
     }
     if (version !== undefined && version !== '1') {
         report('unsupported', 'unsupported-format', versionLine);
-        return result;
+        return items;
     }
 
     /** @type {Item | null} */
@@ -1187,15 +1188,58 @@ export function parse(text) {
                 }
                 inferParent(previous, ancestors.at(-1), report);
                 ancestors.push(previous);
-                result.items.push(previous);
+                items.push(previous);
             }
         }
     }
     finishItem();
-    const idIndex = indexIds(result.items, report);
-    reportReferences(result.items, idIndex, report);
-    reportClosedParents(result.items, report);
-    reportProgressHistory(result.items, report);
-    reportItemEventHistory(result.items, report);
+    return items;
+}
+
+function checkItemSet(items, report) {
+    const idIndex = indexIds(items, report);
+    reportReferences(items, idIndex, report);
+    reportClosedParents(items, report);
+    reportProgressHistory(items, report);
+    reportItemEventHistory(items, report);
+}
+
+/** Check supported Format 1 syntax, hierarchy and selected field values.
+ * @param {string} text
+ * @returns {ParseResult}
+ */
+export function parse(text) {
+    const { result, report } = collectDiagnostics();
+    result.items = parseDocument(text, report);
+    checkItemSet(result.items, report);
+    return result;
+}
+
+/** Check independent documents with a shared ID and reference index.
+ * @param {{source: string, text: string}[]} documents
+ */
+export function parseDocuments(documents) {
+    const { result, report } = collectDiagnostics();
+    const locations = [];
+    const sharedItems = [];
+    for (const { source, text } of documents) {
+        const items = parseDocument(text, (severity, code, line, key, fields) => {
+            report(severity, code, line, key, { ...fields, source });
+        });
+        for (const item of items) {
+            const locationIndex = locations.length;
+            locations.push({ source, line: item.line });
+            result.items.push({ ...item, source });
+            // The shared passes use a unique location index. Preserve the
+            // original file and physical line for every reported location.
+            sharedItems.push({ ...item, line: locationIndex });
+        }
+    }
+    checkItemSet(sharedItems, (severity, code, locationIndex, key, fields) => {
+        const { source, line } = locations[locationIndex];
+        const first = locations[fields?.firstLine];
+        const original = first ? { firstLine: first.line, firstSource: first.source } : {};
+        report(severity, code, line, key, { ...fields, source, ...original });
+    });
     return result;
 }

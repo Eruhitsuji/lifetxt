@@ -40,6 +40,7 @@ const messages = {
         'missing-reference': value => `ID ${JSON.stringify(value)} が入力内に見つかりません。`,
         'self-reference': value => `ID ${JSON.stringify(value)} はこの項目自身を指しています。`,
         'ambiguous-reference': value => `ID ${JSON.stringify(value)} が複数回使われており、参照先を特定できません。`,
+        'reference-cycle': '参照が循環しています。',
         'duplicate-id': (value, firstLine) => `${JSON.stringify(value)} は ${firstLine}行目で既に使われています。`,
         requires: {
             shape: 'ID=state、または id/state の組、all、any でJSON条件を指定してください。all と any には条件が1つ以上必要です。',
@@ -87,6 +88,7 @@ const messages = {
         'missing-reference': value => `ID ${JSON.stringify(value)} was not found in the input.`,
         'self-reference': value => `ID ${JSON.stringify(value)} refers to this item.`,
         'ambiguous-reference': value => `ID ${JSON.stringify(value)} occurs more than once, so the target is ambiguous.`,
+        'reference-cycle': 'The references form a cycle.',
         'duplicate-id': (value, firstLine) => `${JSON.stringify(value)} first appears on line ${firstLine}.`,
         requires: {
             shape: 'Use ID=state or a JSON condition with id and state, all, or any. An all or any group needs at least one condition.',
@@ -138,12 +140,13 @@ button.addEventListener('click', () => {
     if (result.incomplete) summaries.push(copy.incomplete);
     status.textContent = summaries.length ? summaries.join(' ') : copy.ok;
 
-    const lines = result.diagnostics.map(({ severity, code, line, key, part, firstLine, value }) => {
+    const lines = result.diagnostics.map(({ severity, code, line, key, part, firstLine, value, path }) => {
         const location = lang === 'ja' ? `${line}${copy.line}` : `${copy.line} ${line}`;
         const isRequirement = code === 'invalid-requires';
         const field = key ? `${key}: ${part && !isRequirement ? `[${part}] ` : ''}` : '';
         let message = isRequirement ? copy.requires[part] : copy[code];
         if (typeof message === 'function') message = message(value, firstLine);
+        if (path) message += ` ${path.map(id => JSON.stringify(id)).join(' → ')}`;
         return `${location} · ${copy.labels[severity]} · ${code} · ${field}${message ?? code}`;
     });
     const hidden = result.diagnosticCount - result.diagnostics.length;

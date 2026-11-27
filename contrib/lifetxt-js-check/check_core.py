@@ -36,6 +36,7 @@ JS_CODES = {
     "W214": "invalid-id",
     "W215": "missing-reference",
     "W216": "self-reference",
+    "W217": "reference-cycle",
     "W218": "ambiguous-reference",
     "W219": "expected-positive-integer",
     "W220": "indent-no-parent",
@@ -56,6 +57,7 @@ class Case:
     diagnostic_parts: tuple[str, ...] = ()
     duplicate_ids: tuple[tuple[str, int], ...] = ()
     reference_targets: tuple[str, ...] = ()
+    cycle_paths: tuple[tuple[str, ...], ...] = ()
 
     def expected_js(self):
         if self.js is not None:
@@ -389,6 +391,35 @@ def cases():
             diagnostic_keys=("parent", "id"),
         ),
         Case(
+            "cycles in all supported graphs, including inverse blocks",
+            "[ ] T A id:a parent:b depends_on:b blocks:b duplicate_of:b "
+            "replaced_by:b follows:b realizes:b\n"
+            "[ ] T B id:b parent:a duplicate_of:a replaced_by:a follows:a realizes:a",
+            core=(("warning", "W106", 1, None),) * 4
+                 + (("warning", "W106", 2, None),) * 4
+                 + tuple(("warning", code, 1, None)
+                         for code in ("W217", "W227", "W228", "W229", "W230", "W231")),
+            js=(("warning", "reference-cycle", 1),) * 6,
+            diagnostic_keys=("parent", "depends_on", "duplicate_of", "replaced_by", "follows", "realizes"),
+            cycle_paths=(("a", "b", "a"),) * 6,
+        ),
+        Case(
+            "ambiguous IDs do not form a cycle",
+            "[ ] T A id:a parent:b\n[ ] T B id:b parent:a\n[ ] T Copy id:b",
+            core=(("warning", "W213", 3, None), ("warning", "W218", 1, None)),
+            diagnostic_keys=("id", "parent"),
+            duplicate_ids=(("b", 2),),
+            reference_targets=("b",),
+        ),
+        Case(
+            "inferred parent closes a cycle before requires diagnostics",
+            "[ ] T A id:a parent:b requires:missing=done\n  [ ] T B id:b",
+            core=(("warning", "W217", 1, None), ("warning", "W215", 1, None)),
+            diagnostic_keys=("parent", "requires"),
+            reference_targets=("missing",),
+            cycle_paths=(("a", "b", "a"),),
+        ),
+        Case(
             "non-text reference produces a type error and is not resolved in JS",
             '[ ] T Source ref:json<< [null,"missing"] >>',
             core=(("error", "E025", 1, None), ("warning", "W215", 1, None),
@@ -523,6 +554,10 @@ class CoreComparisonTests(unittest.TestCase):
                     tuple(d["value"] for d in js["diagnostics"]
                           if "value" in d and "firstLine" not in d),
                     case.reference_targets,
+                )
+                self.assertEqual(
+                    tuple(tuple(d["path"]) for d in js["diagnostics"] if "path" in d),
+                    case.cycle_paths,
                 )
                 self.assertEqual(js["diagnosticCount"], len(expected_js))
                 severities = {severity for severity, _, _ in expected_js}

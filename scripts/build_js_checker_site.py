@@ -27,7 +27,7 @@ COPY = {
         "状態・種類・タイトル・key:value・JSON詳細値・引用符・行継続・縦棒で始まる本文の書式を確認します。",
         "未対応の形式バージョンと、JavaScriptの安全な整数範囲を超えるJSON整数は検査対象外です。"
         "日付・時刻、イベントの開始・終了日時、繰り返し、開始条件 requires: を検査し、インデントから親子関係を推定します。"
-        "同じ入力内のIDの形式・重複・参照先を検査します。完全な検査には lifetxt check を使用してください。",
+        "同じ入力内のIDの形式・重複・参照先と、親子関係や依存関係などの循環を検査します。完全な検査には lifetxt check を使用してください。",
         "UTF-8で16 KiBまで、診断は最大100件。本文はブラウザ内で処理し、送信や永続保存は行いません。",
         "life.txtのテキスト",
         "チェック",
@@ -50,7 +50,7 @@ COPY = {
         "Checks statuses, types, titles, key:value and JSON details, quotes, backslash line joins, and pipe-prefixed body lines.",
         "Unsupported format versions and JSON integers outside the JavaScript safe range are not checked. "
         "Checks dates, times, event range ordering, recurrence values, and requires: conditions, and infers parents from indentation. "
-        "Checks ID format, duplicates, and reference targets within the input. Use lifetxt check for full validation.",
+        "Checks ID format, duplicates, reference targets, and relation cycles within the input. Use lifetxt check for full validation.",
         "Up to 16 KiB in UTF-8 and 100 diagnostics. Text is processed in your browser without transmission or persistent storage.",
         "life.txt text",
         "Check",

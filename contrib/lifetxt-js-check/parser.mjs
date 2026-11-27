@@ -1,4 +1,4 @@
-/** @typedef {{severity: 'error'|'warning'|'unsupported', code: string, line: number, key?: string, part?: string, firstLine?: number, value?: string}} Diagnostic */
+/** @typedef {{severity: 'error'|'warning'|'unsupported', code: string, line: number, key?: string, part?: string, firstLine?: number, value?: string, path?: string[]}} Diagnostic */
 /** @typedef {null|boolean|number|string|JsonValue[]|{[key: string]: JsonValue}} JsonValue */
 /** @typedef {{line: number, indent: number, status: string, type: string, title: string, details: [string, JsonValue[]][]}} Item */
 /** @typedef {{items: Item[], diagnostics: Diagnostic[], diagnosticCount: number, hasErrors: boolean, incomplete: boolean}} ParseResult */
@@ -264,10 +264,10 @@ function indexIds(items, report) {
             if (typeof value !== 'string' || !value) continue;
             const entry = index.get(value);
             if (!entry) {
-                index.set(value, { firstLine: item.line, count: 1 });
+                index.set(value, { item, count: 1 });
             } else {
                 entry.count++;
-                report('warning', 'duplicate-id', item.line, 'id', { firstLine: entry.firstLine, value });
+                report('warning', 'duplicate-id', item.line, 'id', { firstLine: entry.item.line, value });
             }
         }
     }
@@ -292,7 +292,8 @@ function reportReferences(items, index, report) {
             for (const value of details.get(key) ?? []) check(item, sourceIds, key, value);
         }
     }
-    // Core reports requires references after the regular link diagnostics.
+    reportCycles(index, report);
+    // Core reports requires references after the regular link and cycle diagnostics.
     for (const item of items) {
         const details = new Map(item.details);
         const conditions = details.get('requires');
@@ -302,6 +303,63 @@ function reportReferences(items, index, report) {
             const targets = new Set();
             if (requirementProblem(condition, 0, targets)) continue;
             for (const value of targets) check(item, sourceIds, 'requires', value);
+        }
+    }
+}
+
+function* cyclePaths(edges) {
+    const visited = new Set();
+    const active = new Map();
+    const reported = new Set();
+    const stack = [];
+    function enter(id) {
+        active.set(id, stack.length);
+        stack.push({ id, targets: edges.get(id).values() });
+    }
+
+    for (const root of edges.keys()) {
+        if (visited.has(root)) continue;
+        enter(root);
+        while (stack.length) {
+            const frame = stack.at(-1);
+            const { value: target, done } = frame.targets.next();
+            if (done) {
+                stack.pop();
+                active.delete(frame.id);
+                visited.add(frame.id);
+            } else if (active.has(target)) {
+                const path = stack.slice(active.get(target)).map(entry => entry.id);
+                const signature = JSON.stringify([...path].sort());
+                if (!reported.has(signature)) {
+                    reported.add(signature);
+                    yield [...path, target];
+                }
+            } else if (!visited.has(target)) {
+                enter(target);
+            }
+        }
+    }
+}
+
+function reportCycles(index, report) {
+    const owners = new Map();
+    for (const [id, entry] of index) {
+        if (entry.count === 1) owners.set(id, entry.item);
+    }
+    for (const key of ['parent', 'depends_on', 'duplicate_of', 'replaced_by', 'follows', 'realizes']) {
+        const edges = new Map();
+        for (const [id, item] of owners) {
+            const values = item.details.find(([name]) => name === key)?.[1] ?? [];
+            edges.set(id, new Set(values.filter(target => owners.has(target))));
+        }
+        if (key === 'depends_on') {
+            for (const [id, item] of owners) {
+                const blocks = item.details.find(([name]) => name === 'blocks')?.[1] ?? [];
+                for (const target of blocks) edges.get(target)?.add(id);
+            }
+        }
+        for (const path of cyclePaths(edges)) {
+            report('warning', 'reference-cycle', owners.get(path[0]).line, key, { path });
         }
     }
 }

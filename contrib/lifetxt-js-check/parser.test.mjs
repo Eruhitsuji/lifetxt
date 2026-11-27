@@ -295,6 +295,30 @@ test('checks explicit and inferred references against the same input', () => {
     assert.equal(result.hasErrors, false);
 });
 
+test('finds separate cycles and ignores a dependency edge duplicated by blocks', () => {
+    const result = parse([
+        '[ ] T A id:a depends_on:b',
+        '[ ] T B id:b depends_on:a blocks:a',
+        '[ ] T C id:c parent:d',
+        '[ ] T D id:d parent:c',
+        '[ ] T E id:e ref:f',
+        '[ ] T F id:f ref:e',
+    ].join('\n'));
+    assert.deepEqual(result.diagnostics, [
+        { severity: 'warning', code: 'reference-cycle', line: 3, key: 'parent', path: ['c', 'd', 'c'] },
+        { severity: 'warning', code: 'reference-cycle', line: 1, key: 'depends_on', path: ['a', 'b', 'a'] },
+    ]);
+});
+
+test('walks a deep parent cycle iteratively and reports its starting line', () => {
+    const ids = Array.from({ length: 500 }, (_, i) => 'a' + i);
+    const text = ids.map((id, i) =>
+        '[ ] T T id:' + id + ' parent:' + ids[(i + 1) % ids.length]).join('\n');
+    assert.deepEqual(parse(text).diagnostics, [
+        { severity: 'warning', code: 'reference-cycle', line: 1, key: 'parent', path: [...ids, ids[0]] },
+    ]);
+});
+
 test('excludes unknown format versions', () => {
     const future = parse('#! format_version: 2\nanything');
     assert.equal(future.incomplete, true);

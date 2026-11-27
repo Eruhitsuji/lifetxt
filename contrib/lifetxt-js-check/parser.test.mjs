@@ -213,6 +213,25 @@ test('warns about reversed event ranges at fractional-second precision', () => {
     assert.equal(result.hasErrors, false);
 });
 
+test('checks simple recurrence and identifies each problematic RRULE part', () => {
+    const result = parse([
+        '[ ] T Daily repeat:daily repeat:weekdays interval:2 count:3',
+        '[ ] E Rules repeat:RRULE:FREQ=YEARLY;BYDAY=-1FR;BYMONTHDAY=-1;BYMONTH=2,12;UNTIL=20281231',
+        '[ ] E Incorrect repeat:RRULE:FREQ=DAILY;COUNT=0;BYDAY=2MO;JUNK',
+        '[ ] T Simple repeat:hourly interval:-1 count:0',
+        '[ ] T Typed repeat:json<< [12,"daily"] >>',
+    ].join('\n'));
+    assert.deepEqual(result.diagnostics, [
+        { severity: 'warning', code: 'invalid-rrule', line: 3, key: 'repeat', part: 'COUNT' },
+        { severity: 'warning', code: 'invalid-rrule', line: 3, key: 'repeat', part: 'BYDAY' },
+        { severity: 'warning', code: 'invalid-repeat', line: 4, key: 'repeat' },
+        { severity: 'warning', code: 'expected-positive-integer', line: 4, key: 'interval' },
+        { severity: 'warning', code: 'expected-positive-integer', line: 4, key: 'count' },
+        { severity: 'error', code: 'detail-expects-text', line: 5, key: 'repeat' },
+    ]);
+    assert.equal(result.hasErrors, true);
+});
+
 test('excludes unknown format versions', () => {
     const future = parse('#! format_version: 2\nanything');
     assert.equal(future.incomplete, true);

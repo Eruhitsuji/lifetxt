@@ -32,6 +32,9 @@ const messages = {
         'invalid-time-or-datetime': '時刻 HH:MM または日時 YYYY-MM-DDTHH:MM を指定してください。',
         'detail-expects-text': '文字列の値を指定してください。',
         'event-end-before-start': 'イベントの終了日時が開始日時より前です。',
+        'invalid-repeat': 'daily、weekly、monthly、yearly、weekdays、または RRULE: を指定してください。',
+        'expected-positive-integer': '1以上の整数を指定してください。',
+        'invalid-rrule': 'RRULE の該当箇所の値または組み合わせを確認してください。',
     },
     en: {
         errors: 'Errors found.',
@@ -64,6 +67,9 @@ const messages = {
         'invalid-time-or-datetime': 'Enter a time in HH:MM format or a datetime in YYYY-MM-DDTHH:MM format.',
         'detail-expects-text': 'Enter a text value.',
         'event-end-before-start': 'The event ends before it starts.',
+        'invalid-repeat': 'Use daily, weekly, monthly, yearly, weekdays, or RRULE:.',
+        'expected-positive-integer': 'Enter an integer of 1 or greater.',
+        'invalid-rrule': 'Check the value or combination for the indicated RRULE part.',
     },
 };
 
@@ -108,9 +114,9 @@ button.addEventListener('click', () => {
     if (result.incomplete) summaries.push(copy.incomplete);
     status.textContent = summaries.length ? summaries.join(' ') : copy.ok;
 
-    const lines = result.diagnostics.map(({ severity, code, line, key }) => {
+    const lines = result.diagnostics.map(({ severity, code, line, key, part }) => {
         const location = lang === 'ja' ? `${line}${copy.line}` : `${copy.line} ${line}`;
-        const field = key ? `${key}: ` : '';
+        const field = key ? `${key}: ${part ? `[${part}] ` : ''}` : '';
         return `${location} · ${copy.labels[severity]} · ${code} · ${field}${copy[code] ?? code}`;
     });
     const hidden = result.diagnosticCount - result.diagnostics.length;

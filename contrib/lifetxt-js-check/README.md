@@ -27,6 +27,13 @@ than the start, using the first value of each key. Datetimes with UTC offsets
 are converted to the runtime's local wall clock before comparison, as in
 Python Core. An event with an earlier end gets a warning.
 
+Recurrence checks cover `repeat:daily`, `weekly`, `monthly`, `yearly`, and
+`weekdays`, as well as positive `interval:` and `count:` values. The checked
+`RRULE:` subset is `FREQ`, `INTERVAL`, `COUNT`, `UNTIL`, `BYDAY`,
+`BYMONTHDAY`, `BYMONTH`, and `WKST`. The checker reports the problematic part
+and validates values and combinations without expanding any occurrences.
+Recurrence numbers use ASCII digits.
+
 An indented item inherits `parent:` from the first `id:` value of the nearest
 less-indented item unless it already has a parent value. An indented item
 without an ancestor, or with an ancestor that has no ID, produces a warning.

@@ -28,9 +28,12 @@ JS_CODES = {
     "W202": "invalid-datetime",
     "W203": "invalid-date-or-datetime",
     "W204": "invalid-time-or-datetime",
+    "W205": "invalid-repeat",
     "W206": "event-end-before-start",
+    "W219": "expected-positive-integer",
     "W220": "indent-no-parent",
     "W221": "indent-parent-no-id",
+    "W223": "invalid-rrule",
 }
 
 
@@ -42,7 +45,8 @@ class Case:
     # None derives the JS expectations from the mapped Core codes.
     js: tuple[tuple[str, str, int], ...] | None = None
     same_items: bool = True
-    temporal_keys: tuple[str, ...] = ()
+    diagnostic_keys: tuple[str, ...] = ()
+    rrule_parts: tuple[str, ...] = ()
 
     def expected_js(self):
         if self.js is not None:
@@ -189,13 +193,13 @@ def cases():
                 ("warning", "W203", 1, None), ("warning", "W201", 1, None),
                 ("warning", "W202", 1, None), ("warning", "W204", 1, None),
             ),
-            temporal_keys=("due", "on", "from", "at"),
+            diagnostic_keys=("due", "on", "from", "at"),
         ),
         Case(
             "date values must be text with one error per field",
             '[ ] T title due:json<< ["invalid", null, 1] >> on:json<< "2024-02-29" >>',
             core=(("error", "E025", 1, None),),
-            temporal_keys=("due",),
+            diagnostic_keys=("due",),
         ),
         Case(
             "repeat values are each checked, while malformed item syntax suppresses format warnings",
@@ -203,13 +207,13 @@ def cases():
             "[ ] T malformed due:invalid body:a body:b\n| ambiguous",
             core=(("warning", "W203", 1, None), ("warning", "W203", 1, None),
                   ("error", "E022", 3, 1)),
-            temporal_keys=("due", "due"),
+            diagnostic_keys=("due", "due"),
         ),
         Case(
             "event end is earlier by one microsecond",
             "[ ] E title from:2026-12-01T09:00:00.000002 to:2026-12-01T09:00:00.000001",
             core=(("warning", "W206", 1, None),),
-            temporal_keys=("to",),
+            diagnostic_keys=("to",),
         ),
         Case(
             "event compares the first endpoint values and accepts equal datetimes",
@@ -220,13 +224,46 @@ def cases():
             "invalid event endpoint is reported without a range warning",
             "[ ] E title from:2026-12-01T09:00 to:2026-12-01T24:00",
             core=(("warning", "W202", 1, None),),
-            temporal_keys=("to",),
+            diagnostic_keys=("to",),
         ),
         Case(
             "wrong temporal value type suppresses the range warning",
             "[ ] E title from:2026-12-01T09:00 to:json<< [\"2026-12-01T08:00\",null] >>",
             core=(("error", "E025", 1, None),),
-            temporal_keys=("to",),
+            diagnostic_keys=("to",),
+        ),
+        Case(
+            "valid simple repeats and explicit recurrence bounds",
+            "[ ] T title repeat:daily repeat:weekly repeat:monthly repeat:yearly "
+            "repeat:weekdays interval:+2 count:1_000 until:2026-12-31",
+        ),
+        Case(
+            "valid RRULEs, last value for repeated parts and mixed-case part names",
+            "[ ] E title repeat:RRULE:freq=yearly;BYMONTH=1,12;BYDAY=-1fr;BYMONTHDAY=-1,31;"
+            "WKST=su;INTERVAL=2;COUNT=4;UNTIL=20281231T235959Z "
+            "repeat:RRULE:FREQ=HOURLY;FREQ=WEEKLY;BYDAY=MO,TU;UNTIL=20281231T235959+0900",
+        ),
+        Case(
+            "invalid simple recurrence, interval and count",
+            "[ ] T title repeat:Daily repeat:rrule:FREQ=DAILY interval:0 count:2.5",
+            core=(("warning", "W205", 1, None), ("warning", "W205", 1, None),
+                  ("warning", "W219", 1, None), ("warning", "W219", 1, None)),
+            diagnostic_keys=("repeat", "repeat", "interval", "count"),
+        ),
+        Case(
+            "non-text recurrence fields report one error per key",
+            '[ ] T title repeat:json<< ["invalid",null] >> interval:json<< 2 >> '
+            'count:json<< true >>',
+            core=(("error", "E025", 1, None),) * 3,
+            diagnostic_keys=("repeat", "interval", "count"),
+        ),
+        Case(
+            "RRULE primary warnings retain Core's order and suppress fallback checks",
+            "[ ] E title repeat:RRULE:FREQ=HOURLY;X=1;Z=2;COUNT=0;INTERVAL=-1;"
+            "UNTIL=20260230;BYDAY=2MO;BYMONTH=13;JUNK",
+            core=(("warning", "W223", 1, None),) * 6,
+            diagnostic_keys=("repeat",) * 6,
+            rrule_parts=("FREQ", "KEY", "INTERVAL", "COUNT", "UNTIL", "BYDAY"),
         ),
         # These expectations document gaps for the staged Core-compatible checker.
         Case(
@@ -240,7 +277,7 @@ def cases():
             "non-ASCII digits accepted by Core outside the documented date format",
             "[ ] T title on:２０２４-02-29",
             js=(("warning", "invalid-date", 1),),
-            temporal_keys=("on",),
+            diagnostic_keys=("on",),
         ),
         Case(
             "invalid requires expression",
@@ -262,10 +299,32 @@ def cases():
         ),
     ] + [
         Case(
+            f"invalid RRULE: {rule}",
+            f"[ ] E title repeat:RRULE:{rule}",
+            core=(("warning", "W223", 1, None),),
+            diagnostic_keys=("repeat",),
+            rrule_parts=(part,),
+        )
+        for rule, part in (
+            ("COUNT=2", "FREQ"),
+            ("FREQ=MONTHLY;BYDAY=2XX", "BYDAY"),
+            ("FREQ=MONTHLY;BYDAY=MO,", "BYDAY"),
+            ("FREQ=MONTHLY;BYDAY=0MO", "BYDAY"),
+            ("FREQ=MONTHLY;BYDAY=xxMO", "BYDAY"),
+            ("FREQ=WEEKLY;BYDAY=MO;BYMONTHDAY=1", "BYMONTHDAY"),
+            ("FREQ=MONTHLY;BYMONTHDAY=-32", "BYMONTHDAY"),
+            ("FREQ=MONTHLY;BYMONTH=13", "BYMONTH"),
+            ("FREQ=MONTHLY;BYMONTH=", "BYMONTH"),
+            ("FREQ=WEEKLY;WKST=XX", "WKST"),
+            ("FREQ=MONTHLY;JUNK", "KEY=VALUE"),
+            ("FREQ=DAILY;UNTIL=2026-02-28t01:00", "UNTIL"),
+        )
+    ] + [
+        Case(
             f"temporal key group: {key}",
             f"{'[x]' if key == 'done' else '[ ]'} T title {key}:invalid",
             core=(("warning", code, 1, None),),
-            temporal_keys=(key,),
+            diagnostic_keys=(key,),
         )
         for keys, code in (
             (DATE_KEYS, "W201"),
@@ -313,8 +372,8 @@ class CoreComparisonTests(unittest.TestCase):
                 with patch.dict(os.environ, {"TZ": zone}):
                     time.tzset()
                     self.check_cases([
-                        Case(f"{zone}: mixed offsets", mixed, core=expected, temporal_keys=keys),
-                        Case(f"{zone}: fall-back hour", fold, core=expected, temporal_keys=keys),
+                        Case(f"{zone}: mixed offsets", mixed, core=expected, diagnostic_keys=keys),
+                        Case(f"{zone}: fall-back hour", fold, core=expected, diagnostic_keys=keys),
                         Case(f"{zone}: equal instants", equal),
                     ])
             finally:
@@ -349,7 +408,11 @@ class CoreComparisonTests(unittest.TestCase):
                 self.assertEqual(js_diagnostics, expected_js)
                 self.assertEqual(
                     tuple(d["key"] for d in js["diagnostics"] if "key" in d),
-                    case.temporal_keys,
+                    case.diagnostic_keys,
+                )
+                self.assertEqual(
+                    tuple(d["part"] for d in js["diagnostics"] if "part" in d),
+                    case.rrule_parts,
                 )
                 self.assertEqual(js["diagnosticCount"], len(expected_js))
                 severities = {severity for severity, _, _ in expected_js}

@@ -26,8 +26,8 @@ if (args.length === 1 && args[0] === '--help') {
         } finally {
             await file.close();
         }
-        for (const { severity, code, line, key } of result.diagnostics) {
-            const field = key ? ` (${key}:)` : '';
+        for (const { severity, code, line, key, part } of result.diagnostics) {
+            const field = key ? ` (${key}:${part ? ` ${part}` : ''})` : '';
             console.log(`Line ${line}: ${severity} ${code}${field}`);
         }
         if (result.diagnosticCount > result.diagnostics.length) {

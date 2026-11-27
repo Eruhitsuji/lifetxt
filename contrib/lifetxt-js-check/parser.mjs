@@ -1,4 +1,4 @@
-/** @typedef {{severity: 'error'|'warning'|'unsupported', code: string, line: number, key?: string}} Diagnostic */
+/** @typedef {{severity: 'error'|'warning'|'unsupported', code: string, line: number, key?: string, part?: string}} Diagnostic */
 /** @typedef {null|boolean|number|string|JsonValue[]|{[key: string]: JsonValue}} JsonValue */
 /** @typedef {{line: number, indent: number, status: string, type: string, title: string, details: [string, JsonValue[]][]}} Item */
 /** @typedef {{items: Item[], diagnostics: Diagnostic[], diagnosticCount: number, hasErrors: boolean, incomplete: boolean}} ParseResult */
@@ -24,6 +24,10 @@ const DATE_OR_DATETIME_KEYS = new Set([
 const DATE_VALUE = /^(\d{4})-(\d{2})-(\d{2})$/;
 const TIME_VALUE = /^([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d)(?:\.(\d{1,6}))?)?(Z|[+-](?:[01]\d|2[0-3]):?[0-5]\d)?$/;
 const MONTH_DAYS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+const SIMPLE_REPEATS = new Set(['daily', 'weekly', 'monthly', 'yearly', 'weekdays']);
+const RRULE_FREQUENCIES = new Set(['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY']);
+const RRULE_PARTS = new Set(['FREQ', 'INTERVAL', 'COUNT', 'UNTIL', 'BYDAY', 'BYMONTHDAY', 'BYMONTH', 'WKST']);
+const WEEKDAYS = new Set(['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU']);
 
 function isDate(value) {
     const match = DATE_VALUE.exec(value);
@@ -41,6 +45,93 @@ function isTime(value) {
 function isDateTime(value) {
     const [date, time, extra] = value.split('T');
     return time !== undefined && extra === undefined && isDate(date) && isTime(time);
+}
+
+function recurrenceInteger(value) {
+    const text = value.trim();
+    if (!/^[+-]?\d(?:_?\d)*$/.test(text)) return NaN;
+    return Number(text.replaceAll('_', ''));
+}
+
+function isPositiveInteger(value) {
+    return recurrenceInteger(value) > 0;
+}
+
+function isRruleUntil(value) {
+    if (isDate(value) || isDateTime(value)) return true;
+    const match = /^(\d{4})(\d{2})(\d{2})(?:[Tt](\d{2})(\d{2})(\d{2})(Z|[+-]\d{4})?)?$/.exec(value);
+    if (!match) return false;
+    const [, year, month, day, hour, minute, second, offset = ''] = match;
+    return isDate(year + '-' + month + '-' + day) &&
+        (hour === undefined || isTime(hour + ':' + minute + ':' + second + offset));
+}
+
+function isRruleNumberList(value, minimum, maximum) {
+    return value.split(',').every(token => {
+        const number = recurrenceInteger(token);
+        return number >= minimum && number <= maximum && number !== 0;
+    });
+}
+
+function rruleProblems(value) {
+    const parts = new Map();
+    let malformed = false;
+    for (const chunk of value.slice('RRULE:'.length).split(';')) {
+        const entry = chunk.trim();
+        if (!entry) continue;
+        const separator = entry.indexOf('=');
+        if (separator < 0) {
+            malformed = true;
+            continue;
+        }
+        const key = entry.slice(0, separator).trim().toUpperCase();
+        if (key) parts.set(key, entry.slice(separator + 1).trim());
+    }
+
+    // Match Core's initial warnings before running the stricter fallback
+    // checks. The fallback contributes at most one warning.
+    const problems = [];
+    const freq = parts.get('FREQ')?.toUpperCase();
+    if (!RRULE_FREQUENCIES.has(freq)) problems.push('FREQ');
+    if ([...parts.keys()].some(key => !RRULE_PARTS.has(key))) problems.push('KEY');
+    for (const key of ['INTERVAL', 'COUNT']) {
+        if (parts.has(key) && !isPositiveInteger(parts.get(key))) problems.push(key);
+    }
+    const until = parts.get('UNTIL');
+    if (until !== undefined && !isRruleUntil(until.toUpperCase())) problems.push('UNTIL');
+    const byday = parts.get('BYDAY')?.split(',').map(token => token.trim().toUpperCase());
+    if (byday?.some(token => !WEEKDAYS.has(token.slice(-2)) ||
+        (token.length > 2 && freq && freq !== 'MONTHLY' && freq !== 'YEARLY'))) {
+        problems.push('BYDAY');
+    }
+    if (problems.length) return problems;
+
+    if (malformed) return ['KEY=VALUE'];
+    for (const key of RRULE_PARTS) {
+        if (parts.get(key) === '') return [key];
+    }
+    if (until !== undefined && !isRruleUntil(until)) return ['UNTIL'];
+    if (byday?.some(token => {
+        if (token.length <= 2) return false;
+        const position = recurrenceInteger(token.slice(0, -2));
+        return Number.isNaN(position) || position === 0;
+    })) return ['BYDAY'];
+    if (parts.has('BYMONTHDAY') && !isRruleNumberList(parts.get('BYMONTHDAY'), -31, 31)) return ['BYMONTHDAY'];
+    if (parts.has('BYMONTH') && !isRruleNumberList(parts.get('BYMONTH'), 1, 12)) return ['BYMONTH'];
+    if (parts.has('WKST') && !WEEKDAYS.has(parts.get('WKST').toUpperCase())) return ['WKST'];
+    if (freq === 'WEEKLY' && parts.has('BYMONTHDAY')) return ['BYMONTHDAY'];
+    return [];
+}
+
+function validateRepeat(value, line, report) {
+    if (SIMPLE_REPEATS.has(value)) return;
+    if (!value.startsWith('RRULE:')) {
+        report('warning', 'invalid-repeat', line, 'repeat');
+        return;
+    }
+    for (const part of rruleProblems(value)) {
+        report('warning', 'invalid-rrule', line, 'repeat', part);
+    }
 }
 
 function eventWallClock(value) {
@@ -72,7 +163,7 @@ function validateEventRange(item, report) {
     }
 }
 
-function validateTemporalDetails(item, report) {
+function validateItemDetails(item, report) {
     let hasTypeError = false;
     for (const [key, values] of item.details) {
         let code;
@@ -89,7 +180,10 @@ function validateTemporalDetails(item, report) {
         } else if (key === 'at') {
             code = 'invalid-time-or-datetime';
             accepts = value => isTime(value) || isDateTime(value);
-        } else {
+        } else if (key === 'interval' || key === 'count') {
+            code = 'expected-positive-integer';
+            accepts = isPositiveInteger;
+        } else if (key !== 'repeat') {
             continue;
         }
         if (values.some(value => typeof value !== 'string')) {
@@ -98,7 +192,8 @@ function validateTemporalDetails(item, report) {
             continue;
         }
         for (const value of values) {
-            if (!accepts(value)) report('warning', code, item.line, key);
+            if (key === 'repeat') validateRepeat(value, item.line, report);
+            else if (!accepts(value)) report('warning', code, item.line, key);
         }
     }
     if (item.type === 'E' && !hasTypeError) validateEventRange(item, report);
@@ -339,7 +434,7 @@ function inferParent(item, ancestor, report) {
     }
 }
 
-/** Check supported Format 1 syntax, hierarchy and temporal values.
+/** Check supported Format 1 syntax, hierarchy, times and recurrence values.
  * @param {string} text
  * @returns {ParseResult}
  */
@@ -349,12 +444,15 @@ export function parse(text) {
     const result = {
         items: [], diagnostics: [], diagnosticCount: 0, hasErrors: false, incomplete: false,
     };
-    function report(severity, code, line, key) {
+    function report(severity, code, line, key, part) {
         result.diagnosticCount++;
         result.hasErrors ||= severity === 'error';
         result.incomplete ||= severity === 'unsupported';
         if (result.diagnostics.length < MAX_DIAGNOSTICS) {
-            result.diagnostics.push(key === undefined ? { severity, code, line } : { severity, code, line, key });
+            const diagnostic = { severity, code, line };
+            if (key !== undefined) diagnostic.key = key;
+            if (part !== undefined) diagnostic.part = part;
+            result.diagnostics.push(diagnostic);
         }
     }
 
@@ -385,7 +483,7 @@ export function parse(text) {
     let previous = null;
     let previousHasError = false;
     function finishItem() {
-        if (previous && !previousHasError) validateTemporalDetails(previous, report);
+        if (previous && !previousHasError) validateItemDetails(previous, report);
         previous = null;
         previousHasError = false;
     }

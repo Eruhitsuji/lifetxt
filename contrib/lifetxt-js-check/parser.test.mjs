@@ -8,7 +8,7 @@ test('recognizes every Format 1 status and type', () => {
             const result = parse(`${status} ${type} title`);
             assert.equal(result.items[0].status, status);
             assert.equal(result.items[0].type, type);
-            assert.deepEqual(result.diagnostics, []);
+            assert.equal(result.hasErrors, type === 'S');
         }
     }
 });
@@ -360,6 +360,25 @@ test('warns when completed items depend on open items or closed parents have ope
         { severity: 'warning', code: 'closed-parent-with-open-children', line: 1, key: 'id', value: 'p', childCount: 2 },
         { severity: 'warning', code: 'closed-parent-with-open-children', line: 4, key: 'id', value: 'c', childCount: 1 },
     ]);
+});
+
+test('checks status fields and recommends markers for open and closed intervals', () => {
+    const result = parse([
+        '[/] S Active from:2026-10-01T09:00 state:focus',
+        '[x] S Closed from:2026-10-01T09:00 to:2026-10-01T10:00 state:custom',
+        '[ ] S Missing',
+        '[/] S BadEnd from:2026-10-01T09:00 to:invalid state:unknown',
+    ].join('\n'));
+    assert.deepEqual(result.diagnostics.map(({ severity, code, line }) => [severity, code, line]), [
+        ['error', 'status-missing-from', 3],
+        ['error', 'status-missing-state', 3],
+        ['warning', 'status-open-marker', 3],
+        ['warning', 'invalid-datetime', 4],
+        ['warning', 'unknown-state', 4],
+        ['error', 'status-invalid-to', 4],
+        ['warning', 'status-closed-marker', 4],
+    ]);
+    assert.equal(result.hasErrors, true);
 });
 
 test('excludes unknown format versions', () => {

@@ -11,7 +11,7 @@ import unittest
 from unittest.mock import patch
 
 from lifetxt.model import DATETIME_KEYS, DATE_KEYS, DATE_OR_DATETIME_KEYS, TIME_OR_DATETIME_KEYS
-from lifetxt.model import REFERENCE_KEYS
+from lifetxt.model import REFERENCE_KEYS, STATUS_STATE_VALUES
 from lifetxt.parser import parse_text
 
 
@@ -26,6 +26,10 @@ JS_CODES = {
     "E023": "invalid-json-detail",
     "E024": "invalid-requires",
     "E025": "detail-expects-text",
+    "E201": "status-missing-from",
+    "E202": "status-invalid-from",
+    "E203": "status-missing-state",
+    "E204": "status-invalid-to",
     "W005": "unknown-escape",
     "W201": "invalid-date",
     "W202": "invalid-datetime",
@@ -33,6 +37,9 @@ JS_CODES = {
     "W204": "invalid-time-or-datetime",
     "W205": "invalid-repeat",
     "W206": "event-end-before-start",
+    "W207": "unknown-state",
+    "W208": "status-closed-marker",
+    "W209": "status-open-marker",
     "W213": "duplicate-id",
     "W214": "invalid-id",
     "W215": "missing-reference",
@@ -483,6 +490,39 @@ def cases():
             "[x] T Parent id:p done:2026-10-01 depends_on:child\n"
             "  [-] T Child id:child\n  [N] N Note",
             check_cli=True,
+        ),
+        Case(
+            "status items accept every known state and open or closed markers",
+            "\n".join(f"[/] S Working from:2026-10-01T09:00+0900 state:{value}"
+                      for value in STATUS_STATE_VALUES)
+            + "\n[x] S Done from:2026-10-01T09:00 to:2026-10-01T10:00 state:custom",
+        ),
+        Case(
+            "status item missing required details and marker",
+            "[ ] S Missing",
+            core=(("error", "E201", 1, None), ("error", "E203", 1, None),
+                  ("warning", "W209", 1, None)),
+            diagnostic_keys=("from", "state", "to"),
+        ),
+        Case(
+            "status datetime warnings precede strict errors",
+            "[/] S Working from:2026-10-01 from:no to:invalid state:unknown",
+            core=tuple((severity, code, 1, None) for severity, code in (
+                ("warning", "W202"), ("warning", "W202"), ("warning", "W202"),
+                ("warning", "W207"), ("error", "E202"), ("error", "E202"),
+                ("error", "E204"), ("warning", "W208"),
+            )),
+            diagnostic_keys=("from", "from", "to", "state", "from", "from", "to", "to"),
+        ),
+        Case(
+            "status type error suppresses its item-level checks",
+            "[ ] S Wrong state:json<< 3 >>",
+            core=(("error", "E025", 1, None),),
+            diagnostic_keys=("state",),
+        ),
+        Case(
+            "status checks use key presence for empty JSON value lists",
+            "[x] S Empty from:json<< [] >> to:json<< [] >> state:json<< [] >>",
         ),
         Case(
             "non-text reference produces a type error and is not resolved in JS",

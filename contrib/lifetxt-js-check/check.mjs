@@ -1,6 +1,6 @@
 import { constants } from 'node:fs';
 import { open } from 'node:fs/promises';
-import { MAX_BYTES, MAX_FILES, parse, parseDocuments } from './parser.mjs';
+import { MAX_BYTES, MAX_FILES, parse, parseCheckerConfig, parseDocuments } from './parser.mjs';
 
 function escapeConsole(text) {
     return text.replace(/[^\x20-\x7e]/g, char =>
@@ -32,18 +32,7 @@ async function readInput(path) {
 
 async function readConfig(path) {
     try {
-        const config = JSON.parse(await readInput(path));
-        if (!config || typeof config !== 'object' || Array.isArray(config)) {
-            throw new Error('Expected a JSON object');
-        }
-        for (const value of [config.ids?.key, config.api?.id_key]) {
-            if (value === undefined || value === null || value === '') continue;
-            if (typeof value !== 'string' || /[\s:"]/.test(value)) {
-                throw new Error('Expected ids.key or api.id_key to be a detail key');
-            }
-            return { idKey: value };
-        }
-        return {};
+        return parseCheckerConfig(await readInput(path));
     } catch (error) {
         throw new Error(`Config ${quoteId(path)}: ${escapeConsole(error.message)}`);
     }

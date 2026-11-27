@@ -25,7 +25,9 @@ checker uses the first nonempty ID key from `ids.key` and `api.id_key`, or
 defaults to `id`. For example, `{"ids":{"key":"uid"}}` makes `uid:` the
 identity for hierarchy inference, references, duplicate detection, and history
 parent lookup. The option applies only this setting and does not discover
-configuration files automatically. The browser uses the default ID key.
+configuration files automatically. In the browser, select the JSON under
+Checker settings to apply the same ID key to pasted text or selected life.txt
+files. Clear that selection to use `id:` again.
 
 The checker reads item headers, titles, details, backslash line joins, and
 `|` body lines. It preserves unknown and repeated detail keys. Unsupported

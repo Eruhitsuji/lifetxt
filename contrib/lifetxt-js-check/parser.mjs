@@ -1246,3 +1246,19 @@ export function parseDocuments(documents, { idKey = 'id' } = {}) {
     }, idKey);
     return result;
 }
+
+/** Read the ID key setting supported by both checker interfaces. */
+export function parseCheckerConfig(text) {
+    const config = JSON.parse(text);
+    if (!config || typeof config !== 'object' || Array.isArray(config)) {
+        throw new Error('Expected a JSON object');
+    }
+    for (const value of [config.ids?.key, config.api?.id_key]) {
+        if (value === undefined || value === null || value === '') continue;
+        if (typeof value !== 'string' || /[\s:"]/.test(value)) {
+            throw new Error('Expected ids.key or api.id_key to be a detail key');
+        }
+        return { idKey: value };
+    }
+    return {};
+}

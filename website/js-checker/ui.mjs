@@ -1,8 +1,9 @@
-import { MAX_BYTES, MAX_FILES, parse, parseDocuments } from './parser.mjs';
+import { MAX_BYTES, MAX_FILES, parse, parseCheckerConfig, parseDocuments } from './parser.mjs';
 
 const messages = {
     ja: {
         readingFiles: 'ファイルを読み込み中です。',
+        invalidConfig: name => `${name} の設定が無効です。JSONオブジェクトとIDキーを確認してください。`,
         tooManyFiles: limit => `選択できるのは最大${limit}ファイルです。`,
         fileTooLarge: name => `${name} は16 KiBを超えています。`,
         fileReadError: name => `${name} をUTF-8ファイルとして読み込めませんでした。`,
@@ -123,6 +124,7 @@ const messages = {
     },
     en: {
         readingFiles: 'Reading files…',
+        invalidConfig: name => `${name} has invalid configuration. Check the JSON object and ID key.`,
         tooManyFiles: limit => `Select up to ${limit} files.`,
         fileTooLarge: name => `${name} exceeds 16 KiB.`,
         fileReadError: name => `Could not read ${name} as UTF-8.`,
@@ -250,6 +252,8 @@ const button = document.getElementById('check');
 const loadSample = document.getElementById('load-sample');
 const files = document.getElementById('files');
 const clearFiles = document.getElementById('clear-files');
+const config = document.getElementById('checker-config');
+const clearConfig = document.getElementById('clear-config');
 const status = document.getElementById('status');
 const output = document.getElementById('output');
 
@@ -265,37 +269,41 @@ function syncInputs() {
     input.disabled = hasFiles;
     loadSample.disabled = hasFiles || input.value !== '';
     clearFiles.disabled = !hasFiles;
+    clearConfig.disabled = !config.files.length;
 }
 
-function resetFileResult() {
+function resetCheck() {
     selectionRevision++;
     button.disabled = false;
     clearResult();
     syncInputs();
 }
 
-files.addEventListener('change', resetFileResult);
+files.addEventListener('change', resetCheck);
 clearFiles.addEventListener('click', () => {
     files.value = '';
-    resetFileResult();
+    resetCheck();
     input.focus();
 });
 
-input.addEventListener('input', () => {
-    clearResult();
-    syncInputs();
+config.addEventListener('change', resetCheck);
+clearConfig.addEventListener('click', () => {
+    config.value = '';
+    resetCheck();
+    config.focus();
 });
+input.addEventListener('input', resetCheck);
 loadSample.addEventListener('click', () => {
     if (loadSample.disabled) return;
     input.value = loadSample.dataset.sample;
-    clearResult();
+    resetCheck();
     input.focus();
-    syncInputs();
 });
 window.addEventListener('pagehide', () => {
     input.value = '';
     files.value = '';
-    resetFileResult();
+    config.value = '';
+    resetCheck();
 });
 
 function displayResult(result) {
@@ -321,8 +329,23 @@ function displayResult(result) {
     output.textContent = lines.join('\n');
 }
 
+async function readSelection(file, decoder, revision) {
+    const name = JSON.stringify(file.name);
+    if (file.size > MAX_BYTES) {
+        status.textContent = copy.fileTooLarge(name);
+        return;
+    }
+    try {
+        const bytes = await file.arrayBuffer();
+        if (revision === selectionRevision) return decoder.decode(bytes);
+    } catch {
+        if (revision === selectionRevision) status.textContent = copy.fileReadError(name);
+    }
+}
+
 button.addEventListener('click', async () => {
-    if (!files.files.length) {
+    const settingsFile = config.files[0];
+    if (!files.files.length && !settingsFile) {
         displayResult(parse(input.value));
         return;
     }
@@ -338,27 +361,30 @@ button.addEventListener('click', async () => {
     status.textContent = copy.readingFiles;
     try {
         const decoder = new TextDecoder('utf-8', { fatal: true });
-        const documents = [];
-        for (const file of selected) {
-            const name = JSON.stringify(file.name);
-            if (file.size > MAX_BYTES) {
-                status.textContent = copy.fileTooLarge(name);
-                return;
-            }
+        let options;
+        if (settingsFile) {
+            const text = await readSelection(settingsFile, decoder, revision);
+            if (text === undefined || revision !== selectionRevision) return;
             try {
-                const bytes = await file.arrayBuffer();
-                if (revision !== selectionRevision) return;
-                documents.push({ source: file.name, text: decoder.decode(bytes) });
+                options = parseCheckerConfig(text);
             } catch {
-                if (revision === selectionRevision) status.textContent = copy.fileReadError(name);
+                status.textContent = copy.invalidConfig(JSON.stringify(settingsFile.name));
                 return;
             }
         }
-        displayResult(parseDocuments(documents));
+
+        const documents = [];
+        for (const file of selected) {
+            const text = await readSelection(file, decoder, revision);
+            if (text === undefined || revision !== selectionRevision) return;
+            documents.push({ source: file.name, text });
+        }
+        displayResult(documents.length ? parseDocuments(documents, options) : parse(input.value, options));
     } finally {
         if (revision === selectionRevision) button.disabled = false;
     }
 });
 button.disabled = false;
 files.disabled = false;
+config.disabled = false;
 syncInputs();

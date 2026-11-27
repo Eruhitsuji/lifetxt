@@ -34,6 +34,10 @@ the predecessor. It uses the first comparable date from `due:`, `do:`,
 `on:`, or `from:`, in that order. For datetimes, it compares the calendar
 date as written. Use `lifetxt check` for checks across multiple files.
 
+A completed item with an open `depends_on:` prerequisite gets a warning.
+A completed or canceled parent with open direct children gets a warning on the
+parent line. Explicit and inferred `parent:` links both count.
+
 The built-in temporal fields check calendar dates (`YYYY-MM-DD`), datetimes
 (`YYYY-MM-DDTHH:MM`), or times (`HH:MM`), depending on the key. The check
 uses ASCII digits and accepts optional seconds, fractional seconds, and

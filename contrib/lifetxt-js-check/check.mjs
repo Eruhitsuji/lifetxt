@@ -31,7 +31,7 @@ if (args.length === 1 && args[0] === '--help') {
         } finally {
             await file.close();
         }
-        for (const { severity, code, line, key, part, firstLine, value, path } of result.diagnostics) {
+        for (const { severity, code, line, key, part, firstLine, value, path, childCount } of result.diagnostics) {
             const field = key ? ` (${key}:${part ? ` ${part}` : ''})` : '';
             let target = '';
             if (value !== undefined) {
@@ -39,6 +39,7 @@ if (args.length === 1 && args[0] === '--help') {
                 if (firstLine !== undefined) target += `, first seen at line ${firstLine}`;
             }
             if (path) target = ` ${path.map(quoteId).join(' -> ')}`;
+            if (childCount !== undefined) target += `, ${childCount} open child item(s)`;
             console.log(`Line ${line}: ${severity} ${code}${field}${target}`);
         }
         if (result.diagnosticCount > result.diagnostics.length) {

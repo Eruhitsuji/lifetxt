@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 import time
 import unittest
 from unittest.mock import patch
@@ -42,6 +43,8 @@ JS_CODES = {
     "W220": "indent-no-parent",
     "W221": "indent-parent-no-id",
     "W223": "invalid-rrule",
+    "W224": "completed-with-open-dependency",
+    "W225": "closed-parent-with-open-children",
 }
 
 
@@ -58,6 +61,8 @@ class Case:
     duplicate_ids: tuple[tuple[str, int], ...] = ()
     reference_targets: tuple[str, ...] = ()
     cycle_paths: tuple[tuple[str, ...], ...] = ()
+    child_counts: tuple[int, ...] = ()
+    check_cli: bool = False
 
     def expected_js(self):
         if self.js is not None:
@@ -450,6 +455,36 @@ def cases():
             js=(),
         ),
         Case(
+            "completed item has open prerequisites and explicit and inferred children",
+            "[x] T Parent id:p done:2026-10-01 depends_on:child requires:missing=done\n"
+            "  [/] T Child id:child\n"
+            "[?] T Other parent:p\n[x] T ClosedChild parent:p done:2026-10-01",
+            core=(("warning", "W224", 1, None), ("warning", "W215", 1, None),
+                  ("warning", "W225", 1, None)),
+            diagnostic_keys=("depends_on", "requires", "id"),
+            reference_targets=("child", "missing", "p"),
+            child_counts=(2,),
+            check_cli=True,
+        ),
+        Case(
+            "ambiguous prerequisite and last matching parent",
+            "[ ] T Old id:p\n[-] T Last id:p\n"
+            "[x] T Done done:2026-10-01 depends_on:p\n[>] T Child parent:p",
+            core=(("warning", "W213", 2, None), ("warning", "W218", 3, None),
+                  ("warning", "W218", 4, None), ("warning", "W225", 2, None)),
+            diagnostic_keys=("id", "depends_on", "parent", "id"),
+            duplicate_ids=(("p", 1),),
+            reference_targets=("p", "p", "p"),
+            child_counts=(1,),
+            check_cli=True,
+        ),
+        Case(
+            "resolved closed prerequisite and closed children are accepted",
+            "[x] T Parent id:p done:2026-10-01 depends_on:child\n"
+            "  [-] T Child id:child\n  [N] N Note",
+            check_cli=True,
+        ),
+        Case(
             "non-text reference produces a type error and is not resolved in JS",
             '[ ] T Source ref:json<< [null,"missing"] >>',
             core=(("error", "E025", 1, None), ("warning", "W215", 1, None),
@@ -548,6 +583,17 @@ class CoreComparisonTests(unittest.TestCase):
             core_diagnostics = tuple(
                 (d.severity, d.code, d.line, d.column) for d in diagnostics
             )
+            if case.check_cli:
+                # The full CLI adds W225 and initializes legacy compatibility
+                # hooks. Run it separately from the direct Core fixtures.
+                run = subprocess.run(
+                    [sys.executable, "-m", "lifetxt", "check", "--no-files", "--format", "json", "-"],
+                    input=case.text, capture_output=True, encoding="utf-8", check=True,
+                )
+                core_diagnostics = tuple(
+                    (d["severity"], d["code"], d.get("line"), d.get("column"))
+                    for d in json.loads(run.stdout)
+                )
             js_diagnostics = tuple(
                 (d["severity"], d["code"], d["line"]) for d in js["diagnostics"]
             )
@@ -588,6 +634,10 @@ class CoreComparisonTests(unittest.TestCase):
                 self.assertEqual(
                     tuple(tuple(d["path"]) for d in js["diagnostics"] if "path" in d),
                     case.cycle_paths,
+                )
+                self.assertEqual(
+                    tuple(d["childCount"] for d in js["diagnostics"] if "childCount" in d),
+                    case.child_counts,
                 )
                 self.assertEqual(js["diagnosticCount"], len(expected_js))
                 severities = {severity for severity, _, _ in expected_js}

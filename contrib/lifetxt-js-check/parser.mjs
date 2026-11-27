@@ -1,4 +1,4 @@
-/** @typedef {{severity: 'error'|'warning'|'unsupported', code: string, line: number, key?: string, part?: string, firstLine?: number, value?: string, path?: string[]}} Diagnostic */
+/** @typedef {{severity: 'error'|'warning'|'unsupported', code: string, line: number, key?: string, part?: string, firstLine?: number, value?: string, path?: string[], childCount?: number}} Diagnostic */
 /** @typedef {null|boolean|number|string|JsonValue[]|{[key: string]: JsonValue}} JsonValue */
 /** @typedef {{line: number, indent: number, status: string, type: string, title: string, details: [string, JsonValue[]][]}} Item */
 /** @typedef {{items: Item[], diagnostics: Diagnostic[], diagnosticCount: number, hasErrors: boolean, incomplete: boolean}} ParseResult */
@@ -30,6 +30,7 @@ const REFERENCE_KEYS = [
     'parent', 'ref', 'depends_on', 'blocks', 'related',
     'duplicate_of', 'replaced_by', 'follows', 'realizes',
 ];
+const OPEN_STATUSES = new Set(['[ ]', '[/]', '[>]', '[?]']);
 const SIMPLE_REPEATS = new Set(['daily', 'weekly', 'monthly', 'yearly', 'weekdays']);
 const RRULE_FREQUENCIES = new Set(['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY']);
 const RRULE_PARTS = new Set(['FREQ', 'INTERVAL', 'COUNT', 'UNTIL', 'BYDAY', 'BYMONTHDAY', 'BYMONTH', 'WKST']);
@@ -294,6 +295,7 @@ function reportReferences(items, index, report) {
     }
     reportCycles(index, report);
     reportTemporalOrder(items, index, report);
+    reportCompletedDependencies(items, index, report);
     // Core reports requires references after the regular link and cycle diagnostics.
     for (const item of items) {
         const details = new Map(item.details);
@@ -304,6 +306,42 @@ function reportReferences(items, index, report) {
             const targets = new Set();
             if (requirementProblem(condition, 0, targets)) continue;
             for (const value of targets) check(item, sourceIds, 'requires', value);
+        }
+    }
+}
+
+function reportCompletedDependencies(items, index, report) {
+    for (const item of items) {
+        if (item.status !== '[x]') continue;
+        for (const value of item.details.find(([key]) => key === 'depends_on')?.[1] ?? []) {
+            const target = index.get(value);
+            if (target?.count === 1 && target.item !== item && OPEN_STATUSES.has(target.item.status)) {
+                report('warning', 'completed-with-open-dependency', item.line, 'depends_on', { value });
+            }
+        }
+    }
+}
+
+function reportClosedParents(items, report) {
+    const parents = new Map();
+    const openChildren = new Map();
+    for (const item of items) {
+        const details = new Map(item.details);
+        // Core's parent check uses the last item with the ID, even when
+        // duplicate IDs are diagnosed elsewhere.
+        for (const id of details.get('id') ?? []) {
+            if (typeof id === 'string') parents.set(id, item);
+        }
+        for (const id of details.get('parent') ?? []) {
+            if (typeof id !== 'string') continue;
+            const count = openChildren.get(id) ?? 0;
+            openChildren.set(id, count + Number(OPEN_STATUSES.has(item.status)));
+        }
+    }
+    for (const [value, childCount] of openChildren) {
+        const parent = parents.get(value);
+        if (childCount && (parent?.status === '[x]' || parent?.status === '[-]')) {
+            report('warning', 'closed-parent-with-open-children', parent.line, 'id', { value, childCount });
         }
     }
 }
@@ -732,5 +770,6 @@ export function parse(text) {
     finishItem();
     const idIndex = indexIds(result.items, report);
     reportReferences(result.items, idIndex, report);
+    reportClosedParents(result.items, report);
     return result;
 }

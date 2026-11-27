@@ -26,6 +26,10 @@ const TIME_VALUE = /^([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d)(?:\.(\d{1,6}))?)?(Z|
 const MONTH_DAYS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 // Python's ID regex also matches before a single trailing LF in a JSON string.
 const ID_VALUE = /^[A-Za-z0-9][A-Za-z0-9_.:@\/-]*\n?$/;
+const REFERENCE_KEYS = [
+    'parent', 'ref', 'depends_on', 'blocks', 'related',
+    'duplicate_of', 'replaced_by', 'follows', 'realizes',
+];
 const SIMPLE_REPEATS = new Set(['daily', 'weekly', 'monthly', 'yearly', 'weekdays']);
 const RRULE_FREQUENCIES = new Set(['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY']);
 const RRULE_PARTS = new Set(['FREQ', 'INTERVAL', 'COUNT', 'UNTIL', 'BYDAY', 'BYMONTHDAY', 'BYMONTH', 'WKST']);
@@ -35,25 +39,26 @@ const REQUIREMENT_STATES = new Set([
     '[ ]', '[/]', '[x]', '[-]', '[>]', '[?]', '[N]',
 ]);
 
-function requirementLeafProblem(id, states) {
+function requirementLeafProblem(id, states, targets) {
     if (typeof id !== 'string' || !id || /[\p{White_Space}\x1c-\x1f]/u.test(id)) return 'id';
     if (!states.length || states.some(state => !REQUIREMENT_STATES.has(state))) return 'state';
+    targets?.add(id);
     return null;
 }
 
-function requirementProblem(value, depth = 0) {
+function requirementProblem(value, depth = 0, targets) {
     if (depth > 32) return 'depth';
     if (typeof value === 'string') {
         const separator = value.lastIndexOf('=');
         return separator < 0 ? 'shape' :
-            requirementLeafProblem(value.slice(0, separator), value.slice(separator + 1).split(','));
+            requirementLeafProblem(value.slice(0, separator), value.slice(separator + 1).split(','), targets);
     }
     if (value === null || typeof value !== 'object' || Array.isArray(value)) return 'shape';
 
     const keys = Object.keys(value);
     if (keys.length === 2 && Object.hasOwn(value, 'id') && Object.hasOwn(value, 'state')) {
         const states = Array.isArray(value.state) ? value.state : [value.state];
-        return requirementLeafProblem(value.id, states);
+        return requirementLeafProblem(value.id, states, targets);
     }
     if (keys.length !== 1) return 'shape';
     const [operator] = keys;
@@ -62,7 +67,7 @@ function requirementProblem(value, depth = 0) {
         return 'shape';
     }
     for (const child of children) {
-        const problem = requirementProblem(child, depth + 1);
+        const problem = requirementProblem(child, depth + 1, targets);
         if (problem) return problem;
     }
     return null;
@@ -232,6 +237,9 @@ function validateItemDetails(item, report) {
         } else if (key === 'id') {
             code = 'invalid-id';
             accepts = value => ID_VALUE.test(value);
+        } else if (REFERENCE_KEYS.includes(key)) {
+            code = 'invalid-reference-id';
+            accepts = value => ID_VALUE.test(value);
         } else if (key !== 'repeat') {
             continue;
         }
@@ -248,18 +256,52 @@ function validateItemDetails(item, report) {
     if (item.type === 'E' && !hasTypeError) validateEventRange(item, report);
 }
 
-function reportDuplicateIds(items, report) {
-    const seen = new Map();
+function indexIds(items, report) {
+    const index = new Map();
     for (const item of items) {
         const values = item.details.find(([key]) => key === 'id')?.[1] ?? [];
         for (const value of values) {
             if (typeof value !== 'string' || !value) continue;
-            const firstLine = seen.get(value);
-            if (firstLine === undefined) {
-                seen.set(value, item.line);
+            const entry = index.get(value);
+            if (!entry) {
+                index.set(value, { firstLine: item.line, count: 1 });
             } else {
-                report('warning', 'duplicate-id', item.line, 'id', { firstLine, value });
+                entry.count++;
+                report('warning', 'duplicate-id', item.line, 'id', { firstLine: entry.firstLine, value });
             }
+        }
+    }
+    return index;
+}
+
+function reportReferences(items, index, report) {
+    function check(item, sourceIds, key, value) {
+        if (typeof value !== 'string') return;
+        let code;
+        if (sourceIds.has(value)) code = 'self-reference';
+        else if (!index.has(value)) code = 'missing-reference';
+        else if (index.get(value).count > 1) code = 'ambiguous-reference';
+        else return;
+        report('warning', code, item.line, key, { value });
+    }
+
+    for (const item of items) {
+        const details = new Map(item.details);
+        const sourceIds = new Set((details.get('id') ?? []).filter(id => typeof id === 'string' && id));
+        for (const key of REFERENCE_KEYS) {
+            for (const value of details.get(key) ?? []) check(item, sourceIds, key, value);
+        }
+    }
+    // Core reports requires references after the regular link diagnostics.
+    for (const item of items) {
+        const details = new Map(item.details);
+        const conditions = details.get('requires');
+        if (!conditions?.length) continue;
+        const sourceIds = new Set((details.get('id') ?? []).filter(id => typeof id === 'string' && id));
+        for (const condition of conditions) {
+            const targets = new Set();
+            if (requirementProblem(condition, 0, targets)) continue;
+            for (const value of targets) check(item, sourceIds, 'requires', value);
         }
     }
 }
@@ -593,6 +635,7 @@ export function parse(text) {
         }
     }
     finishItem();
-    reportDuplicateIds(result.items, report);
+    const idIndex = indexIds(result.items, report);
+    reportReferences(result.items, idIndex, report);
     return result;
 }

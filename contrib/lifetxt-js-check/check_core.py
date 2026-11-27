@@ -420,6 +420,36 @@ def cases():
             cycle_paths=(("a", "b", "a"),),
         ),
         Case(
+            "temporal reference warnings run in Core order and use authored dates",
+            "[ ] T Old id:old on:2026-10-10\n"
+            "[ ] T Replacement id:replacement on:2026-10-07\n"
+            "[ ] T Source id:source due:2026-10-08T23:30-11:00 "
+            "do:2026-10-15 follows:old replaced_by:replacement",
+            core=(("warning", "W106", 3, None), ("warning", "W106", 3, None),
+                  ("warning", "W244", 3, None), ("warning", "W244", 3, None)),
+            js=(("warning", "temporal-reference-order", 3),) * 2,
+            diagnostic_keys=("replaced_by", "follows"),
+            reference_targets=("replacement", "old"),
+        ),
+        Case(
+            "invalid first value falls back to the next temporal field",
+            "[ ] T Old id:old from:2026-10-09T00:00Z\n"
+            "[ ] T New id:new due:invalid due:2026-10-12 do:2026-10-08 follows:old",
+            core=(("warning", "W203", 2, None), ("warning", "W106", 2, None),
+                  ("warning", "W244", 2, None)),
+            js=(("warning", "invalid-date-or-datetime", 2),
+                ("warning", "temporal-reference-order", 2)),
+            diagnostic_keys=("due", "follows"),
+            reference_targets=("old",),
+        ),
+        Case(
+            "same authored dates remain comparable as equal across offsets",
+            "[ ] T Old id:old due:2026-10-09T00:00+14:00\n"
+            "[ ] T New id:new due:2026-10-09T23:59-10:00 replaced_by:old",
+            core=(("warning", "W106", 2, None),),
+            js=(),
+        ),
+        Case(
             "non-text reference produces a type error and is not resolved in JS",
             '[ ] T Source ref:json<< [null,"missing"] >>',
             core=(("error", "E025", 1, None), ("warning", "W215", 1, None),

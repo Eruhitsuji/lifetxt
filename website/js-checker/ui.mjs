@@ -41,6 +41,7 @@ const messages = {
         'self-reference': value => `ID ${JSON.stringify(value)} はこの項目自身を指しています。`,
         'ambiguous-reference': value => `ID ${JSON.stringify(value)} が複数回使われており、参照先を特定できません。`,
         'reference-cycle': '参照が循環しています。',
+        'temporal-reference-order': value => `ID ${JSON.stringify(value)} との参照関係が、項目に記載された日付順と矛盾しています。`,
         'duplicate-id': (value, firstLine) => `${JSON.stringify(value)} は ${firstLine}行目で既に使われています。`,
         requires: {
             shape: 'ID=state、または id/state の組、all、any でJSON条件を指定してください。all と any には条件が1つ以上必要です。',
@@ -89,6 +90,7 @@ const messages = {
         'self-reference': value => `ID ${JSON.stringify(value)} refers to this item.`,
         'ambiguous-reference': value => `ID ${JSON.stringify(value)} occurs more than once, so the target is ambiguous.`,
         'reference-cycle': 'The references form a cycle.',
+        'temporal-reference-order': value => `The relation to ID ${JSON.stringify(value)} conflicts with the items’ calendar date order.`,
         'duplicate-id': (value, firstLine) => `${JSON.stringify(value)} first appears on line ${firstLine}.`,
         requires: {
             shape: 'Use ID=state or a JSON condition with id and state, all, or any. An all or any group needs at least one condition.',

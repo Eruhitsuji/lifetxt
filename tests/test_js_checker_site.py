@@ -218,6 +218,11 @@ class JSCheckerSiteTests(unittest.TestCase):
             expect(output).to_contain_text("reference-cycle")
             expect(output).to_contain_text("depends_on:")
             expect(output).to_contain_text('"a" → "b" → "a"')
+            text.fill("[ ] T Old id:old on:2026-10-10\n"
+                      "[ ] T New id:new on:2026-10-08 follows:old")
+            button.click()
+            expect(output).to_contain_text("temporal-reference-order")
+            expect(output).to_contain_text('follows: ID "old"' if lang == "ja" else 'ID "old"')
             text.fill('[ ] T "unfinished')
             expect(status).to_be_empty()
             expect(output).to_be_empty()

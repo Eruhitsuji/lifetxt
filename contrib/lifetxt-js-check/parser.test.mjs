@@ -319,6 +319,32 @@ test('walks a deep parent cycle iteratively and reports its starting line', () =
     ]);
 });
 
+test('checks authored calendar order for follows and replaced_by', () => {
+    const result = parse([
+        '[ ] T Old id:old on:2026-10-10',
+        '[ ] T Replacement id:replacement on:2026-10-07',
+        '[ ] T Source id:source due:2026-10-08T23:30-11:00 do:2026-10-15 follows:old replaced_by:replacement',
+        '[ ] T Same id:same from:2026-10-10T01:00+14:00 follows:old',
+        '[ ] T NoDate id:undated follows:old',
+        '[ ] T NoId on:2026-10-07 follows:old',
+    ].join('\n'));
+    assert.deepEqual(result.diagnostics, [
+        { severity: 'warning', code: 'temporal-reference-order', line: 3, key: 'replaced_by', value: 'replacement' },
+        { severity: 'warning', code: 'temporal-reference-order', line: 3, key: 'follows', value: 'old' },
+    ]);
+});
+
+test('does not compare ambiguous or self temporal references', () => {
+    const result = parse([
+        '[ ] T Old id:old id:alias on:2026-10-10 follows:alias',
+        '[ ] T Copy id:old on:2026-10-10',
+        '[ ] T New id:new on:2026-10-07 follows:old',
+        '[ ] T AmbiguousSource id:old id:unique on:2026-10-07 follows:later',
+        '[ ] T Later id:later on:2026-10-12',
+    ].join('\n'));
+    assert.equal(result.diagnostics.some(d => d.code === 'temporal-reference-order'), false);
+});
+
 test('excludes unknown format versions', () => {
     const future = parse('#! format_version: 2\nanything');
     assert.equal(future.incomplete, true);

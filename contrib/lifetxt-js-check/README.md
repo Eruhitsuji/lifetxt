@@ -28,8 +28,11 @@ warns about missing targets, self references, and ambiguous IDs.
 Cycle warnings show the starting line and the ID path. Cycle checks cover
 `parent:`, `depends_on:` combined with reversed `blocks:`, and each of
 `duplicate_of:`, `replaced_by:`, `follows:`, and `realizes:` separately.
-Only IDs with exactly one occurrence participate. Use `lifetxt check` for
-checks across multiple files and temporal relation consistency.
+Only IDs with exactly one occurrence participate. For `follows:` and
+`replaced_by:`, the checker also warns when the successor is dated before
+the predecessor. It uses the first comparable date from `due:`, `do:`,
+`on:`, or `from:`, in that order. For datetimes, it compares the calendar
+date as written. Use `lifetxt check` for checks across multiple files.
 
 The built-in temporal fields check calendar dates (`YYYY-MM-DD`), datetimes
 (`YYYY-MM-DDTHH:MM`), or times (`HH:MM`), depending on the key. The check

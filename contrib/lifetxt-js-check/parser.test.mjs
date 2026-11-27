@@ -432,6 +432,24 @@ test('accepts continuous history and reports duplicated events', () => {
     ]);
 });
 
+test('accepts partial item histories and detects duplicate events', () => {
+    const sequence = '100000000000000000000';
+    const item = '[ ] T Item id:item';
+    const event = '[N] N Event record:item_event id:IE-item-' + sequence +
+        ' parent:item event:status_changed at:2026-11-27T09:00:00Z sequence:' + sequence +
+        ' transaction:tx source_revision:' + 'a'.repeat(64) +
+        ' before_status:"[/]" after_status:"[ ]"';
+    assert.deepEqual(parse([item, event].join('\n')).diagnostics, []);
+    const result = parse([item, event, event].join('\n'));
+    assert.deepEqual(result.diagnostics.map(d => [d.code, d.key]), [
+        ['duplicate-id', 'id'],
+        ['item-event-duplicate', 'id'],
+        ['item-event-duplicate', 'transaction'],
+        ['item-event-duplicate', 'sequence'],
+        ['item-history-discontinuous', 'before_status'],
+    ]);
+});
+
 test('excludes unknown format versions', () => {
     const future = parse('#! format_version: 2\nanything');
     assert.equal(future.incomplete, true);

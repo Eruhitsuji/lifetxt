@@ -94,6 +94,11 @@ timestamps, and continuity with the current item in the same input. Progress
 numbers use ASCII digits. Missing timestamps are reported without using the
 current time as a substitute.
 
+For `record:item_event` notes, the checker validates the event fields,
+sequence, timestamps, and recorded status against the current item. A
+partial history may start at a later sequence when it has no creation event.
+History comparisons use the default `id:` key and textual field values.
+
 ## Core comparison
 
 From the repository root, run the same checks as the JS checker CI:

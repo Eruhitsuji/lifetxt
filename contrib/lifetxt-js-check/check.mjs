@@ -2,11 +2,14 @@ import { constants } from 'node:fs';
 import { open } from 'node:fs/promises';
 import { MAX_BYTES, parse } from './parser.mjs';
 
-function quoteId(value) {
-    return JSON.stringify(value).replace(/[^\x20-\x7e]/g, char =>
+function escapeConsole(text) {
+    return text.replace(/[^\x20-\x7e]/g, char =>
         '\\u' + char.charCodeAt(0).toString(16).padStart(4, '0'));
 }
 
+function quoteId(value) {
+    return escapeConsole(JSON.stringify(value));
+}
 const args = process.argv.slice(2);
 if (args.length === 1 && args[0] === '--help') {
     console.log('Usage: node check.mjs FILE\nChecks supported life.txt syntax and values.');
@@ -32,7 +35,7 @@ if (args.length === 1 && args[0] === '--help') {
             await file.close();
         }
         for (const { severity, code, line, key, part, firstLine, value, path, childCount } of result.diagnostics) {
-            const field = key ? ` (${key}:${part ? ` ${part}` : ''})` : '';
+            const field = key ? ` (${key}:${part ? ` ${escapeConsole(part)}` : ''})` : '';
             let target = '';
             if (value !== undefined) {
                 target = ` ${quoteId(value)}`;

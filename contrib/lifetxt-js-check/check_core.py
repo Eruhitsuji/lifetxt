@@ -70,6 +70,11 @@ JS_CODES = {
     "W241": "progress-history-discontinuous",
     "W242": "progress-history-time-order",
     "W243": "progress-history-current-mismatch",
+    "W273": "item-history-gap",
+    "W274": "item-history-time-order",
+    "W275": "item-history-creation-order",
+    "W276": "item-history-discontinuous",
+    "W277": "item-history-current-mismatch",
 }
 
 
@@ -605,6 +610,48 @@ def cases():
             diagnostic_keys=("at", "record", "at", "sequence", "source_revision",
                              "operation", "before_progress", "after_progress"),
             diagnostic_parts=("id, parent, transaction",),
+            check_cli=True,
+        ),
+        Case(
+            "item event partial history can begin after sequence one",
+            "[ ] T Item id:p\n"
+            '[N] N Event record:item_event id:IE-p-000007 parent:p event:status_changed '
+            'at:2026-11-27T09:00:00Z sequence:7 transaction:tx7 '
+            f"source_revision:{'a' * 64} "
+            'before_status:"[/]" after_status:"[ ]"',
+            check_cli=True,
+        ),
+        Case(
+            "item history sequence and status continuity",
+            "[ ] T Item id:p\n"
+            '[N] N First record:item_event id:IE-p-000002 parent:p event:created '
+            'at:2026-11-27T10:00:00Z sequence:2 transaction:tx2 '
+            f"source_revision:{'a' * 64} "
+            'item_kind:T item_title:Item after_status:"[ ]"\n'
+            '[N] N Last record:item_event id:IE-p-000004 parent:p event:completed '
+            'at:2026-11-27T09:00:00Z sequence:4 transaction:tx4 '
+            f"source_revision:{'b' * 64} "
+            'before_status:"[/]" after_status:"[x]"',
+            core=tuple(("warning", code, line, None) for code, line in (
+                ("W273", 3), ("W275", 2), ("W274", 3), ("W276", 3), ("W277", 3),
+            )),
+            diagnostic_keys=("sequence", "sequence", "at", "before_status", "after_status"),
+            check_cli=True,
+        ),
+        Case(
+            "item event schedule shape and malformed envelope",
+            "[N] N Event record:item_event event:schedule_changed field:wrong rogue:x at:08:00 sequence:0",
+            core=tuple(("warning", code, 1, None) for code in (
+                "W106", "W261", "W261", "W264", "W265", "W266", "W268", "W269", "W269",
+            )),
+            js=tuple(("warning", code, 1) for code in (
+                "item-event-missing", "item-event-cardinality", "item-event-unknown-field",
+                "item-event-timestamp", "item-event-sequence", "item-event-field",
+                "item-event-schedule-value", "item-event-schedule-value",
+            )),
+            diagnostic_keys=("record", "record", "record", "at", "sequence", "field", "before", "after"),
+            diagnostic_parts=("id, parent, transaction, source_revision",
+                              "id, parent, transaction, source_revision", "rogue"),
             check_cli=True,
         ),
         Case(

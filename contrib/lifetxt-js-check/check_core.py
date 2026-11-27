@@ -30,7 +30,10 @@ JS_CODES = {
     "E202": "status-invalid-from",
     "E203": "status-missing-state",
     "E204": "status-invalid-to",
+    "E205": "message-missing-sender",
+    "E206": "message-missing-recipient",
     "W005": "unknown-escape",
+    "W101": "note-marker-with-actionable-type",
     "W201": "invalid-date",
     "W202": "invalid-datetime",
     "W203": "invalid-date-or-datetime",
@@ -40,6 +43,9 @@ JS_CODES = {
     "W207": "unknown-state",
     "W208": "status-closed-marker",
     "W209": "status-open-marker",
+    "W210": "notification-missing-boundary",
+    "W211": "notification-end-before-start",
+    "W212": "message-workflow-marker",
     "W213": "duplicate-id",
     "W214": "invalid-id",
     "W215": "missing-reference",
@@ -523,6 +529,38 @@ def cases():
         Case(
             "status checks use key presence for empty JSON value lists",
             "[x] S Empty from:json<< [] >> to:json<< [] >> state:json<< [] >>",
+        ),
+        Case(
+            "message missing participants and a notification boundary",
+            "[N] M Missing notify_to:2026-10-01",
+            core=(("warning", "W101", 1, None), ("error", "E205", 1, None),
+                  ("error", "E206", 1, None), ("warning", "W210", 1, None),
+                  ("warning", "W212", 1, None)),
+            diagnostic_keys=("sender", "recipient", "notify_from"),
+        ),
+        Case(
+            "date-only notification end equals 23:59:59",
+            "[/] M Message sender:self recipient:a recipient:b "
+            "notify_from:2026-10-01T23:59:59 notify_to:2026-10-01",
+        ),
+        Case(
+            "date-only notification end and its next microsecond",
+            "[ ] M Message sender:self recipient:a "
+            "notify_from:2026-10-01T23:59:59.000001 notify_to:2026-10-01",
+            core=(("warning", "W211", 1, None),),
+            diagnostic_keys=("notify_to",),
+        ),
+        Case(
+            "message participant types suppress interval diagnostics",
+            "[ ] M Message sender:json<< true >> notify_from:2026-10-01",
+            core=(("error", "E025", 1, None),),
+            diagnostic_keys=("sender",),
+        ),
+        Case(
+            "invalid notification datetime only gets a value warning",
+            "[ ] M Message sender:self recipient:a notify_from:invalid notify_to:2026-10-01",
+            core=(("warning", "W203", 1, None),),
+            diagnostic_keys=("notify_from",),
         ),
         Case(
             "non-text reference produces a type error and is not resolved in JS",

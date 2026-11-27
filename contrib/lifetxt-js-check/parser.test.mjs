@@ -8,7 +8,7 @@ test('recognizes every Format 1 status and type', () => {
             const result = parse(`${status} ${type} title`);
             assert.equal(result.items[0].status, status);
             assert.equal(result.items[0].type, type);
-            assert.equal(result.hasErrors, type === 'S');
+            assert.equal(result.hasErrors, type === 'S' || type === 'M');
         }
     }
 });
@@ -379,6 +379,22 @@ test('checks status fields and recommends markers for open and closed intervals'
         ['warning', 'status-closed-marker', 4],
     ]);
     assert.equal(result.hasErrors, true);
+});
+
+test('checks message participants and notification interval boundaries', () => {
+    const result = parse([
+        '[ ] M Missing notify_from:2026-10-01',
+        '[ ] M Ordered sender:self recipient:a recipient:b notify_from:2026-10-01 notify_to:2026-10-01',
+        '[ ] M Reversed sender:self recipient:a notify_from:2026-10-02T00:00 notify_to:2026-10-01',
+        '[ ] M Empty sender:self recipient:a notify_from:json<< [] >> notify_to:2026-10-01',
+        '[ ] T Task notify_from:2026-10-02 notify_to:2026-10-01',
+    ].join('\n'));
+    assert.deepEqual(result.diagnostics.map(({ code, line, key }) => [code, line, key]), [
+        ['message-missing-sender', 1, 'sender'],
+        ['message-missing-recipient', 1, 'recipient'],
+        ['notification-missing-boundary', 1, 'notify_to'],
+        ['notification-end-before-start', 3, 'notify_to'],
+    ]);
 });
 
 test('excludes unknown format versions', () => {

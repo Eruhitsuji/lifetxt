@@ -51,6 +51,11 @@ Status items (`S`) require `from:` and `state:`. The checker validates
 the status datetimes and recommends `[/]` for an ongoing status or `[x]`
 when `to:` is present. Unknown `state:` values produce a warning.
 
+Message items (`M`) require `sender:` and `recipient:`. The checker warns
+about a missing boundary or reversed order in `notify_from:` and `notify_to:`,
+and recommends a workflow marker for messages. A date-only start means
+00:00:00, and a date-only end means 23:59:59.
+
 Recurrence checks cover `repeat:daily`, `weekly`, `monthly`, `yearly`, and
 `weekdays`, as well as positive `interval:` and `count:` values. The checked
 `RRULE:` subset is `FREQ`, `INTERVAL`, `COUNT`, `UNTIL`, `BYDAY`,

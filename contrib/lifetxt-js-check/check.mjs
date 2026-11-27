@@ -26,9 +26,15 @@ if (args.length === 1 && args[0] === '--help') {
         } finally {
             await file.close();
         }
-        for (const { severity, code, line, key, part } of result.diagnostics) {
+        for (const { severity, code, line, key, part, firstLine, value } of result.diagnostics) {
             const field = key ? ` (${key}:${part ? ` ${part}` : ''})` : '';
-            console.log(`Line ${line}: ${severity} ${code}${field}`);
+            let duplicate = '';
+            if (firstLine !== undefined) {
+                const escaped = JSON.stringify(value).replace(/[^\x20-\x7e]/g, char =>
+                    '\\u' + char.charCodeAt(0).toString(16).padStart(4, '0'));
+                duplicate = ` ${escaped}, first seen at line ${firstLine}`;
+            }
+            console.log(`Line ${line}: ${severity} ${code}${field}${duplicate}`);
         }
         if (result.diagnosticCount > result.diagnostics.length) {
             console.log(`${result.diagnosticCount - result.diagnostics.length} additional diagnostics omitted.`);

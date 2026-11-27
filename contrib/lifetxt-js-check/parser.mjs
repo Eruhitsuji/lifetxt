@@ -118,6 +118,23 @@ function isProgress(value) {
     return total > 0n && current >= 0n && current <= total;
 }
 
+function validateDuration(value, key, line, report) {
+    const match = /^(?:(\d+)h(?:(\d+)m)?|(\d+)m?)$/.exec(value.trim().toLowerCase());
+    if (!match) {
+        report('warning', 'invalid-duration', line, key);
+        return;
+    }
+    const total = BigInt(match[1] ?? '0') * 60n + BigInt(match[2] ?? match[3] ?? '0');
+    const hours = total / 60n;
+    const minutes = total % 60n;
+    let compact = minutes + 'm';
+    if (hours > 0n) {
+        compact = hours + 'h';
+        if (minutes > 0n) compact += String(minutes).padStart(2, '0') + 'm';
+    }
+    if (compact !== value) report('warning', 'noncompact-duration', line, key, { part: compact });
+}
+
 function isRruleUntil(value) {
     if (isDate(value) || isDateTime(value)) return true;
     const match = /^(\d{4})(\d{2})(\d{2})(?:[Tt](\d{2})(\d{2})(\d{2})(Z|[+-]\d{4})?)?$/.exec(value);
@@ -323,7 +340,8 @@ function validateItemDetails(item, report) {
         } else if (REFERENCE_KEYS.includes(key)) {
             code = 'invalid-reference-id';
             accepts = value => ID_VALUE.test(value);
-        } else if (key !== 'repeat' && key !== 'sender' && key !== 'recipient') {
+        } else if (key !== 'repeat' && key !== 'sender' && key !== 'recipient' &&
+            key !== 'est' && key !== 'elapsed' && key !== 'importance') {
             continue;
         }
         if (values.some(value => typeof value !== 'string')) {
@@ -331,8 +349,13 @@ function validateItemDetails(item, report) {
             hasTypeError = true;
             continue;
         }
+        if (key === 'importance' &&
+            (values.length !== 1 || !['high', 'normal', 'low'].includes(values[0]))) {
+            report('warning', 'invalid-importance', item.line, key);
+        }
         for (const value of values) {
             if (key === 'repeat') validateRepeat(value, item.line, report);
+            else if (key === 'est' || key === 'elapsed') validateDuration(value, key, item.line, report);
             else if (accepts && !accepts(value)) report('warning', code, item.line, key);
         }
     }

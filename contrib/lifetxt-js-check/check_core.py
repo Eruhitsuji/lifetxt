@@ -58,9 +58,11 @@ JS_CODES = {
     "W219": "expected-positive-integer",
     "W220": "indent-no-parent",
     "W221": "indent-parent-no-id",
+    "W222": "noncompact-duration",
     "W223": "invalid-rrule",
     "W224": "completed-with-open-dependency",
     "W225": "closed-parent-with-open-children",
+    "W226": "invalid-duration",
     "W230": "invalid-progress",
     "W231": "progress-event-missing",
     "W233": "progress-event-timestamp",
@@ -668,6 +670,24 @@ def cases():
                 ("W104", 4), ("W203", 4),
             )),
             diagnostic_keys=("done", "done", "done"),
+        ),
+        Case(
+            "duration suggestions and importance cardinality",
+            '[ ] T Work est:90 elapsed:" 1H5M " est:1h75m elapsed:bad importance:high importance:low\n'
+            '[ ] T Typed est:json<< 30 >> importance:json<< [] >>',
+            core=tuple((severity, code, line, None) for severity, code, line in (
+                ("warning", "W222", 1), ("warning", "W222", 1), ("warning", "W222", 1),
+                ("warning", "W226", 1), ("warning", "W231", 1),
+                ("error", "E025", 2), ("warning", "W231", 2),
+            )),
+            js=tuple((severity, code, line) for severity, code, line in (
+                ("warning", "noncompact-duration", 1), ("warning", "noncompact-duration", 1),
+                ("warning", "noncompact-duration", 1), ("warning", "invalid-duration", 1),
+                ("warning", "invalid-importance", 1), ("error", "detail-expects-text", 2),
+                ("warning", "invalid-importance", 2),
+            )),
+            diagnostic_keys=("est", "est", "elapsed", "elapsed", "importance", "est", "importance"),
+            diagnostic_parts=("1h30m", "2h15m", "1h05m"),
         ),
         Case(
             "non-text reference produces a type error and is not resolved in JS",

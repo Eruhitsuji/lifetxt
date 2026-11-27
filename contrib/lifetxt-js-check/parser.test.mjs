@@ -232,6 +232,27 @@ test('checks simple recurrence and identifies each problematic RRULE part', () =
     assert.equal(result.hasErrors, true);
 });
 
+test('accepts all requirement states in short and JSON conditions', () => {
+    const states = ['not_started', 'in_progress', 'done', 'canceled', 'moved', 'maybe', 'note',
+        '[ ]', '[/]', '[x]', '[-]', '[>]', '[?]', '[N]'];
+    const condition = JSON.stringify({ all: [
+        { id: 'review', state: states },
+        { any: ['materials=not_started,done', 'review=alias=done'] },
+    ] });
+    assert.deepEqual(parse('[ ] T Submit requires:"review=' + states.join(',') + '" ' +
+        'requires:json<< ' + condition + ' >>').diagnostics, []);
+});
+
+test('reports the first problem in each requires value on its item line', () => {
+    const result = parse('# comment\n[ ] T Submit requires:"a b=done" requires:review=done, ' +
+        'requires:json<< [{"all":["ok=done",{"id":"other","state":[]}]}, ' +
+        '{"all":[]}, {"id":"review","state":true}] >>\n[ ] T Next');
+    assert.deepEqual(result.diagnostics, ['id', 'state', 'state', 'shape', 'state'].map(part =>
+        ({ severity: 'error', code: 'invalid-requires', line: 2, key: 'requires', part })));
+    assert.equal(result.hasErrors, true);
+    assert.equal(result.items.length, 2);
+});
+
 test('excludes unknown format versions', () => {
     const future = parse('#! format_version: 2\nanything');
     assert.equal(future.incomplete, true);

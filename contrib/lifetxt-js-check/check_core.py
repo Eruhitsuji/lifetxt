@@ -22,6 +22,7 @@ JS_CODES = {
     "E021": "line-join-into-body",
     "E022": "ambiguous-body",
     "E023": "invalid-json-detail",
+    "E024": "invalid-requires",
     "E025": "detail-expects-text",
     "W005": "unknown-escape",
     "W201": "invalid-date",
@@ -46,7 +47,7 @@ class Case:
     js: tuple[tuple[str, str, int], ...] | None = None
     same_items: bool = True
     diagnostic_keys: tuple[str, ...] = ()
-    rrule_parts: tuple[str, ...] = ()
+    diagnostic_parts: tuple[str, ...] = ()
 
     def expected_js(self):
         if self.js is not None:
@@ -263,7 +264,43 @@ def cases():
             "UNTIL=20260230;BYDAY=2MO;BYMONTH=13;JUNK",
             core=(("warning", "W223", 1, None),) * 6,
             diagnostic_keys=("repeat",) * 6,
-            rrule_parts=("FREQ", "KEY", "INTERVAL", "COUNT", "UNTIL", "BYDAY"),
+            diagnostic_parts=("FREQ", "KEY", "INTERVAL", "COUNT", "UNTIL", "BYDAY"),
+        ),
+        Case(
+            "short and nested JSON requirements with known reference targets",
+            '[ ] T Review id:review\n[ ] T Materials id:materials\n'
+            '[ ] T Submit requires:review=in_progress,done requires:"materials=[ ]" '
+            'requires:json<< {"all":[{"id":"review","state":["done","[?]"]},'
+            '{"any":["materials=not_started","review=[x]"]}]} >>\n',
+        ),
+        Case(
+            "invalid requires value reports one error per value in order",
+            '[ ] T Submit requires:bad() requires:=done requires:review=done, '
+            'requires:json<< [true,{"id":42,"state":"done"},{"id":"a\\u0085b","state":"done"},'
+            '{"id":"a","state":[]},{"id":"a","state":"done","extra":true},{"any":[]}] >>\n',
+            core=(("error", "E024", 1, None),) * 9,
+            diagnostic_keys=("requires",) * 9,
+            diagnostic_parts=("shape", "id", "state", "shape", "id", "id", "state", "shape", "shape"),
+        ),
+        Case(
+            "requires group reports only its first invalid child",
+            '[ ] T Submit requires:json<< {"any":["=done","review=unknown"]} >>',
+            core=(("error", "E024", 1, None),),
+            diagnostic_keys=("requires",),
+            diagnostic_parts=("id",),
+        ),
+        Case(
+            "allows 32 nested requires groups",
+            '[ ] T Review id:review\n[ ] T Submit requires:json<< '
+            + '{"all":[' * 32 + '"review=done"' + ']}' * 32 + ' >>',
+        ),
+        Case(
+            "rejects 33 nested requires groups",
+            '[ ] T Submit requires:json<< '
+            + '{"any":[' * 33 + '"review=done"' + ']}' * 33 + ' >>',
+            core=(("error", "E024", 1, None),),
+            diagnostic_keys=("requires",),
+            diagnostic_parts=("depth",),
         ),
         # These expectations document gaps for the staged Core-compatible checker.
         Case(
@@ -278,12 +315,6 @@ def cases():
             "[ ] T title on:２０２４-02-29",
             js=(("warning", "invalid-date", 1),),
             diagnostic_keys=("on",),
-        ),
-        Case(
-            "invalid requires expression",
-            "[ ] T title requires:bad()\n",
-            core=(("error", "E024", 1, None),),
-            js=(),
         ),
         Case(
             "duplicate ID",
@@ -303,7 +334,7 @@ def cases():
             f"[ ] E title repeat:RRULE:{rule}",
             core=(("warning", "W223", 1, None),),
             diagnostic_keys=("repeat",),
-            rrule_parts=(part,),
+            diagnostic_parts=(part,),
         )
         for rule, part in (
             ("COUNT=2", "FREQ"),
@@ -412,7 +443,7 @@ class CoreComparisonTests(unittest.TestCase):
                 )
                 self.assertEqual(
                     tuple(d["part"] for d in js["diagnostics"] if "part" in d),
-                    case.rrule_parts,
+                    case.diagnostic_parts,
                 )
                 self.assertEqual(js["diagnosticCount"], len(expected_js))
                 severities = {severity for severity, _, _ in expected_js}

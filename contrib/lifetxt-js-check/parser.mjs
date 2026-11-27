@@ -28,6 +28,43 @@ const SIMPLE_REPEATS = new Set(['daily', 'weekly', 'monthly', 'yearly', 'weekday
 const RRULE_FREQUENCIES = new Set(['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY']);
 const RRULE_PARTS = new Set(['FREQ', 'INTERVAL', 'COUNT', 'UNTIL', 'BYDAY', 'BYMONTHDAY', 'BYMONTH', 'WKST']);
 const WEEKDAYS = new Set(['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU']);
+const REQUIREMENT_STATES = new Set([
+    'not_started', 'in_progress', 'done', 'canceled', 'moved', 'maybe', 'note',
+    '[ ]', '[/]', '[x]', '[-]', '[>]', '[?]', '[N]',
+]);
+
+function requirementLeafProblem(id, states) {
+    if (typeof id !== 'string' || !id || /[\p{White_Space}\x1c-\x1f]/u.test(id)) return 'id';
+    if (!states.length || states.some(state => !REQUIREMENT_STATES.has(state))) return 'state';
+    return null;
+}
+
+function requirementProblem(value, depth = 0) {
+    if (depth > 32) return 'depth';
+    if (typeof value === 'string') {
+        const separator = value.lastIndexOf('=');
+        return separator < 0 ? 'shape' :
+            requirementLeafProblem(value.slice(0, separator), value.slice(separator + 1).split(','));
+    }
+    if (value === null || typeof value !== 'object' || Array.isArray(value)) return 'shape';
+
+    const keys = Object.keys(value);
+    if (keys.length === 2 && Object.hasOwn(value, 'id') && Object.hasOwn(value, 'state')) {
+        const states = Array.isArray(value.state) ? value.state : [value.state];
+        return requirementLeafProblem(value.id, states);
+    }
+    if (keys.length !== 1) return 'shape';
+    const [operator] = keys;
+    const children = value[operator];
+    if ((operator !== 'all' && operator !== 'any') || !Array.isArray(children) || !children.length) {
+        return 'shape';
+    }
+    for (const child of children) {
+        const problem = requirementProblem(child, depth + 1);
+        if (problem) return problem;
+    }
+    return null;
+}
 
 function isDate(value) {
     const match = DATE_VALUE.exec(value);
@@ -166,6 +203,13 @@ function validateEventRange(item, report) {
 function validateItemDetails(item, report) {
     let hasTypeError = false;
     for (const [key, values] of item.details) {
+        if (key === 'requires') {
+            for (const value of values) {
+                const problem = requirementProblem(value);
+                if (problem) report('error', 'invalid-requires', item.line, key, problem);
+            }
+            continue;
+        }
         let code;
         let accepts;
         if (key === 'on') {
@@ -434,7 +478,7 @@ function inferParent(item, ancestor, report) {
     }
 }
 
-/** Check supported Format 1 syntax, hierarchy, times and recurrence values.
+/** Check supported Format 1 syntax, hierarchy and selected field values.
  * @param {string} text
  * @returns {ParseResult}
  */

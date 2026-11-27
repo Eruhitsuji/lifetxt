@@ -34,6 +34,12 @@ Recurrence checks cover `repeat:daily`, `weekly`, `monthly`, `yearly`, and
 and validates values and combinations without expanding any occurrences.
 Recurrence numbers use ASCII digits.
 
+The checker validates the shape of `requires:` conditions. Use
+`requires:review=done,in_progress` or a JSON object such as
+`requires:json<< {"any":[{"id":"review","state":"done"},"proxy=[x]"]} >>`.
+Each repeated value is checked. Groups must contain at least one condition and
+may be nested up to 32 levels. Use `lifetxt check` to verify the referenced IDs.
+
 An indented item inherits `parent:` from the first `id:` value of the nearest
 less-indented item unless it already has a parent value. An indented item
 without an ancestor, or with an ancestor that has no ID, produces a warning.
@@ -68,6 +74,6 @@ explicit mapping from Core codes to JS codes. Core columns are checked against
 fixture expectations. The current JS diagnostic format has no column field.
 
 Fixtures also document the current engine-specific results for known gaps,
-including oversized JSON integers, requirements, and ID
-references. A changed diagnostic fails CI with the fixture name and engine.
+including oversized JSON integers and ID references. A changed diagnostic fails
+CI with the fixture name and engine.
 Update the corresponding expectations when a gap is resolved (#1731).

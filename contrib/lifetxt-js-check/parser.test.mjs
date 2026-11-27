@@ -239,8 +239,9 @@ test('accepts all requirement states in short and JSON conditions', () => {
         { id: 'review', state: states },
         { any: ['materials=not_started,done', 'review=alias=done'] },
     ] });
-    assert.deepEqual(parse('[ ] T Submit requires:"review=' + states.join(',') + '" ' +
-        'requires:json<< ' + condition + ' >>').diagnostics, []);
+    assert.deepEqual(parse('[ ] T Review id:review id:review=alias\n' +
+        '[ ] T Materials id:materials\n[ ] T Submit requires:"review=' + states.join(',') + '" ' +
+        'requires:json<< ' + condition + ' >>').diagnostics.map(d => d.code), ['invalid-id']);
 });
 
 test('reports the first problem in each requires value on its item line', () => {
@@ -275,6 +276,23 @@ test('reports a type error without indexing a non-text ID', () => {
         { severity: 'error', code: 'detail-expects-text', line: 1, key: 'id' },
     ]);
     assert.equal(result.hasErrors, true);
+});
+
+test('checks explicit and inferred references against the same input', () => {
+    const result = parse([
+        '[ ] T Parent id:parent',
+        '  [ ] T Child id:child ref:child related:later',
+        '[ ] T Later id:later id:alias',
+        '[ ] T SameAlias id:alias',
+        '[ ] T Other depends_on:alias requires:json<< {"all":["missing=done","missing=maybe"]} >>',
+    ].join('\n'));
+    assert.deepEqual(result.diagnostics, [
+        { severity: 'warning', code: 'duplicate-id', line: 4, key: 'id', firstLine: 3, value: 'alias' },
+        { severity: 'warning', code: 'self-reference', line: 2, key: 'ref', value: 'child' },
+        { severity: 'warning', code: 'ambiguous-reference', line: 5, key: 'depends_on', value: 'alias' },
+        { severity: 'warning', code: 'missing-reference', line: 5, key: 'requires', value: 'missing' },
+    ]);
+    assert.equal(result.hasErrors, false);
 });
 
 test('excludes unknown format versions', () => {

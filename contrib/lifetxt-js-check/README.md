@@ -15,13 +15,17 @@ Inputs are limited to 16,384 UTF-8 bytes and output to 100 diagnostics.
 
 The checker reads item headers, titles, details, backslash line joins, and
 `|` body lines. It preserves unknown and repeated detail keys. Unsupported
-format versions are reported as unchecked. Use `lifetxt check` for reference
-resolution.
+format versions are reported as unchecked.
 
 Use a compact ASCII token for `id:`. The checker warns about invalid text IDs
 and repeated nonempty text IDs in the input, including repetitions on the same
 item, and gives the first occurrence's line. IDs are case-sensitive. Non-text
 ID values produce a type error and do not participate in duplicate detection.
+
+Reference keys such as `parent:`, `ref:`, and `depends_on:` and valid
+`requires:` conditions are checked against the same input. The checker
+warns about missing targets, self references, and ambiguous IDs. Use
+`lifetxt check` for cycle detection and checks across multiple files.
 
 The built-in temporal fields check calendar dates (`YYYY-MM-DD`), datetimes
 (`YYYY-MM-DDTHH:MM`), or times (`HH:MM`), depending on the key. The check
@@ -43,7 +47,7 @@ The checker validates the shape of `requires:` conditions. Use
 `requires:review=done,in_progress` or a JSON object such as
 `requires:json<< {"any":[{"id":"review","state":"done"},"proxy=[x]"]} >>`.
 Each repeated value is checked. Groups must contain at least one condition and
-may be nested up to 32 levels. Use `lifetxt check` to verify the referenced IDs.
+may be nested up to 32 levels.
 
 An indented item inherits `parent:` from the first `id:` value of the nearest
 less-indented item unless it already has a parent value. An indented item
@@ -79,6 +83,6 @@ explicit mapping from Core codes to JS codes. Core columns are checked against
 fixture expectations. The current JS diagnostic format has no column field.
 
 Fixtures also document the current engine-specific results for known gaps,
-including oversized JSON integers, non-text ID duplication, and ID references.
+including oversized JSON integers and non-text ID or reference values.
 A changed diagnostic fails CI with the fixture name and engine.
 Update the corresponding expectations when a gap is resolved (#1731).

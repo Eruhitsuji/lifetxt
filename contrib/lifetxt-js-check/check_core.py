@@ -10,6 +10,7 @@ import unittest
 from unittest.mock import patch
 
 from lifetxt.model import DATETIME_KEYS, DATE_KEYS, DATE_OR_DATETIME_KEYS, TIME_OR_DATETIME_KEYS
+from lifetxt.model import REFERENCE_KEYS
 from lifetxt.parser import parse_text
 
 
@@ -33,6 +34,9 @@ JS_CODES = {
     "W206": "event-end-before-start",
     "W213": "duplicate-id",
     "W214": "invalid-id",
+    "W215": "missing-reference",
+    "W216": "self-reference",
+    "W218": "ambiguous-reference",
     "W219": "expected-positive-integer",
     "W220": "indent-no-parent",
     "W221": "indent-parent-no-id",
@@ -51,6 +55,7 @@ class Case:
     diagnostic_keys: tuple[str, ...] = ()
     diagnostic_parts: tuple[str, ...] = ()
     duplicate_ids: tuple[tuple[str, int], ...] = ()
+    reference_targets: tuple[str, ...] = ()
 
     def expected_js(self):
         if self.js is not None:
@@ -353,10 +358,44 @@ def cases():
             diagnostic_keys=("id",),
         ),
         Case(
-            "unresolved parent",
-            "[ ] T child parent:missing\n",
-            core=(("warning", "W215", 1, None),),
-            js=(),
+            "regular and requires references are reported in separate passes",
+            "[ ] T Lookup id:lookup requires:missing=done ref:unknown\n"
+            "[ ] T Target id:dup id:dup\n"
+            '[ ] T Source id:source ref:dup related:source '
+            'requires:json<< {"any":["dup=done","dup=maybe","source=done"]} >>\n',
+            core=(("warning", "W213", 2, None), ("warning", "W215", 1, None),
+                  ("warning", "W218", 3, None), ("warning", "W216", 3, None),
+                  ("warning", "W215", 1, None), ("warning", "W218", 3, None),
+                  ("warning", "W216", 3, None)),
+            diagnostic_keys=("id", "ref", "ref", "related", "requires", "requires", "requires"),
+            duplicate_ids=(("dup", 2),),
+            reference_targets=("unknown", "dup", "source", "missing", "dup", "source"),
+        ),
+        Case(
+            "all standard reference keys use Core's order and exact ID matching",
+            "[ ] T Target id:Known\n[ ] T Source "
+            + " ".join(f"{key}:known" for key in reversed(REFERENCE_KEYS)),
+            core=(("warning", "W106", 2, None),) * 4
+                 + (("warning", "W215", 2, None),) * len(REFERENCE_KEYS),
+            js=(("warning", "missing-reference", 2),) * len(REFERENCE_KEYS),
+            diagnostic_keys=REFERENCE_KEYS,
+            reference_targets=("known",) * len(REFERENCE_KEYS),
+        ),
+        Case(
+            "invalid reference token still participates in string lookup",
+            '[ ] T Source parent:"has space"\n[ ] T Target id:"has space"',
+            core=(("warning", "W214", 1, None), ("warning", "W214", 2, None)),
+            js=(("warning", "invalid-reference-id", 1), ("warning", "invalid-id", 2)),
+            diagnostic_keys=("parent", "id"),
+        ),
+        Case(
+            "non-text reference produces a type error and is not resolved in JS",
+            '[ ] T Source ref:json<< [null,"missing"] >>',
+            core=(("error", "E025", 1, None), ("warning", "W215", 1, None),
+                  ("warning", "W215", 1, None)),
+            js=(("error", "detail-expects-text", 1), ("warning", "missing-reference", 1)),
+            diagnostic_keys=("ref", "ref"),
+            reference_targets=("missing",),
         ),
     ] + [
         Case(
@@ -479,6 +518,11 @@ class CoreComparisonTests(unittest.TestCase):
                     tuple((d["value"], d["firstLine"]) for d in js["diagnostics"]
                           if "firstLine" in d),
                     case.duplicate_ids,
+                )
+                self.assertEqual(
+                    tuple(d["value"] for d in js["diagnostics"]
+                          if "value" in d and "firstLine" not in d),
+                    case.reference_targets,
                 )
                 self.assertEqual(js["diagnosticCount"], len(expected_js))
                 severities = {severity for severity, _, _ in expected_js}

@@ -28,13 +28,14 @@ if (args.length === 1 && args[0] === '--help') {
         }
         for (const { severity, code, line, key, part, firstLine, value } of result.diagnostics) {
             const field = key ? ` (${key}:${part ? ` ${part}` : ''})` : '';
-            let duplicate = '';
-            if (firstLine !== undefined) {
+            let target = '';
+            if (value !== undefined) {
                 const escaped = JSON.stringify(value).replace(/[^\x20-\x7e]/g, char =>
                     '\\u' + char.charCodeAt(0).toString(16).padStart(4, '0'));
-                duplicate = ` ${escaped}, first seen at line ${firstLine}`;
+                target = ` ${escaped}`;
+                if (firstLine !== undefined) target += `, first seen at line ${firstLine}`;
             }
-            console.log(`Line ${line}: ${severity} ${code}${field}${duplicate}`);
+            console.log(`Line ${line}: ${severity} ${code}${field}${target}`);
         }
         if (result.diagnosticCount > result.diagnostics.length) {
             console.log(`${result.diagnosticCount - result.diagnostics.length} additional diagnostics omitted.`);

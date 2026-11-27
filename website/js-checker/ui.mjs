@@ -36,6 +36,10 @@ const messages = {
         'expected-positive-integer': '1以上の整数を指定してください。',
         'invalid-rrule': 'RRULE の該当箇所の値または組み合わせを確認してください。',
         'invalid-id': '英数字で始まる半角のIDを指定してください。記号は _ . : @ / - を使用できます。',
+        'invalid-reference-id': '参照先のIDは、英数字で始まる半角の値を指定してください。',
+        'missing-reference': value => `ID ${JSON.stringify(value)} が入力内に見つかりません。`,
+        'self-reference': value => `ID ${JSON.stringify(value)} はこの項目自身を指しています。`,
+        'ambiguous-reference': value => `ID ${JSON.stringify(value)} が複数回使われており、参照先を特定できません。`,
         'duplicate-id': (value, firstLine) => `${JSON.stringify(value)} は ${firstLine}行目で既に使われています。`,
         requires: {
             shape: 'ID=state、または id/state の組、all、any でJSON条件を指定してください。all と any には条件が1つ以上必要です。',
@@ -79,6 +83,10 @@ const messages = {
         'expected-positive-integer': 'Enter an integer of 1 or greater.',
         'invalid-rrule': 'Check the value or combination for the indicated RRULE part.',
         'invalid-id': 'Enter an ASCII ID starting with a letter or digit. Allowed punctuation is _ . : @ / -.',
+        'invalid-reference-id': 'Enter an ASCII reference ID starting with a letter or digit.',
+        'missing-reference': value => `ID ${JSON.stringify(value)} was not found in the input.`,
+        'self-reference': value => `ID ${JSON.stringify(value)} refers to this item.`,
+        'ambiguous-reference': value => `ID ${JSON.stringify(value)} occurs more than once, so the target is ambiguous.`,
         'duplicate-id': (value, firstLine) => `${JSON.stringify(value)} first appears on line ${firstLine}.`,
         requires: {
             shape: 'Use ID=state or a JSON condition with id and state, all, or any. An all or any group needs at least one condition.',
@@ -134,8 +142,8 @@ button.addEventListener('click', () => {
         const location = lang === 'ja' ? `${line}${copy.line}` : `${copy.line} ${line}`;
         const isRequirement = code === 'invalid-requires';
         const field = key ? `${key}: ${part && !isRequirement ? `[${part}] ` : ''}` : '';
-        const message = firstLine !== undefined ? copy['duplicate-id'](value, firstLine) :
-            isRequirement ? copy.requires[part] : copy[code];
+        let message = isRequirement ? copy.requires[part] : copy[code];
+        if (typeof message === 'function') message = message(value, firstLine);
         return `${location} · ${copy.labels[severity]} · ${code} · ${field}${message ?? code}`;
     });
     const hidden = result.diagnosticCount - result.diagnostics.length;

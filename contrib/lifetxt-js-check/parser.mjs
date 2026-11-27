@@ -17,6 +17,48 @@ const UNCLOSED_JSON = Symbol('unclosed JSON detail');
 const encoder = new TextEncoder();
 
 // Match Core's field groups in lifetxt/model.py.
+const KNOWN_KEYS = new Set([
+    'id', 'source', 'uid', 'parent', 'ref', 'depends_on', 'requires', 'blocks', 'related',
+    'created', 'updated', 'done', 'due', 'do', 'from', 'to', 'state', 'user', 'person',
+    'owner', 'assignee', 'attendee', 'sender', 'recipient', 'team', 'group', 'service',
+    'channel', 'visibility', 'notify_at', 'notify_from', 'notify_to', 'ack', 'snooze_until',
+    'on', 'at', 'repeat', 'repeat_base', 'interval', 'until', 'count', 'elapsed', 'project',
+    'context', 'loc', 'priority', 'importance', 'progress', 'est', 'tag', 'note', 'body',
+    'mood', 'weather', 'url', 'reason', 'moved_to', 'file', 'dir',
+]);
+const KEY_STYLE = /^[a-z][a-z0-9_]*\n?$/;
+// Core exempts record-owned fields from custom-key warnings (safety_compat_v2.py).
+const RECORD_OWNED_KEYS = new Map([
+    ['project', ['area', 'record']],
+    ['milestone', ['record']],
+    ['risk', ['record', 'severity']],
+    ['issue', ['record', 'severity']],
+    ['decision', ['record']],
+    ['meeting', ['record']],
+    ['ticket', [
+        'branch', 'build', 'category', 'closed_by', 'commit', 'component', 'duplicate_of',
+        'follows', 'milestone', 'pr', 'realizes', 'record', 'replaced_by', 'reporter',
+        'resolution', 'severity', 'sprint', 'story_points', 'ticket_status', 'tracker',
+        'version', 'watcher',
+    ]],
+    ['ticket_event', [
+        'activity', 'author', 'change', 'event', 'from_status', 'provider', 'record', 'role',
+        'sequence', 'sprint', 'ticket_revision', 'to_status', 'tracker', 'transaction',
+        'version', 'watcher',
+    ]],
+    ['time_entry', [
+        'activity', 'corrects', 'created_at', 'event_id', 'record', 'sequence', 'timer_ref',
+    ]],
+    ['progress_event', [
+        'after_progress', 'before_missing', 'before_progress', 'operation', 'record',
+        'sequence', 'source_revision', 'transaction',
+    ]],
+    ['item_event', [
+        'actor', 'after', 'after_missing', 'after_status', 'before', 'before_missing',
+        'before_status', 'completed_at', 'event', 'field', 'item_kind', 'item_title', 'record',
+        'relation', 'sequence', 'source_revision', 'target', 'transaction',
+    ]],
+]);
 const DATE_OR_DATETIME_KEYS = new Set([
     'created', 'updated', 'done', 'due', 'do', 'moved_to', 'notify_at',
     'notify_from', 'notify_to', 'ack', 'snooze_until', 'until',
@@ -302,6 +344,8 @@ function validateItemMarker(item, report) {
 
 function validateItemDetails(item, report) {
     validateItemMarker(item, report);
+    const record = item.details.find(([key]) => key === 'record')?.[1][0];
+    const recordKeys = RECORD_OWNED_KEYS.get(typeof record === 'string' ? record.toLowerCase() : record);
     let hasTypeError = false;
     for (const [key, values] of item.details) {
         if (key === 'requires') {
@@ -311,6 +355,19 @@ function validateItemDetails(item, report) {
             }
             continue;
         }
+        const known = KNOWN_KEYS.has(key);
+        if ((known || REFERENCE_KEYS.includes(key)) && values.some(value => typeof value !== 'string')) {
+            report('error', 'detail-expects-text', item.line, key);
+            hasTypeError = true;
+            continue;
+        }
+        if (key === 'importance' &&
+            (values.length !== 1 || !['high', 'normal', 'low'].includes(values[0]))) {
+            report('warning', 'invalid-importance', item.line, key);
+        }
+        if (!KEY_STYLE.test(key)) report('warning', 'detail-key-style', item.line, key);
+        if (!known && !recordKeys?.includes(key)) report('warning', 'custom-detail-key', item.line, key);
+
         let code;
         let accepts;
         if (key === 'on') {
@@ -340,18 +397,6 @@ function validateItemDetails(item, report) {
         } else if (REFERENCE_KEYS.includes(key)) {
             code = 'invalid-reference-id';
             accepts = value => ID_VALUE.test(value);
-        } else if (key !== 'repeat' && key !== 'sender' && key !== 'recipient' &&
-            key !== 'est' && key !== 'elapsed' && key !== 'importance') {
-            continue;
-        }
-        if (values.some(value => typeof value !== 'string')) {
-            report('error', 'detail-expects-text', item.line, key);
-            hasTypeError = true;
-            continue;
-        }
-        if (key === 'importance' &&
-            (values.length !== 1 || !['high', 'normal', 'low'].includes(values[0]))) {
-            report('warning', 'invalid-importance', item.line, key);
         }
         for (const value of values) {
             if (key === 'repeat') validateRepeat(value, item.line, report);

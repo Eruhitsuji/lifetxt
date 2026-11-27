@@ -35,7 +35,7 @@ if (args.length === 1 && args[0] === '--help') {
             await file.close();
         }
         for (const { severity, code, line, key, part, firstLine, value, path, childCount } of result.diagnostics) {
-            const field = key ? ` (${key}:${part ? ` ${escapeConsole(part)}` : ''})` : '';
+            const field = key ? ` (${escapeConsole(key)}:${part ? ` ${escapeConsole(part)}` : ''})` : '';
             let target = '';
             if (value !== undefined) {
                 target = ` ${quoteId(value)}`;

@@ -11,7 +11,7 @@ import unittest
 from unittest.mock import patch
 
 from lifetxt.model import DATETIME_KEYS, DATE_KEYS, DATE_OR_DATETIME_KEYS, TIME_OR_DATETIME_KEYS
-from lifetxt.model import REFERENCE_KEYS, STATUS_STATE_VALUES
+from lifetxt.model import KNOWN_KEYS, REFERENCE_KEYS, STATUS_STATE_VALUES
 from lifetxt.parser import parse_text
 
 
@@ -37,6 +37,8 @@ JS_CODES = {
     "W102": "note-item-with-workflow-marker",
     "W103": "completed-item-missing-done",
     "W104": "done-without-completed-marker",
+    "W105": "detail-key-style",
+    "W106": "custom-detail-key",
     "W201": "invalid-date",
     "W202": "invalid-datetime",
     "W203": "invalid-date-or-datetime",
@@ -122,7 +124,7 @@ def cases():
             '| Text\r\n'
             '| 続き\r\n',
             core=(("warning", "W106", 2, None),),
-            js=(),
+            diagnostic_keys=("custom",),
         ),
         Case(
             "malformed detail after a Unicode title",
@@ -166,14 +168,14 @@ def cases():
             '[ ] T title options:json<<\r\n\t{"note":"a >> b","nested":[1,true,null]}\r\n'
             '>> tag:after\r\n[ ] T next',
             core=(("warning", "W106", 1, None),),
-            js=(),
+            diagnostic_keys=("options",),
         ),
         Case(
             "JSON top-level array, empty array and nested array",
             '[ ] T title tag:a tag:json<< ["b","c"] >> tag:d '
             'options:json<< [] >> map:json<< [["a"]] >>',
             core=(("warning", "W106", 1, None), ("warning", "W106", 1, None)),
-            js=(),
+            diagnostic_keys=("options", "map"),
         ),
         Case(
             "malformed JSON recovers at a following detail",
@@ -378,12 +380,29 @@ def cases():
             core=(("error", "E025", 1, None),),
             diagnostic_keys=("id",),
         ),
+        Case(
+            "noncanonical keys warn in field order and custom JSON stays typed",
+            '[ ] T Item My-Key:json<< {"enabled":true} >> owner:json<< ["one",null,1] >> '
+            'custom_key:json<< [false] >>',
+            core=(("warning", "W105", 1, None), ("warning", "W106", 1, None),
+                  ("error", "E025", 1, None), ("warning", "W106", 1, None)),
+            diagnostic_keys=("My-Key", "My-Key", "owner", "custom_key"),
+        ),
+        Case(
+            "record-owned fields only lose the custom warning on matching records",
+            "[ ] T Item record:TiCkEt component:backend vendor_field:yes\n"
+            "[ ] T Ordinary component:backend",
+            core=(("warning", "W106", 1, None), ("warning", "W106", 2, None)),
+            diagnostic_keys=("vendor_field", "component"),
+            check_cli=True,
+        ),
         # These expectations document gaps for the staged Core-compatible checker.
         Case(
             "JSON integer outside JavaScript's safe integer range",
             "[ ] T title options:json<< 9007199254740993 >>",
             core=(("warning", "W106", 1, None),),
-            js=(("unsupported", "json-integer-precision", 1),),
+            js=(("unsupported", "json-integer-precision", 1), ("warning", "custom-detail-key", 1)),
+            diagnostic_keys=("options",),
             same_items=False,
         ),
         Case(
@@ -419,8 +438,7 @@ def cases():
             + " ".join(f"{key}:known" for key in reversed(REFERENCE_KEYS)),
             core=(("warning", "W106", 2, None),) * 4
                  + (("warning", "W215", 2, None),) * len(REFERENCE_KEYS),
-            js=(("warning", "missing-reference", 2),) * len(REFERENCE_KEYS),
-            diagnostic_keys=REFERENCE_KEYS,
+            diagnostic_keys=tuple(reversed(REFERENCE_KEYS[-4:])) + REFERENCE_KEYS,
             reference_targets=("known",) * len(REFERENCE_KEYS),
         ),
         Case(
@@ -439,8 +457,10 @@ def cases():
                  + (("warning", "W106", 2, None),) * 4
                  + tuple(("warning", code, 1, None)
                          for code in ("W217", "W227", "W228", "W229", "W230", "W231")),
-            js=(("warning", "reference-cycle", 1),) * 6,
-            diagnostic_keys=("parent", "depends_on", "duplicate_of", "replaced_by", "follows", "realizes"),
+            js=(("warning", "custom-detail-key", 1),) * 4
+               + (("warning", "custom-detail-key", 2),) * 4
+               + (("warning", "reference-cycle", 1),) * 6,
+            diagnostic_keys=REFERENCE_KEYS[-4:] * 2 + ("parent", "depends_on") + REFERENCE_KEYS[-4:],
             cycle_paths=(("a", "b", "a"),) * 6,
         ),
         Case(
@@ -467,8 +487,9 @@ def cases():
             "do:2026-10-15 follows:old replaced_by:replacement",
             core=(("warning", "W106", 3, None), ("warning", "W106", 3, None),
                   ("warning", "W244", 3, None), ("warning", "W244", 3, None)),
-            js=(("warning", "temporal-reference-order", 3),) * 2,
-            diagnostic_keys=("replaced_by", "follows"),
+            js=(("warning", "custom-detail-key", 3),) * 2
+               + (("warning", "temporal-reference-order", 3),) * 2,
+            diagnostic_keys=("follows", "replaced_by", "replaced_by", "follows"),
             reference_targets=("replacement", "old"),
         ),
         Case(
@@ -477,9 +498,9 @@ def cases():
             "[ ] T New id:new due:invalid due:2026-10-12 do:2026-10-08 follows:old",
             core=(("warning", "W203", 2, None), ("warning", "W106", 2, None),
                   ("warning", "W244", 2, None)),
-            js=(("warning", "invalid-date-or-datetime", 2),
+            js=(("warning", "invalid-date-or-datetime", 2), ("warning", "custom-detail-key", 2),
                 ("warning", "temporal-reference-order", 2)),
-            diagnostic_keys=("due", "follows"),
+            diagnostic_keys=("due", "follows", "follows"),
             reference_targets=("old",),
         ),
         Case(
@@ -487,7 +508,7 @@ def cases():
             "[ ] T Old id:old due:2026-10-09T00:00+14:00\n"
             "[ ] T New id:new due:2026-10-09T23:59-10:00 replaced_by:old",
             core=(("warning", "W106", 2, None),),
-            js=(),
+            diagnostic_keys=("replaced_by",),
         ),
         Case(
             "completed item has open prerequisites and explicit and inferred children",
@@ -650,11 +671,11 @@ def cases():
                 "W106", "W261", "W261", "W264", "W265", "W266", "W268", "W269", "W269",
             )),
             js=tuple(("warning", code, 1) for code in (
-                "item-event-missing", "item-event-cardinality", "item-event-unknown-field",
+                "custom-detail-key", "item-event-missing", "item-event-cardinality", "item-event-unknown-field",
                 "item-event-timestamp", "item-event-sequence", "item-event-field",
                 "item-event-schedule-value", "item-event-schedule-value",
             )),
-            diagnostic_keys=("record", "record", "record", "at", "sequence", "field", "before", "after"),
+            diagnostic_keys=("rogue", "record", "record", "record", "at", "sequence", "field", "before", "after"),
             diagnostic_parts=("id, parent, transaction, source_revision",
                               "id, parent, transaction, source_revision", "rogue"),
             check_cli=True,
@@ -734,6 +755,17 @@ def cases():
             (TIME_OR_DATETIME_KEYS, "W204"),
         )
         for key in keys
+    ] + [
+        Case(
+            f"built-in field expects text: {key}",
+            f"{'[x]' if key == 'done' else '[ ]'} T title {key}:json<< [null,1,true] >>",
+            core=(("error", "E025", 1, None),)
+                 + ((("warning", "W215", 1, None),) * 3 if key in REFERENCE_KEYS else ()),
+            # JS skips reference lookups for non-text values.
+            js=(("error", "detail-expects-text", 1),),
+            diagnostic_keys=(key,),
+        )
+        for key in KNOWN_KEYS if key != "requires"
     ]
 
 

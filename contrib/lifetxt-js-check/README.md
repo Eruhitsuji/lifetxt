@@ -107,6 +107,14 @@ The checker validates `est:` and `elapsed:` using ASCII hours and minutes
 and suggests a compact duration such as `1h30m` for `90`. When specified,
 `importance:` must contain exactly one of `high`, `normal`, and `low`.
 
+Detail keys use a lowercase ASCII letter followed by lowercase letters, digits,
+or underscores. Nonconforming keys and unrecognized custom keys produce
+warnings. Custom values are preserved, including JSON values within the
+checker's supported range. Built-in keys require text values, except for
+`requires:`, which also accepts structured conditions. Record-owned fields
+are recognized for their corresponding `record:` markers. Validation against
+user-defined custom field declarations requires `lifetxt check`.
+
 ## Core comparison
 
 From the repository root, run the same checks as the JS checker CI:

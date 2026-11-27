@@ -22,7 +22,7 @@ const DATE_OR_DATETIME_KEYS = new Set([
     'notify_from', 'notify_to', 'ack', 'snooze_until', 'until',
 ]);
 const DATE_VALUE = /^(\d{4})-(\d{2})-(\d{2})$/;
-const TIME_VALUE = /^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d{1,6})?)?(?:Z|[+-](?:[01]\d|2[0-3]):?[0-5]\d)?$/;
+const TIME_VALUE = /^([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d)(?:\.(\d{1,6}))?)?(Z|[+-](?:[01]\d|2[0-3]):?[0-5]\d)?$/;
 const MONTH_DAYS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
 function isDate(value) {
@@ -43,7 +43,37 @@ function isDateTime(value) {
     return time !== undefined && extra === undefined && isDate(date) && isTime(time);
 }
 
+function eventWallClock(value) {
+    const [date, time] = value.split('T');
+    const [, hour, minute, second = '00', fraction = '', offset] = TIME_VALUE.exec(time);
+    const zone = !offset || offset === 'Z' ? 'Z' : offset.replace(/:?([0-5]\d)$/, ':$1');
+    const clock = new Date(`${date}T${hour}:${minute}:${second}${zone}`);
+    if (!offset) return [clock.getTime(), fraction.padEnd(6, '0')];
+
+    // Core compares offset-aware values as local wall-clock fields. Encode
+    // those fields as UTC solely to order them alongside offsetless values.
+    const localYear = clock.getFullYear();
+    if (localYear < 1 || localYear > 9999) return null;
+    const wall = new Date(0);
+    wall.setUTCFullYear(localYear, clock.getMonth(), clock.getDate());
+    wall.setUTCHours(clock.getHours(), clock.getMinutes(), clock.getSeconds());
+    return [wall.getTime(), fraction.padEnd(6, '0')];
+}
+
+function validateEventRange(item, report) {
+    const from = item.details.find(([key]) => key === 'from')?.[1][0];
+    const to = item.details.find(([key]) => key === 'to')?.[1][0];
+    if (typeof from !== 'string' || typeof to !== 'string' ||
+        !isDateTime(from) || !isDateTime(to)) return;
+    const start = eventWallClock(from);
+    const end = eventWallClock(to);
+    if (start && end && (end[0] < start[0] || (end[0] === start[0] && end[1] < start[1]))) {
+        report('warning', 'event-end-before-start', item.line, 'to');
+    }
+}
+
 function validateTemporalDetails(item, report) {
+    let hasTypeError = false;
     for (const [key, values] of item.details) {
         let code;
         let accepts;
@@ -64,12 +94,14 @@ function validateTemporalDetails(item, report) {
         }
         if (values.some(value => typeof value !== 'string')) {
             report('error', 'detail-expects-text', item.line, key);
+            hasTypeError = true;
             continue;
         }
         for (const value of values) {
             if (!accepts(value)) report('warning', code, item.line, key);
         }
     }
+    if (item.type === 'E' && !hasTypeError) validateEventRange(item, report);
 }
 
 function jsonClose(text) {

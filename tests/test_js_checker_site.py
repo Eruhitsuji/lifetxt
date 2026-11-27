@@ -245,6 +245,12 @@ class JSCheckerSiteTests(unittest.TestCase):
             expect(output).to_contain_text("message-missing-sender")
             expect(output).to_contain_text("message-missing-recipient")
             expect(output).to_contain_text("notification-end-before-start")
+            text.fill("[ ] T Work id:work progress:120%\n"
+                      "[N] N Event record:progress_event parent:work")
+            button.click()
+            expect(output).to_contain_text("invalid-progress")
+            expect(output).to_contain_text("progress-event-missing")
+            expect(output).to_contain_text("progress-event-timestamp")
             text.fill('[ ] T "unfinished')
             expect(status).to_be_empty()
             expect(output).to_be_empty()

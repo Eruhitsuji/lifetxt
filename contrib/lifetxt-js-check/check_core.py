@@ -58,6 +58,18 @@ JS_CODES = {
     "W223": "invalid-rrule",
     "W224": "completed-with-open-dependency",
     "W225": "closed-parent-with-open-children",
+    "W230": "invalid-progress",
+    "W231": "progress-event-missing",
+    "W233": "progress-event-timestamp",
+    "W234": "progress-event-sequence",
+    "W235": "progress-event-revision",
+    "W236": "progress-event-operation",
+    "W237": "progress-event-before-choice",
+    "W238": "progress-event-invalid-progress",
+    "W240": "progress-history-gap",
+    "W241": "progress-history-discontinuous",
+    "W242": "progress-history-time-order",
+    "W243": "progress-history-current-mismatch",
 }
 
 
@@ -561,6 +573,39 @@ def cases():
             "[ ] M Message sender:self recipient:a notify_from:invalid notify_to:2026-10-01",
             core=(("warning", "W203", 1, None),),
             diagnostic_keys=("notify_from",),
+        ),
+        Case(
+            "progress percent and fractions with out-of-range and typed inputs",
+            '[ ] T Work progress:33.3% progress:3/5 progress:101% progress:4/3\n'
+            '[ ] T Typed progress:json<< 25 >>',
+            core=(("warning", "W230", 1, None), ("warning", "W230", 1, None),
+                  ("error", "E025", 2, None)),
+            diagnostic_keys=("progress",) * 3,
+        ),
+        Case(
+            "progress history gaps, continuity, time order and current mismatch",
+            "[ ] T Work id:work progress:25%\n"
+            "[N] N First record:progress_event id:PE-work-000001 parent:work "
+            "at:2026-11-27T10:00:00Z sequence:1 transaction:tx1 operation:set "
+            f"source_revision:{'a' * 64} before_missing:true after_progress:10%\n"
+            "[N] N Last record:progress_event id:PE-work-000003 parent:work "
+            "at:2026-11-27T09:00:00Z sequence:3 transaction:tx3 operation:set "
+            f"source_revision:{'b' * 64} before_progress:0% after_progress:50%",
+            core=tuple(("warning", code, 3, None) for code in ("W240", "W241", "W242", "W243")),
+            diagnostic_keys=("sequence", "before_progress", "at", "progress"),
+            check_cli=True,
+        ),
+        Case(
+            "progress event malformed evidence fields",
+            "[N] N Event record:progress_event at:bad sequence:0 "
+            "source_revision:bad operation:bad after_progress:105%",
+            core=tuple(("warning", code, 1, None) for code in (
+                "W204", "W231", "W233", "W234", "W235", "W236", "W237", "W238",
+            )),
+            diagnostic_keys=("at", "record", "at", "sequence", "source_revision",
+                             "operation", "before_progress", "after_progress"),
+            diagnostic_parts=("id, parent, transaction",),
+            check_cli=True,
         ),
         Case(
             "non-text reference produces a type error and is not resolved in JS",

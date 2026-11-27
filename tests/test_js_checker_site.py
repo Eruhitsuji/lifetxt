@@ -327,7 +327,7 @@ class JSCheckerSiteTests(unittest.TestCase):
             button.click()
             self.assertEqual(output.inner_text().count("invalid-item-start"), 100)
             expect(output).to_contain_text("1件" if lang == "ja" else "1 additional")
-            text.fill("[ ] T Paste survives")
+            text.fill("[ ] T Paste-survives")
             files = page.locator("#files")
             clear_files = page.locator("#clear-files")
             expect(clear_files).to_be_disabled()
@@ -347,7 +347,7 @@ class JSCheckerSiteTests(unittest.TestCase):
             expect(output).to_contain_text('"inbox.txt" の2行目' if lang == "ja" else '"inbox.txt", line 2')
             clear_files.click()
             expect(text).to_be_focused()
-            expect(text).to_have_value("[ ] T Paste survives")
+            expect(text).to_have_value("[ ] T Paste-survives")
             expect(output).to_be_empty()
             button.click()
             expect(output).to_be_empty()
@@ -385,7 +385,7 @@ class JSCheckerSiteTests(unittest.TestCase):
             expect(status).to_be_empty()
             expect(output).to_be_empty()
             expect(button).to_be_enabled()
-            expect(text).to_have_value("[ ] T Paste survives")
+            expect(text).to_have_value("[ ] T Paste-survives")
             self.assertEqual(
                 page.evaluate("[localStorage.length, sessionStorage.length]"), [0, 0]
             )

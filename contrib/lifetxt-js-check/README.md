@@ -88,6 +88,12 @@ array is kept as one value. A JSON integer outside the JavaScript safe range
 
 The distribution ZIP contains the parser, CLI, this README, and LICENSE.
 
+Progress accepts percentages such as `75%` and fractions such as `3/5`.
+The checker also validates `record:progress_event` notes and their sequence,
+timestamps, and continuity with the current item in the same input. Progress
+numbers use ASCII digits. Missing timestamps are reported without using the
+current time as a substitute.
+
 ## Core comparison
 
 From the repository root, run the same checks as the JS checker CI:

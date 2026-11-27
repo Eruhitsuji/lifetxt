@@ -397,6 +397,41 @@ test('checks message participants and notification interval boundaries', () => {
     ]);
 });
 
+test('validates progress without losing precision in large fractions', () => {
+    const result = parse('[ ] T Work progress:9007199254740993/9007199254740992 ' +
+        'progress:3/5 progress:100% progress:0/0');
+    assert.deepEqual(result.diagnostics.map(d => d.code), ['invalid-progress', 'invalid-progress']);
+});
+
+test('validates normalized event timestamps and handles sparse large sequences', () => {
+    const sequence = '100000000000000000000';
+    const result = parse([
+        '[ ] T Work id:work progress:50%',
+        '[N] N Event record:progress_event id:PE-work-' + sequence + ' parent:work ' +
+            'at:2026-11-27T10:00:00.25+0900 sequence:' + sequence +
+            ' transaction:tx source_revision:' + 'a'.repeat(64) +
+            ' operation:set before_progress:0% after_progress:50%',
+    ].join('\n'));
+    assert.deepEqual(result.diagnostics.map(d => [d.code, d.line]), [
+        ['progress-event-timestamp', 2], ['progress-history-gap', 2],
+    ]);
+});
+
+test('accepts continuous history and reports duplicated events', () => {
+    const item = '[ ] T Work id:work progress:50%';
+    const event = '[N] N Event record:progress_event id:PE-work-000001 parent:work ' +
+        'at:2026-11-27T10:00:00Z sequence:1 transaction:tx source_revision:' + 'a'.repeat(64) +
+        ' operation:set before_missing:true after_progress:50%';
+    assert.deepEqual(parse([item, event].join('\n')).diagnostics, []);
+    const duplicates = parse([item, event, event].join('\n')).diagnostics;
+    assert.deepEqual(duplicates.map(d => [d.code, d.key]), [
+        ['duplicate-id', 'id'],
+        ['progress-event-duplicate', 'id'],
+        ['progress-event-duplicate', 'transaction'],
+        ['progress-event-duplicate', 'sequence'],
+    ]);
+});
+
 test('excludes unknown format versions', () => {
     const future = parse('#! format_version: 2\nanything');
     assert.equal(future.incomplete, true);

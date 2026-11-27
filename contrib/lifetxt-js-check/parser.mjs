@@ -106,6 +106,18 @@ function isPositiveInteger(value) {
     return recurrenceInteger(value) > 0;
 }
 
+function isProgress(value) {
+    if (typeof value !== 'string') return false;
+    const text = value.trim();
+    const percent = /^(-?\d+(?:\.\d+)?)%$/.exec(text);
+    if (percent) return Number(percent[1]) >= 0 && Number(percent[1]) <= 100;
+    const fraction = /^(-?\d+)\/(-?\d+)$/.exec(text);
+    if (!fraction) return false;
+    const current = BigInt(fraction[1]);
+    const total = BigInt(fraction[2]);
+    return total > 0n && current >= 0n && current <= total;
+}
+
 function isRruleUntil(value) {
     if (isDate(value) || isDateTime(value)) return true;
     const match = /^(\d{4})(\d{2})(\d{2})(?:[Tt](\d{2})(\d{2})(\d{2})(Z|[+-]\d{4})?)?$/.exec(value);
@@ -292,6 +304,9 @@ function validateItemDetails(item, report) {
         } else if (key === 'state') {
             code = 'unknown-state';
             accepts = value => STATUS_STATES.has(value);
+        } else if (key === 'progress') {
+            code = 'invalid-progress';
+            accepts = isProgress;
         } else if (REFERENCE_KEYS.includes(key)) {
             code = 'invalid-reference-id';
             accepts = value => ID_VALUE.test(value);
@@ -329,6 +344,124 @@ function indexIds(items, report) {
         }
     }
     return index;
+}
+
+const PROGRESS_EVENT_FIELDS = [
+    'id', 'parent', 'at', 'sequence', 'transaction',
+    'source_revision', 'operation', 'after_progress',
+];
+
+function progressTimestamp(value) {
+    if (typeof value !== 'string') return null;
+    const text = value.trim().replace(' ', 'T');
+    if (!isDateTime(text) || !/(?:Z|[+-]\d{2}:?\d{2})$/.test(text)) return null;
+    const epoch = Date.parse(text.replace(/\.(\d+)(?=Z|[+-]\d)/, ''));
+    if (!Number.isFinite(epoch)) return null;
+    const utc = new Date(epoch).toISOString();
+    return utc.length === 24 && !utc.startsWith('0000') ? utc.replace('.000Z', 'Z') : null;
+}
+
+function reportProgressHistory(items, report) {
+    const events = [];
+    const parents = new Map();
+    for (const item of items) {
+        const details = new Map(item.details);
+        if (item.type === 'N' && details.get('record')?.includes('progress_event')) {
+            events.push({ item, details });
+            continue;
+        }
+        for (const id of details.get('id') ?? []) {
+            if (typeof id !== 'string') continue;
+            const matches = parents.get(id) ?? [];
+            matches.push(details);
+            parents.set(id, matches);
+        }
+    }
+
+    const ids = new Set();
+    const transactions = new Set();
+    const histories = new Map();
+    for (const { item, details } of events) {
+        const values = key => details.get(key) ?? [];
+        const first = key => values(key)[0];
+        const warn = (code, key, part) => report('warning', code, item.line, key, part ? { part } : undefined);
+        const missing = PROGRESS_EVENT_FIELDS.filter(key => !values(key).length);
+        const repeated = PROGRESS_EVENT_FIELDS.filter(key => values(key).length > 1);
+        if (missing.length) warn('progress-event-missing', 'record', missing.join(', '));
+        if (repeated.length) warn('progress-event-repeated', 'record', repeated.join(', '));
+
+        const parent = first('parent');
+        if (parent && parents.get(parent)?.length !== 1) warn('progress-event-parent', 'parent');
+        const timestamp = progressTimestamp(first('at'));
+        if (timestamp === null || timestamp !== first('at')) warn('progress-event-timestamp', 'at');
+        const rawSequence = first('sequence');
+        const sequenceText = typeof rawSequence === 'string' ? rawSequence.trim() : String(rawSequence);
+        const sequence = /^[+-]?\d(?:_?\d)*$/.test(sequenceText) ?
+            BigInt(sequenceText.replaceAll('_', '')) : 0n;
+        if (sequence <= 0n) warn('progress-event-sequence', 'sequence');
+        const revision = first('source_revision');
+        if (revision && !/^[0-9a-f]{64}\n?$/.test(revision)) warn('progress-event-revision', 'source_revision');
+        const operation = first('operation');
+        if (operation && operation !== 'set' && operation !== 'delta') warn('progress-event-operation', 'operation');
+
+        const before = values('before_progress');
+        const after = values('after_progress');
+        const missingValues = values('before_missing');
+        const beforeMissing = missingValues.length === 1 && missingValues[0] === 'true';
+        if (beforeMissing === Boolean(before.length)) warn('progress-event-before-choice', 'before_progress');
+        if (missingValues.length && !beforeMissing) warn('progress-event-before-flag', 'before_missing');
+        if (beforeMissing && operation === 'delta') warn('progress-event-delta-missing', 'before_missing');
+        if (beforeMissing && sequence > 1n) warn('progress-event-late-missing', 'before_missing');
+        for (const [key, list] of [['before_progress', before], ['after_progress', after]]) {
+            if (list.length > 1) warn('progress-event-progress-repeated', key);
+            for (const value of list) {
+                if (!isProgress(value)) warn('progress-event-invalid-progress', key);
+            }
+        }
+
+        const id = first('id');
+        const transaction = first('transaction');
+        for (const [value, seen, key] of [[id, ids, 'id'], [transaction, transactions, 'transaction']]) {
+            if (!value) continue;
+            if (seen.has(value)) warn('progress-event-duplicate', key);
+            seen.add(value);
+        }
+        if (!parent || sequence <= 0n) continue;
+        let history = histories.get(parent);
+        if (!history) {
+            history = { sequences: new Set(), rows: [] };
+            histories.set(parent, history);
+        }
+        if (history.sequences.has(sequence)) warn('progress-event-duplicate', 'sequence');
+        history.sequences.add(sequence);
+        history.rows.push({ line: item.line, timestamp, sequence, before, after });
+        const safeParent = String(parent).replace(/[^A-Za-z0-9_.-]+/g, '-').replace(/^-+|-+$/g, '') || 'item';
+        const expectedId = 'PE-' + safeParent + '-' + String(sequence).padStart(6, '0');
+        if (id && id !== expectedId) warn('progress-event-id-mismatch', 'id');
+    }
+
+    for (const [parent, { sequences, rows }] of histories) {
+        rows.sort((a, b) => a.sequence < b.sequence ? -1 : Number(a.sequence > b.sequence));
+        const latest = rows.at(-1);
+        if (latest.sequence !== BigInt(sequences.size)) {
+            report('warning', 'progress-history-gap', latest.line, 'sequence');
+        }
+        for (let i = 1; i < rows.length; i++) {
+            const previous = rows[i - 1];
+            const current = rows[i];
+            if (previous.after.length && current.before.length && previous.after[0] !== current.before[0]) {
+                report('warning', 'progress-history-discontinuous', current.line, 'before_progress');
+            }
+            if (previous.timestamp && current.timestamp && previous.timestamp > current.timestamp) {
+                report('warning', 'progress-history-time-order', current.line, 'at');
+            }
+        }
+        const matches = parents.get(parent);
+        if (latest.after.length && matches?.length === 1 &&
+            matches[0].get('progress')?.[0] !== latest.after[0]) {
+            report('warning', 'progress-history-current-mismatch', latest.line, 'progress');
+        }
+    }
 }
 
 function reportReferences(items, index, report) {
@@ -827,5 +960,6 @@ export function parse(text) {
     const idIndex = indexIds(result.items, report);
     reportReferences(result.items, idIndex, report);
     reportClosedParents(result.items, report);
+    reportProgressHistory(result.items, report);
     return result;
 }

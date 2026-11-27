@@ -24,8 +24,12 @@ ID values produce a type error and do not participate in duplicate detection.
 
 Reference keys such as `parent:`, `ref:`, and `depends_on:` and valid
 `requires:` conditions are checked against the same input. The checker
-warns about missing targets, self references, and ambiguous IDs. Use
-`lifetxt check` for cycle detection and checks across multiple files.
+warns about missing targets, self references, and ambiguous IDs.
+Cycle warnings show the starting line and the ID path. Cycle checks cover
+`parent:`, `depends_on:` combined with reversed `blocks:`, and each of
+`duplicate_of:`, `replaced_by:`, `follows:`, and `realizes:` separately.
+Only IDs with exactly one occurrence participate. Use `lifetxt check` for
+checks across multiple files and temporal relation consistency.
 
 The built-in temporal fields check calendar dates (`YYYY-MM-DD`), datetimes
 (`YYYY-MM-DDTHH:MM`), or times (`HH:MM`), depending on the key. The check

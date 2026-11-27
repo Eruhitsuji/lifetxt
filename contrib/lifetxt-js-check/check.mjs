@@ -2,6 +2,11 @@ import { constants } from 'node:fs';
 import { open } from 'node:fs/promises';
 import { MAX_BYTES, parse } from './parser.mjs';
 
+function quoteId(value) {
+    return JSON.stringify(value).replace(/[^\x20-\x7e]/g, char =>
+        '\\u' + char.charCodeAt(0).toString(16).padStart(4, '0'));
+}
+
 const args = process.argv.slice(2);
 if (args.length === 1 && args[0] === '--help') {
     console.log('Usage: node check.mjs FILE\nChecks supported life.txt syntax and values.');
@@ -26,15 +31,14 @@ if (args.length === 1 && args[0] === '--help') {
         } finally {
             await file.close();
         }
-        for (const { severity, code, line, key, part, firstLine, value } of result.diagnostics) {
+        for (const { severity, code, line, key, part, firstLine, value, path } of result.diagnostics) {
             const field = key ? ` (${key}:${part ? ` ${part}` : ''})` : '';
             let target = '';
             if (value !== undefined) {
-                const escaped = JSON.stringify(value).replace(/[^\x20-\x7e]/g, char =>
-                    '\\u' + char.charCodeAt(0).toString(16).padStart(4, '0'));
-                target = ` ${escaped}`;
+                target = ` ${quoteId(value)}`;
                 if (firstLine !== undefined) target += `, first seen at line ${firstLine}`;
             }
+            if (path) target = ` ${path.map(quoteId).join(' -> ')}`;
             console.log(`Line ${line}: ${severity} ${code}${field}${target}`);
         }
         if (result.diagnosticCount > result.diagnostics.length) {

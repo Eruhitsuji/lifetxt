@@ -345,6 +345,23 @@ test('does not compare ambiguous or self temporal references', () => {
     assert.equal(result.diagnostics.some(d => d.code === 'temporal-reference-order'), false);
 });
 
+test('warns when completed items depend on open items or closed parents have open children', () => {
+    const result = parse([
+        '[x] T Parent id:p done:2026-10-01 depends_on:child',
+        '  [/] T Child id:child',
+        '[?] T Other parent:p',
+        '[-] T Canceled id:c depends_on:child',
+        '[>] T Moved parent:c',
+        '[N] N Note parent:c',
+        '[x] T Okay done:2026-10-01 depends_on:c',
+    ].join('\n'));
+    assert.deepEqual(result.diagnostics, [
+        { severity: 'warning', code: 'completed-with-open-dependency', line: 1, key: 'depends_on', value: 'child' },
+        { severity: 'warning', code: 'closed-parent-with-open-children', line: 1, key: 'id', value: 'p', childCount: 2 },
+        { severity: 'warning', code: 'closed-parent-with-open-children', line: 4, key: 'id', value: 'c', childCount: 1 },
+    ]);
+});
+
 test('excludes unknown format versions', () => {
     const future = parse('#! format_version: 2\nanything');
     assert.equal(future.incomplete, true);

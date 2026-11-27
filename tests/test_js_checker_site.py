@@ -223,6 +223,12 @@ class JSCheckerSiteTests(unittest.TestCase):
             button.click()
             expect(output).to_contain_text("temporal-reference-order")
             expect(output).to_contain_text('follows: ID "old"' if lang == "ja" else 'ID "old"')
+            text.fill("[x] T Parent id:p done:2026-10-01 depends_on:child\n"
+                      "  [ ] T Child id:child")
+            button.click()
+            expect(output).to_contain_text("completed-with-open-dependency")
+            expect(output).to_contain_text("closed-parent-with-open-children")
+            expect(output).to_contain_text("1 件" if lang == "ja" else "1 open child")
             text.fill('[ ] T "unfinished')
             expect(status).to_be_empty()
             expect(output).to_be_empty()

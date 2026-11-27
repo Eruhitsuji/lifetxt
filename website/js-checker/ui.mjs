@@ -41,8 +41,10 @@ const messages = {
         'self-reference': value => `ID ${JSON.stringify(value)} はこの項目自身を指しています。`,
         'ambiguous-reference': value => `ID ${JSON.stringify(value)} が複数回使われており、参照先を特定できません。`,
         'reference-cycle': '参照が循環しています。',
+        'completed-with-open-dependency': value => `完了済みですが、前提項目 ${JSON.stringify(value)} が未完了です。`,
+        'closed-parent-with-open-children': (value, { childCount }) => `完了・取消済みの親 ${JSON.stringify(value)} に未完了の子が ${childCount} 件あります。`,
         'temporal-reference-order': value => `ID ${JSON.stringify(value)} との参照関係が、項目に記載された日付順と矛盾しています。`,
-        'duplicate-id': (value, firstLine) => `${JSON.stringify(value)} は ${firstLine}行目で既に使われています。`,
+        'duplicate-id': (value, { firstLine }) => `${JSON.stringify(value)} は ${firstLine}行目で既に使われています。`,
         requires: {
             shape: 'ID=state、または id/state の組、all、any でJSON条件を指定してください。all と any には条件が1つ以上必要です。',
             id: '空白を含まないIDを指定してください。',
@@ -90,8 +92,10 @@ const messages = {
         'self-reference': value => `ID ${JSON.stringify(value)} refers to this item.`,
         'ambiguous-reference': value => `ID ${JSON.stringify(value)} occurs more than once, so the target is ambiguous.`,
         'reference-cycle': 'The references form a cycle.',
+        'completed-with-open-dependency': value => `This item is completed, but prerequisite ${JSON.stringify(value)} is still open.`,
+        'closed-parent-with-open-children': (value, { childCount }) => `Completed or canceled parent ${JSON.stringify(value)} has ${childCount} open child items.`,
         'temporal-reference-order': value => `The relation to ID ${JSON.stringify(value)} conflicts with the items’ calendar date order.`,
-        'duplicate-id': (value, firstLine) => `${JSON.stringify(value)} first appears on line ${firstLine}.`,
+        'duplicate-id': (value, { firstLine }) => `${JSON.stringify(value)} first appears on line ${firstLine}.`,
         requires: {
             shape: 'Use ID=state or a JSON condition with id and state, all, or any. An all or any group needs at least one condition.',
             id: 'Enter a nonempty ID without whitespace.',
@@ -142,12 +146,13 @@ button.addEventListener('click', () => {
     if (result.incomplete) summaries.push(copy.incomplete);
     status.textContent = summaries.length ? summaries.join(' ') : copy.ok;
 
-    const lines = result.diagnostics.map(({ severity, code, line, key, part, firstLine, value, path }) => {
+    const lines = result.diagnostics.map(diagnostic => {
+        const { severity, code, line, key, part, value, path } = diagnostic;
         const location = lang === 'ja' ? `${line}${copy.line}` : `${copy.line} ${line}`;
         const isRequirement = code === 'invalid-requires';
         const field = key ? `${key}: ${part && !isRequirement ? `[${part}] ` : ''}` : '';
         let message = isRequirement ? copy.requires[part] : copy[code];
-        if (typeof message === 'function') message = message(value, firstLine);
+        if (typeof message === 'function') message = message(value, diagnostic);
         if (path) message += ` ${path.map(id => JSON.stringify(id)).join(' → ')}`;
         return `${location} · ${copy.labels[severity]} · ${code} · ${field}${message ?? code}`;
     });

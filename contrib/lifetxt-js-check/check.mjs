@@ -10,7 +10,7 @@ function escapeConsole(text) {
 function quoteId(value) {
     return escapeConsole(JSON.stringify(value));
 }
-const usage = 'Usage: node check.mjs FILE [FILE ...]';
+const usage = 'Usage: node check.mjs [--config PATH] FILE [FILE ...]';
 
 async function readInput(path) {
     const file = await open(path, constants.O_RDONLY | (constants.O_NONBLOCK ?? 0));
@@ -30,25 +30,59 @@ async function readInput(path) {
     }
 }
 
+async function readConfig(path) {
+    try {
+        const config = JSON.parse(await readInput(path));
+        if (!config || typeof config !== 'object' || Array.isArray(config)) {
+            throw new Error('Expected a JSON object');
+        }
+        for (const value of [config.ids?.key, config.api?.id_key]) {
+            if (value === undefined || value === null || value === '') continue;
+            if (typeof value !== 'string' || /[\s:"]/.test(value)) {
+                throw new Error('Expected ids.key or api.id_key to be a detail key');
+            }
+            return { idKey: value };
+        }
+        return {};
+    } catch (error) {
+        throw new Error(`Config ${quoteId(path)}: ${escapeConsole(error.message)}`);
+    }
+}
+
 const args = process.argv.slice(2);
 if (args.length === 1 && args[0] === '--help') {
     console.log(`${usage}\nChecks supported life.txt syntax and values.`);
-} else if (args.length === 0 || args.length > MAX_FILES) {
-    console.error(usage);
-    if (args.length > MAX_FILES) console.error(`Pass at most ${MAX_FILES} files.`);
-    process.exitCode = 2;
 } else {
+    let configPath;
+    if (args[0] === '--config') {
+        configPath = args[1];
+        args.splice(0, 2);
+    }
+    if (args[0] === '--') args.shift();
+    if (args.length === 0 || args.length > MAX_FILES) {
+        console.error(usage);
+        if (args.length > MAX_FILES) console.error(`Pass at most ${MAX_FILES} files.`);
+        process.exitCode = 2;
+    } else {
+        await checkFiles(args, configPath);
+    }
+}
+
+async function checkFiles(paths, configPath) {
     try {
+        const options = configPath === undefined ? {} : await readConfig(configPath);
         const documents = [];
-        for (const source of args) {
+        for (const source of paths) {
             try {
                 documents.push({ source, text: await readInput(source) });
             } catch (error) {
-                if (args.length === 1) throw error;
+                if (paths.length === 1) throw error;
                 throw new Error(`${quoteId(source)}: ${escapeConsole(error.message)}`);
             }
         }
-        const result = documents.length === 1 ? parse(documents[0].text) : parseDocuments(documents);
+        const result = documents.length === 1
+            ? parse(documents[0].text, options)
+            : parseDocuments(documents, options);
         for (const { severity, code, line, key, part, firstLine, source, firstSource, value, path, childCount } of result.diagnostics) {
             const field = key ? ` (${escapeConsole(key)}:${part ? ` ${escapeConsole(part)}` : ''})` : '';
             let target = '';

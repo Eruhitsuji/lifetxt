@@ -7,6 +7,7 @@ CLI requires Node.js 22 or later.
 ```sh
 node check.mjs life.txt
 node check.mjs inbox.life.txt projects.life.txt
+node check.mjs --config lifetxt.config.json inbox.life.txt projects.life.txt
 ```
 
 Exit codes are 0 for no errors in checked input (warnings are allowed), 1 for
@@ -18,6 +19,13 @@ Multiple-file output identifies the path and line, including the first
 occurrence of a duplicate ID. Hierarchy, continuations, and format version
 are evaluated within each file. Shared checks use records from the supported
 inputs. An unreadable file stops the check with exit code 2.
+
+An explicit `--config PATH` reads a UTF-8 JSON object (up to 16 KiB). The
+checker uses the first nonempty ID key from `ids.key` and `api.id_key`, or
+defaults to `id`. For example, `{"ids":{"key":"uid"}}` makes `uid:` the
+identity for hierarchy inference, references, duplicate detection, and history
+parent lookup. The option applies only this setting and does not discover
+configuration files automatically. The browser uses the default ID key.
 
 The checker reads item headers, titles, details, backslash line joins, and
 `|` body lines. It preserves unknown and repeated detail keys. Unsupported
@@ -110,7 +118,7 @@ current time as a substitute.
 For `record:item_event` notes, the checker validates the event fields,
 sequence, timestamps, and recorded status against the current item. A
 partial history may start at a later sequence when it has no creation event.
-History comparisons use the default `id:` key and textual field values.
+History event records use `id:` even when the parent lookup uses a configured ID key. History comparisons use textual field values.
 
 The checker validates `est:` and `elapsed:` using ASCII hours and minutes
 and suggests a compact duration such as `1h30m` for `90`. When specified,

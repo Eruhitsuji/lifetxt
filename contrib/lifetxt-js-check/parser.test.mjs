@@ -540,3 +540,17 @@ test('shares the diagnostic cap and tracks errors from later documents', () => {
     assert.equal(result.diagnosticCount, 101);
     assert.equal(result.hasErrors, true);
 });
+
+test('uses a configured ID for hierarchy, reference cycles, and history parents', () => {
+    const result = parse([
+        '[ ] T A uid:a id:ordinary depends_on:b',
+        '  [ ] T B uid:b depends_on:a',
+        '[N] N Event record:item_event id:IE-a-000001 parent:a event:created ' +
+            'at:2026-11-01T09:00:00Z sequence:1 transaction:tx ' +
+            'source_revision:' + 'a'.repeat(64) + ' item_kind:T item_title:A after_status:"[ ]"',
+    ].join('\n'), { idKey: 'uid' });
+    assert.deepEqual(result.items[1].details.at(-1), ['parent', ['a']]);
+    assert.deepEqual(result.diagnostics, [
+        { severity: 'warning', code: 'reference-cycle', line: 1, key: 'depends_on', path: ['a', 'b', 'a'] },
+    ]);
+});

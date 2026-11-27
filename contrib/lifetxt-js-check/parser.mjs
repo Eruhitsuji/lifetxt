@@ -410,10 +410,10 @@ function validateItemDetails(item, report) {
     if (item.type === 'M' && !hasTypeError) validateMessageItem(item, report);
 }
 
-function indexIds(items, report) {
+function indexIds(items, report, idKey) {
     const index = new Map();
     for (const item of items) {
-        const values = item.details.find(([key]) => key === 'id')?.[1] ?? [];
+        const values = item.details.find(([key]) => key === idKey)?.[1] ?? [];
         for (const value of values) {
             if (typeof value !== 'string' || !value) continue;
             const entry = index.get(value);
@@ -421,7 +421,7 @@ function indexIds(items, report) {
                 index.set(value, { item, count: 1 });
             } else {
                 entry.count++;
-                report('warning', 'duplicate-id', item.line, 'id', { firstLine: entry.item.line, value });
+                report('warning', 'duplicate-id', item.line, idKey, { firstLine: entry.item.line, value });
             }
         }
     }
@@ -453,7 +453,7 @@ function historyEventId(prefix, parent, sequence) {
     return prefix + '-' + safeParent + '-' + String(sequence).padStart(6, '0');
 }
 
-function reportProgressHistory(items, report) {
+function reportProgressHistory(items, report, idKey) {
     const events = [];
     const parents = new Map();
     for (const item of items) {
@@ -462,7 +462,7 @@ function reportProgressHistory(items, report) {
             events.push({ item, details });
             continue;
         }
-        for (const id of details.get('id') ?? []) {
+        for (const id of details.get(idKey) ?? []) {
             if (typeof id !== 'string') continue;
             const matches = parents.get(id) ?? [];
             matches.push(details);
@@ -619,7 +619,7 @@ function itemEventDateTime(value) {
     return isDateTime(text) ? text : null;
 }
 
-function reportItemEventHistory(items, report) {
+function reportItemEventHistory(items, report, idKey) {
     const parents = new Map();
     const events = [];
     for (const item of items) {
@@ -628,7 +628,7 @@ function reportItemEventHistory(items, report) {
             events.push({ item, details });
             continue;
         }
-        for (const value of details.get('id') ?? []) {
+        for (const value of details.get(idKey) ?? []) {
             if (typeof value !== 'string') continue;
             const matches = parents.get(value) ?? [];
             matches.push(item);
@@ -700,7 +700,7 @@ function reportItemEventHistory(items, report) {
     }
 }
 
-function reportReferences(items, index, report) {
+function reportReferences(items, index, report, idKey) {
     function check(item, sourceIds, key, value) {
         if (typeof value !== 'string') return;
         let code;
@@ -713,20 +713,20 @@ function reportReferences(items, index, report) {
 
     for (const item of items) {
         const details = new Map(item.details);
-        const sourceIds = new Set((details.get('id') ?? []).filter(id => typeof id === 'string' && id));
+        const sourceIds = new Set((details.get(idKey) ?? []).filter(id => typeof id === 'string' && id));
         for (const key of REFERENCE_KEYS) {
             for (const value of details.get(key) ?? []) check(item, sourceIds, key, value);
         }
     }
     reportCycles(index, report);
-    reportTemporalOrder(items, index, report);
+    reportTemporalOrder(items, index, report, idKey);
     reportCompletedDependencies(items, index, report);
     // Core reports requires references after the regular link and cycle diagnostics.
     for (const item of items) {
         const details = new Map(item.details);
         const conditions = details.get('requires');
         if (!conditions?.length) continue;
-        const sourceIds = new Set((details.get('id') ?? []).filter(id => typeof id === 'string' && id));
+        const sourceIds = new Set((details.get(idKey) ?? []).filter(id => typeof id === 'string' && id));
         for (const condition of conditions) {
             const targets = new Set();
             if (requirementProblem(condition, 0, targets)) continue;
@@ -747,14 +747,14 @@ function reportCompletedDependencies(items, index, report) {
     }
 }
 
-function reportClosedParents(items, report) {
+function reportClosedParents(items, report, idKey) {
     const parents = new Map();
     const openChildren = new Map();
     for (const item of items) {
         const details = new Map(item.details);
         // Core's parent check uses the last item with the ID, even when
         // duplicate IDs are diagnosed elsewhere.
-        for (const id of details.get('id') ?? []) {
+        for (const id of details.get(idKey) ?? []) {
             if (typeof id === 'string') parents.set(id, item);
         }
         for (const id of details.get('parent') ?? []) {
@@ -766,7 +766,7 @@ function reportClosedParents(items, report) {
     for (const [value, childCount] of openChildren) {
         const parent = parents.get(value);
         if (childCount && (parent?.status === '[x]' || parent?.status === '[-]')) {
-            report('warning', 'closed-parent-with-open-children', parent.line, 'id', { value, childCount });
+            report('warning', 'closed-parent-with-open-children', parent.line, idKey, { value, childCount });
         }
     }
 }
@@ -781,13 +781,13 @@ function comparableDate(details) {
     return null;
 }
 
-function reportTemporalOrder(items, index, report) {
+function reportTemporalOrder(items, index, report, idKey) {
     for (const item of items) {
         const details = new Map(item.details);
         const follows = details.get('follows') ?? [];
         const replacements = details.get('replaced_by') ?? [];
         if (!follows.length && !replacements.length) continue;
-        const ids = (details.get('id') ?? []).filter(id => typeof id === 'string' && id);
+        const ids = (details.get(idKey) ?? []).filter(id => typeof id === 'string' && id);
         if (index.get(ids[0])?.count !== 1) continue;
         const date = comparableDate(details);
         if (!date) continue;
@@ -1079,7 +1079,7 @@ function readItem(line, lineNumber, report, probe = false) {
     };
 }
 
-function inferParent(item, ancestor, report) {
+function inferParent(item, ancestor, report, idKey) {
     const parent = item.details.find(([name]) => name === 'parent');
     if (item.indent === 0 || parent?.[1].length) return;
 
@@ -1087,7 +1087,7 @@ function inferParent(item, ancestor, report) {
         report('warning', 'indent-no-parent', item.line);
         return;
     }
-    const ids = ancestor.details.find(([name]) => name === 'id')?.[1];
+    const ids = ancestor.details.find(([name]) => name === idKey)?.[1];
     if (!ids?.length) {
         report('warning', 'indent-parent-no-id', item.line);
         return;
@@ -1117,7 +1117,7 @@ function collectDiagnostics() {
     return { result, report };
 }
 
-function parseDocument(text, report) {
+function parseDocument(text, report, idKey) {
     if (typeof text !== 'string') throw new TypeError('Expected text');
     /** @type {Item[]} */
     const items = [];
@@ -1187,7 +1187,7 @@ function parseDocument(text, report) {
                 while (ancestors.length && ancestors.at(-1).indent >= previous.indent) {
                     ancestors.pop();
                 }
-                inferParent(previous, ancestors.at(-1), report);
+                inferParent(previous, ancestors.at(-1), report, idKey);
                 ancestors.push(previous);
                 items.push(previous);
             }
@@ -1197,36 +1197,38 @@ function parseDocument(text, report) {
     return items;
 }
 
-function checkItemSet(items, report) {
-    const idIndex = indexIds(items, report);
-    reportReferences(items, idIndex, report);
-    reportClosedParents(items, report);
-    reportProgressHistory(items, report);
-    reportItemEventHistory(items, report);
+function checkItemSet(items, report, idKey) {
+    const idIndex = indexIds(items, report, idKey);
+    reportReferences(items, idIndex, report, idKey);
+    reportClosedParents(items, report, idKey);
+    reportProgressHistory(items, report, idKey);
+    reportItemEventHistory(items, report, idKey);
 }
 
 /** Check supported Format 1 syntax, hierarchy and selected field values.
  * @param {string} text
+ * @param {{idKey?: string}} [options]
  * @returns {ParseResult}
  */
-export function parse(text) {
+export function parse(text, { idKey = 'id' } = {}) {
     const { result, report } = collectDiagnostics();
-    result.items = parseDocument(text, report);
-    checkItemSet(result.items, report);
+    result.items = parseDocument(text, report, idKey);
+    checkItemSet(result.items, report, idKey);
     return result;
 }
 
 /** Check independent documents with a shared ID and reference index.
  * @param {{source: string, text: string}[]} documents
+ * @param {{idKey?: string}} [options]
  */
-export function parseDocuments(documents) {
+export function parseDocuments(documents, { idKey = 'id' } = {}) {
     const { result, report } = collectDiagnostics();
     const locations = [];
     const sharedItems = [];
     for (const { source, text } of documents) {
         const items = parseDocument(text, (severity, code, line, key, fields) => {
             report(severity, code, line, key, { ...fields, source });
-        });
+        }, idKey);
         for (const item of items) {
             const locationIndex = locations.length;
             locations.push({ source, line: item.line });
@@ -1241,6 +1243,6 @@ export function parseDocuments(documents) {
         const first = locations[fields?.firstLine];
         const original = first ? { firstLine: first.line, firstSource: first.source } : {};
         report(severity, code, line, key, { ...fields, source, ...original });
-    });
+    }, idKey);
     return result;
 }

@@ -253,6 +253,30 @@ test('reports the first problem in each requires value on its item line', () => 
     assert.equal(result.items.length, 2);
 });
 
+test('checks ID syntax, preserves case, and keeps the first occurrence', () => {
+    const result = parse([
+        '[ ] T First id:Case id:case id:Case id:A.1@cal/team:class_1-test',
+        '[ ] T Invalid id:"has space" id:"" id:""',
+        '[ ] T Next id:Case id:case',
+    ].join('\n'));
+    assert.deepEqual(result.diagnostics, [
+        ...Array.from({ length: 3 }, () =>
+            ({ severity: 'warning', code: 'invalid-id', line: 2, key: 'id' })),
+        { severity: 'warning', code: 'duplicate-id', line: 1, key: 'id', firstLine: 1, value: 'Case' },
+        { severity: 'warning', code: 'duplicate-id', line: 3, key: 'id', firstLine: 1, value: 'Case' },
+        { severity: 'warning', code: 'duplicate-id', line: 3, key: 'id', firstLine: 1, value: 'case' },
+    ]);
+    assert.equal(result.hasErrors, false);
+});
+
+test('reports a type error without indexing a non-text ID', () => {
+    const result = parse('[ ] T Typed id:json<< [true,12,null] >>\n[ ] T Text id:True id:12');
+    assert.deepEqual(result.diagnostics, [
+        { severity: 'error', code: 'detail-expects-text', line: 1, key: 'id' },
+    ]);
+    assert.equal(result.hasErrors, true);
+});
+
 test('excludes unknown format versions', () => {
     const future = parse('#! format_version: 2\nanything');
     assert.equal(future.incomplete, true);

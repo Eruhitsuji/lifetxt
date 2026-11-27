@@ -15,8 +15,13 @@ Inputs are limited to 16,384 UTF-8 bytes and output to 100 diagnostics.
 
 The checker reads item headers, titles, details, backslash line joins, and
 `|` body lines. It preserves unknown and repeated detail keys. Unsupported
-format versions are reported as unchecked. ID checks and reference resolution
-require `lifetxt check`.
+format versions are reported as unchecked. Use `lifetxt check` for reference
+resolution.
+
+Use a compact ASCII token for `id:`. The checker warns about invalid text IDs
+and repeated nonempty text IDs in the input, including repetitions on the same
+item, and gives the first occurrence's line. IDs are case-sensitive. Non-text
+ID values produce a type error and do not participate in duplicate detection.
 
 The built-in temporal fields check calendar dates (`YYYY-MM-DD`), datetimes
 (`YYYY-MM-DDTHH:MM`), or times (`HH:MM`), depending on the key. The check
@@ -74,6 +79,6 @@ explicit mapping from Core codes to JS codes. Core columns are checked against
 fixture expectations. The current JS diagnostic format has no column field.
 
 Fixtures also document the current engine-specific results for known gaps,
-including oversized JSON integers and ID references. A changed diagnostic fails
-CI with the fixture name and engine.
+including oversized JSON integers, non-text ID duplication, and ID references.
+A changed diagnostic fails CI with the fixture name and engine.
 Update the corresponding expectations when a gap is resolved (#1731).

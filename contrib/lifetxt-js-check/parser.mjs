@@ -1,4 +1,4 @@
-/** @typedef {{severity: 'error'|'warning'|'unsupported', code: string, line: number, key?: string, part?: string}} Diagnostic */
+/** @typedef {{severity: 'error'|'warning'|'unsupported', code: string, line: number, key?: string, part?: string, firstLine?: number, value?: string}} Diagnostic */
 /** @typedef {null|boolean|number|string|JsonValue[]|{[key: string]: JsonValue}} JsonValue */
 /** @typedef {{line: number, indent: number, status: string, type: string, title: string, details: [string, JsonValue[]][]}} Item */
 /** @typedef {{items: Item[], diagnostics: Diagnostic[], diagnosticCount: number, hasErrors: boolean, incomplete: boolean}} ParseResult */
@@ -24,6 +24,8 @@ const DATE_OR_DATETIME_KEYS = new Set([
 const DATE_VALUE = /^(\d{4})-(\d{2})-(\d{2})$/;
 const TIME_VALUE = /^([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d)(?:\.(\d{1,6}))?)?(Z|[+-](?:[01]\d|2[0-3]):?[0-5]\d)?$/;
 const MONTH_DAYS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+// Python's ID regex also matches before a single trailing LF in a JSON string.
+const ID_VALUE = /^[A-Za-z0-9][A-Za-z0-9_.:@\/-]*\n?$/;
 const SIMPLE_REPEATS = new Set(['daily', 'weekly', 'monthly', 'yearly', 'weekdays']);
 const RRULE_FREQUENCIES = new Set(['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY']);
 const RRULE_PARTS = new Set(['FREQ', 'INTERVAL', 'COUNT', 'UNTIL', 'BYDAY', 'BYMONTHDAY', 'BYMONTH', 'WKST']);
@@ -167,7 +169,7 @@ function validateRepeat(value, line, report) {
         return;
     }
     for (const part of rruleProblems(value)) {
-        report('warning', 'invalid-rrule', line, 'repeat', part);
+        report('warning', 'invalid-rrule', line, 'repeat', { part });
     }
 }
 
@@ -206,7 +208,7 @@ function validateItemDetails(item, report) {
         if (key === 'requires') {
             for (const value of values) {
                 const problem = requirementProblem(value);
-                if (problem) report('error', 'invalid-requires', item.line, key, problem);
+                if (problem) report('error', 'invalid-requires', item.line, key, { part: problem });
             }
             continue;
         }
@@ -227,6 +229,9 @@ function validateItemDetails(item, report) {
         } else if (key === 'interval' || key === 'count') {
             code = 'expected-positive-integer';
             accepts = isPositiveInteger;
+        } else if (key === 'id') {
+            code = 'invalid-id';
+            accepts = value => ID_VALUE.test(value);
         } else if (key !== 'repeat') {
             continue;
         }
@@ -241,6 +246,22 @@ function validateItemDetails(item, report) {
         }
     }
     if (item.type === 'E' && !hasTypeError) validateEventRange(item, report);
+}
+
+function reportDuplicateIds(items, report) {
+    const seen = new Map();
+    for (const item of items) {
+        const values = item.details.find(([key]) => key === 'id')?.[1] ?? [];
+        for (const value of values) {
+            if (typeof value !== 'string' || !value) continue;
+            const firstLine = seen.get(value);
+            if (firstLine === undefined) {
+                seen.set(value, item.line);
+            } else {
+                report('warning', 'duplicate-id', item.line, 'id', { firstLine, value });
+            }
+        }
+    }
 }
 
 function jsonClose(text) {
@@ -488,14 +509,13 @@ export function parse(text) {
     const result = {
         items: [], diagnostics: [], diagnosticCount: 0, hasErrors: false, incomplete: false,
     };
-    function report(severity, code, line, key, part) {
+    function report(severity, code, line, key, fields) {
         result.diagnosticCount++;
         result.hasErrors ||= severity === 'error';
         result.incomplete ||= severity === 'unsupported';
         if (result.diagnostics.length < MAX_DIAGNOSTICS) {
-            const diagnostic = { severity, code, line };
+            const diagnostic = { severity, code, line, ...fields };
             if (key !== undefined) diagnostic.key = key;
-            if (part !== undefined) diagnostic.part = part;
             result.diagnostics.push(diagnostic);
         }
     }
@@ -573,5 +593,6 @@ export function parse(text) {
         }
     }
     finishItem();
+    reportDuplicateIds(result.items, report);
     return result;
 }

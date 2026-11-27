@@ -31,6 +31,8 @@ JS_CODES = {
     "W204": "invalid-time-or-datetime",
     "W205": "invalid-repeat",
     "W206": "event-end-before-start",
+    "W213": "duplicate-id",
+    "W214": "invalid-id",
     "W219": "expected-positive-integer",
     "W220": "indent-no-parent",
     "W221": "indent-parent-no-id",
@@ -48,6 +50,7 @@ class Case:
     same_items: bool = True
     diagnostic_keys: tuple[str, ...] = ()
     diagnostic_parts: tuple[str, ...] = ()
+    duplicate_ids: tuple[tuple[str, int], ...] = ()
 
     def expected_js(self):
         if self.js is not None:
@@ -302,6 +305,32 @@ def cases():
             diagnostic_keys=("requires",),
             diagnostic_parts=("depth",),
         ),
+        Case(
+            "compact ID syntax and Core trailing LF behavior",
+            '[ ] T title id:Cal.1@host/path:code_2-test id:9 '
+            'id:json<< "legacy\\n" >>',
+        ),
+        Case(
+            "invalid ID characters, position and empty values",
+            '[ ] T title id:_leading id:"has space" id:日本語 id:"" id:""',
+            core=(("warning", "W214", 1, None),) * 5,
+            diagnostic_keys=("id",) * 5,
+        ),
+        Case(
+            "duplicate IDs in original order and subsequent items",
+            "[ ] T one id:Example id:example id:Example id:other\n"
+            "[ ] T two id:other id:Example\n",
+            core=(("warning", "W213", 1, None), ("warning", "W213", 2, None),
+                  ("warning", "W213", 2, None)),
+            diagnostic_keys=("id",) * 3,
+            duplicate_ids=(("Example", 1), ("other", 1), ("Example", 1)),
+        ),
+        Case(
+            "only one non-text ID error per field",
+            '[ ] T title id:json<< [1,null,"has space"] >>',
+            core=(("error", "E025", 1, None),),
+            diagnostic_keys=("id",),
+        ),
         # These expectations document gaps for the staged Core-compatible checker.
         Case(
             "JSON integer outside JavaScript's safe integer range",
@@ -317,10 +346,11 @@ def cases():
             diagnostic_keys=("on",),
         ),
         Case(
-            "duplicate ID",
-            "[ ] T one id:duplicate\n[ ] T two id:duplicate\n",
-            core=(("warning", "W213", 2, None),),
-            js=(),
+            "Core also indexes truthy non-text IDs after reporting a type error",
+            "[ ] T One id:json<< true >>\n[ ] T Two id:True",
+            core=(("error", "E025", 1, None), ("warning", "W213", 2, None)),
+            js=(("error", "detail-expects-text", 1),),
+            diagnostic_keys=("id",),
         ),
         Case(
             "unresolved parent",
@@ -444,6 +474,11 @@ class CoreComparisonTests(unittest.TestCase):
                 self.assertEqual(
                     tuple(d["part"] for d in js["diagnostics"] if "part" in d),
                     case.diagnostic_parts,
+                )
+                self.assertEqual(
+                    tuple((d["value"], d["firstLine"]) for d in js["diagnostics"]
+                          if "firstLine" in d),
+                    case.duplicate_ids,
                 )
                 self.assertEqual(js["diagnosticCount"], len(expected_js))
                 severities = {severity for severity, _, _ in expected_js}

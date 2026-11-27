@@ -81,6 +81,19 @@ class DeskPageTests(unittest.TestCase):
                 self.assertEqual(self.complete_repeat(done_at=value).status_code, 400)
         self.assertEqual(self.client.get("/api/items/id/repeat-1").json()["item"]["status"], "[ ]")
 
+    def test_status_card_present(self):
+        self.assertIn('id="status-card"', self.client.get("/desk").text)
+
+    def test_fullscreen_toggle_present(self):
+        self.assertIn('id="fullscreen-toggle"', self.client.get("/desk").text)
+
+    def test_layout_settings_present(self):
+        text = self.client.get("/desk").text
+        self.assertIn('id="layout-open"', text)
+        self.assertIn('id="layout-dialog"', text)
+        for name in ("clock", "status", "next", "calendar", "tasks", "capture"):
+            self.assertEqual(text.count(f'id="{name}-zone"'), 1, name)
+
     def test_manifest(self):
         r = self.client.get("/desk.webmanifest")
         self.assertEqual(r.status_code, 200)

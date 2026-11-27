@@ -293,6 +293,7 @@ function reportReferences(items, index, report) {
         }
     }
     reportCycles(index, report);
+    reportTemporalOrder(items, index, report);
     // Core reports requires references after the regular link and cycle diagnostics.
     for (const item of items) {
         const details = new Map(item.details);
@@ -303,6 +304,42 @@ function reportReferences(items, index, report) {
             const targets = new Set();
             if (requirementProblem(condition, 0, targets)) continue;
             for (const value of targets) check(item, sourceIds, 'requires', value);
+        }
+    }
+}
+
+function comparableDate(details) {
+    for (const key of ['due', 'do', 'on', 'from']) {
+        const value = details.get(key)?.[0];
+        if (typeof value !== 'string') continue;
+        // Core uses the calendar date as written, including for offset datetimes.
+        if (isDate(value) || isDateTime(value)) return value.slice(0, 10);
+    }
+    return null;
+}
+
+function reportTemporalOrder(items, index, report) {
+    for (const item of items) {
+        const details = new Map(item.details);
+        const follows = details.get('follows') ?? [];
+        const replacements = details.get('replaced_by') ?? [];
+        if (!follows.length && !replacements.length) continue;
+        const ids = (details.get('id') ?? []).filter(id => typeof id === 'string' && id);
+        if (index.get(ids[0])?.count !== 1) continue;
+        const date = comparableDate(details);
+        if (!date) continue;
+
+        // Core emits replaced_by before follows for each item.
+        for (const [key, references] of [['replaced_by', replacements], ['follows', follows]]) {
+            for (const value of references) {
+                const target = index.get(value);
+                if (target?.count !== 1 || target.item === item) continue;
+                const targetDate = comparableDate(new Map(target.item.details));
+                if (!targetDate) continue;
+                if (key === 'follows' ? date < targetDate : targetDate < date) {
+                    report('warning', 'temporal-reference-order', item.line, key, { value });
+                }
+            }
         }
     }
 }

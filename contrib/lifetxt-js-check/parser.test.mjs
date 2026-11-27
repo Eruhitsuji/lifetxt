@@ -19,6 +19,9 @@ test('preserves Unicode, repeated and special keys, and body text', () => {
     const result = parse(text);
     assert.deepEqual(result.diagnostics, [
         { severity: 'warning', code: 'indent-no-parent', line: 3 },
+        { severity: 'warning', code: 'custom-detail-key', line: 3, key: 'custom' },
+        { severity: 'warning', code: 'detail-key-style', line: 3, key: '__proto__' },
+        { severity: 'warning', code: 'custom-detail-key', line: 3, key: '__proto__' },
     ]);
     assert.deepEqual(result.items, [{
         line: 3, indent: 2, status: '[N]', type: 'N', title: '日本語😀 "引用"',
@@ -91,7 +94,10 @@ test('reads multiline JSON details and keeps JSON string delimiters literal', ()
         '>> tag:json<< ["second","third"] >> empty:json<< [] >>',
         '[ ] T next',
     ].join('\n'));
-    assert.deepEqual(result.diagnostics, []);
+    assert.deepEqual(result.diagnostics, [
+        { severity: 'warning', code: 'custom-detail-key', line: 1, key: 'options' },
+        { severity: 'warning', code: 'custom-detail-key', line: 1, key: 'empty' },
+    ]);
     assert.deepEqual(result.items[0].details, [
         ['tag', ['first', 'second', 'third']],
         ['options', [{ text: 'embedded >> marker', list: [null, { same: true }] }]],
@@ -118,6 +124,7 @@ test('flags JSON integers that would lose precision', () => {
     const result = parse('[ ] T title options:json<< {"large":9007199254740993} >> tag:after');
     assert.deepEqual(result.diagnostics, [
         { severity: 'unsupported', code: 'json-integer-precision', line: 1 },
+        { severity: 'warning', code: 'custom-detail-key', line: 1, key: 'options' },
     ]);
     assert.equal(result.incomplete, true);
     assert.equal(result.hasErrors, false);
@@ -329,6 +336,11 @@ test('checks authored calendar order for follows and replaced_by', () => {
         '[ ] T NoId on:2026-10-07 follows:old',
     ].join('\n'));
     assert.deepEqual(result.diagnostics, [
+        { severity: 'warning', code: 'custom-detail-key', line: 3, key: 'follows' },
+        { severity: 'warning', code: 'custom-detail-key', line: 3, key: 'replaced_by' },
+        { severity: 'warning', code: 'custom-detail-key', line: 4, key: 'follows' },
+        { severity: 'warning', code: 'custom-detail-key', line: 5, key: 'follows' },
+        { severity: 'warning', code: 'custom-detail-key', line: 6, key: 'follows' },
         { severity: 'warning', code: 'temporal-reference-order', line: 3, key: 'replaced_by', value: 'replacement' },
         { severity: 'warning', code: 'temporal-reference-order', line: 3, key: 'follows', value: 'old' },
     ]);

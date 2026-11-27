@@ -5,6 +5,18 @@ traceability:
     - requirement_id: req-browser-local-check-v1
       capability_id: cap-official-website
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1731
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1773
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1774
+      changed_files_or_scope: [JavaScript checker multiple file inputs and shared diagnostics]
+      tests_or_evidence:
+        - contrib/lifetxt-js-check/parser.test.mjs
+        - contrib/lifetxt-js-check/check_core.py
+        - contrib/lifetxt-js-check/package_zip.py
+      status: in_review
+
+    - requirement_id: req-browser-local-check-v1
+      capability_id: cap-official-website
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1731
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1771
       pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1772
       changed_files_or_scope: [JavaScript checker detail key naming and value types]

@@ -3,7 +3,7 @@ schema_version: 1
 capabilities:
   - id: cap-web-desk
     name: Desk always-on work screen
-    summary: Scroll-free /desk page with workspace clock, today's calendar timeline and tasks, item detail dialogs, complete/start/stop and quick add through existing revision-guarded APIs.
+    summary: Scroll-free /desk page with workspace clock, today's calendar timeline and tasks, item detail dialogs, complete/start/stop and quick add through existing revision-guarded APIs, current Status display and change, a full screen toggle and a per-browser screen layout.
     status: implemented
     owner: Eruhitsuji
     source_requirements:
@@ -20,8 +20,11 @@ capabilities:
       - tests/test_web_desk.py
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/1670
+      - https://github.com/Eruhitsuji/lifetxt/issues/1779
+      - https://github.com/Eruhitsuji/lifetxt/issues/1780
+      - https://github.com/Eruhitsuji/lifetxt/issues/1781
     reuse_policy: Reuse command-center, agenda, items and capture APIs and the Planner revision contract; no new API or mutation path.
-    notes: Today/7-day/month calendar, detail editing, completion time, Quick/todo.txt capture and theme toggle. Chromium integration verification recorded in issue 1670; physical display and non-Chromium browsers not verified. No service worker or offline queue.
+    notes: Today/7-day/month calendar, detail editing, completion time, Quick/todo.txt capture and theme toggle. Status uses the existing /api/status contract; layout is stored only in browser localStorage (issues 1779-1781). Chromium integration verification recorded in issue 1670; physical display and non-Chromium browsers not verified. No service worker or offline queue.
 
   - id: cap-web-bulk-done-date
     name: Explicit bulk task completion date

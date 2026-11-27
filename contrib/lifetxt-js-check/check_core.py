@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+from tempfile import TemporaryDirectory
 import time
 import unittest
 from unittest.mock import patch
@@ -792,6 +793,52 @@ class CoreComparisonTests(unittest.TestCase):
         self.check_cases(cases())
 
     @unittest.skipUnless(hasattr(time, "tzset"), "requires a configurable local timezone")
+    def test_cli_checks_multiple_files_with_core_locations(self):
+        checker = Path("contrib/lifetxt-js-check/check.mjs").resolve()
+        with TemporaryDirectory() as directory:
+            first = Path(directory) / "first file.txt"
+            second = Path(directory) / "second file.txt"
+            first.write_text(
+                "[ ] T A id:a depends_on:b\n  [ ] T Child id:child\n[ ] T First id:dup\n",
+                encoding="utf-8",
+            )
+            second.write_text(
+                "  [ ] T B id:b depends_on:a\n[ ] T Second id:dup\n"
+                "[ ] T Bad due:invalid ref:missing\n",
+                encoding="utf-8",
+            )
+            paths = [str(first), str(second)]
+            core = subprocess.run(
+                [sys.executable, "-m", "lifetxt", "check", "--no-files", "--format", "json", *paths],
+                capture_output=True, encoding="utf-8", check=True,
+            )
+            js = subprocess.run(
+                ["node", checker, *paths], capture_output=True, encoding="utf-8", check=True,
+            )
+            expected = [
+                (row["source"], row["line"], row["severity"],
+                 "reference-cycle" if row["code"] == "W227" else JS_CODES[row["code"]])
+                for row in json.loads(core.stdout)
+            ]
+            self.assertEqual(len(expected), 5)
+            lines = js.stdout.splitlines()
+            prefixes = [
+                f"{json.dumps(source)}: line {line}: {severity} {code}"
+                for source, line, severity, code in expected
+            ]
+            self.assertEqual(len(lines), len(prefixes) + 1)
+            for line, prefix in zip(lines, prefixes):
+                self.assertTrue(line.startswith(prefix), line)
+            self.assertIn(f"first seen at {json.dumps(paths[0])}: line 3", js.stdout)
+
+            second.write_bytes(b"\xff")
+            invalid = subprocess.run(
+                ["node", checker, *paths], capture_output=True, encoding="utf-8",
+            )
+            self.assertEqual(invalid.returncode, 2)
+            self.assertEqual(invalid.stdout, "")
+            self.assertIn(json.dumps(paths[1]), invalid.stderr)
+
     def test_event_ranges_use_core_local_wall_clock(self):
         # The same input has different ordering in UTC and during the New York
         # fall-back hour. Scope the timezone change to these fixtures.

@@ -6,12 +6,18 @@ CLI requires Node.js 22 or later.
 
 ```sh
 node check.mjs life.txt
+node check.mjs inbox.life.txt projects.life.txt
 ```
 
 Exit codes are 0 for no errors in checked input (warnings are allowed), 1 for
 validation errors, 2 for usage or input errors, and 3 for incomplete checks
 without validation errors.
-Inputs are limited to 16,384 UTF-8 bytes and output to 100 diagnostics.
+Pass up to 64 regular files in argument order. Each file is limited to
+16,384 UTF-8 bytes. The check displays up to 100 diagnostics in total.
+Multiple-file output identifies the path and line, including the first
+occurrence of a duplicate ID. Hierarchy, continuations, and format version
+are evaluated within each file. Shared checks use records from the supported
+inputs. An unreadable file stops the check with exit code 2.
 
 The checker reads item headers, titles, details, backslash line joins, and
 `|` body lines. It preserves unknown and repeated detail keys. Unsupported
@@ -32,7 +38,8 @@ Only IDs with exactly one occurrence participate. For `follows:` and
 `replaced_by:`, the checker also warns when the successor is dated before
 the predecessor. It uses the first comparable date from `due:`, `do:`,
 `on:`, or `from:`, in that order. For datetimes, it compares the calendar
-date as written. Use `lifetxt check` for checks across multiple files.
+date as written. The Node CLI checks IDs, references, and related history across
+all supplied files. The browser checker accepts one document at a time.
 
 A completed item with an open `depends_on:` prerequisite gets a warning.
 A completed or canceled parent with open direct children gets a warning on the

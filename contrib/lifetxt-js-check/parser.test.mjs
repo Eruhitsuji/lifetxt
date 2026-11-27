@@ -471,6 +471,20 @@ test('warns about mismatched item markers and done fields', () => {
     assert.equal(result.hasErrors, false);
 });
 
+test('suggests exact compact durations and validates one importance value', () => {
+    const result = parse([
+        '[ ] T Clean est:0m elapsed:1h05m importance:normal',
+        '[ ] T Work est:9007199254740993h60m importance:HIGH',
+        '[ ] T Invalid elapsed:1h5 importance:json<< [true] >>',
+    ].join('\n'));
+    assert.deepEqual(result.diagnostics, [
+        { severity: 'warning', code: 'noncompact-duration', line: 2, key: 'est', part: '9007199254740994h' },
+        { severity: 'warning', code: 'invalid-importance', line: 2, key: 'importance' },
+        { severity: 'warning', code: 'invalid-duration', line: 3, key: 'elapsed' },
+        { severity: 'error', code: 'detail-expects-text', line: 3, key: 'importance' },
+    ]);
+});
+
 test('excludes unknown format versions', () => {
     const future = parse('#! format_version: 2\nanything');
     assert.equal(future.incomplete, true);

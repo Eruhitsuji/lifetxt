@@ -103,6 +103,10 @@ sequence, timestamps, and recorded status against the current item. A
 partial history may start at a later sequence when it has no creation event.
 History comparisons use the default `id:` key and textual field values.
 
+The checker validates `est:` and `elapsed:` using ASCII hours and minutes
+and suggests a compact duration such as `1h30m` for `90`. When specified,
+`importance:` must contain exactly one of `high`, `normal`, and `low`.
+
 ## Core comparison
 
 From the repository root, run the same checks as the JS checker CI:

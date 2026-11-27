@@ -268,11 +268,24 @@ function validateMessageItem(item, report) {
     if (item.status === '[N]') report('warning', 'message-workflow-marker', item.line);
 }
 
-function validateItemDetails(item, report) {
-    let hasTypeError = false;
-    if (item.type === 'M' && item.status === '[N]') {
+function validateItemMarker(item, report) {
+    const isNote = item.type === 'N' || item.type === 'J';
+    if (item.status === '[N]' && !isNote) {
         report('warning', 'note-marker-with-actionable-type', item.line);
+    } else if (item.status !== '[N]' && isNote) {
+        report('warning', 'note-item-with-workflow-marker', item.line);
     }
+    const hasDone = item.details.some(([key]) => key === 'done');
+    if (item.status === '[x]' && !hasDone && item.type !== 'S') {
+        report('warning', 'completed-item-missing-done', item.line, 'done');
+    } else if (item.status !== '[x]' && hasDone) {
+        report('warning', 'done-without-completed-marker', item.line, 'done');
+    }
+}
+
+function validateItemDetails(item, report) {
+    validateItemMarker(item, report);
+    let hasTypeError = false;
     for (const [key, values] of item.details) {
         if (key === 'requires') {
             for (const value of values) {

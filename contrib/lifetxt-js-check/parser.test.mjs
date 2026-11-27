@@ -450,6 +450,27 @@ test('accepts partial item histories and detects duplicate events', () => {
     ]);
 });
 
+test('warns about mismatched item markers and done fields', () => {
+    const result = parse([
+        '[N] T Task',
+        '[ ] N Note',
+        '[x] J Journal',
+        '[/] T Task done:2026-11-27',
+        '[x] S Closed from:2026-11-27T09:00 to:2026-11-27T10:00 state:focus',
+        '[x] T Done done:2026-11-27',
+        '[x] T Empty done:json<< [] >>',
+        '[N] J Journal',
+    ].join('\n'));
+    assert.deepEqual(result.diagnostics.map(({ code, line }) => [code, line]), [
+        ['note-marker-with-actionable-type', 1],
+        ['note-item-with-workflow-marker', 2],
+        ['note-item-with-workflow-marker', 3],
+        ['completed-item-missing-done', 3],
+        ['done-without-completed-marker', 4],
+    ]);
+    assert.equal(result.hasErrors, false);
+});
+
 test('excludes unknown format versions', () => {
     const future = parse('#! format_version: 2\nanything');
     assert.equal(future.incomplete, true);

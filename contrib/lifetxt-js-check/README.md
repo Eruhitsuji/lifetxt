@@ -51,6 +51,10 @@ Status items (`S`) require `from:` and `state:`. The checker validates
 the status datetimes and recommends `[/]` for an ongoing status or `[x]`
 when `to:` is present. Unknown `state:` values produce a warning.
 
+The checker recommends the `[N]` marker for notes (`N`) and journals (`J`).
+Completed items generally use `done:`, except status items (`S`). A
+`done:` field on an item with a marker other than `[x]` produces a warning.
+
 Message items (`M`) require `sender:` and `recipient:`. The checker warns
 about a missing boundary or reversed order in `notify_from:` and `notify_to:`,
 and recommends a workflow marker for messages. A date-only start means

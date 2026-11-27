@@ -183,7 +183,7 @@ function validateRepeat(value, line, report) {
     }
 }
 
-function eventWallClock(value) {
+function wallClock(value) {
     const [date, time] = value.split('T');
     const [, hour, minute, second = '00', fraction = '', offset] = TIME_VALUE.exec(time);
     const zone = !offset || offset === 'Z' ? 'Z' : offset.replace(/:?([0-5]\d)$/, ':$1');
@@ -200,14 +200,19 @@ function eventWallClock(value) {
     return [wall.getTime(), fraction.padEnd(6, '0')];
 }
 
+function isReversedRange(from, to) {
+    if (typeof from !== 'string' || typeof to !== 'string' ||
+        !isDateTime(from) || !isDateTime(to)) return false;
+    const start = wallClock(from);
+    const end = wallClock(to);
+    return start !== null && end !== null &&
+        (end[0] < start[0] || (end[0] === start[0] && end[1] < start[1]));
+}
+
 function validateEventRange(item, report) {
     const from = item.details.find(([key]) => key === 'from')?.[1][0];
     const to = item.details.find(([key]) => key === 'to')?.[1][0];
-    if (typeof from !== 'string' || typeof to !== 'string' ||
-        !isDateTime(from) || !isDateTime(to)) return;
-    const start = eventWallClock(from);
-    const end = eventWallClock(to);
-    if (start && end && (end[0] < start[0] || (end[0] === start[0] && end[1] < start[1]))) {
+    if (isReversedRange(from, to)) {
         report('warning', 'event-end-before-start', item.line, 'to');
     }
 }
@@ -231,8 +236,31 @@ function validateStatusItem(item, report) {
     }
 }
 
+function validateMessageItem(item, report) {
+    const details = new Map(item.details);
+    if (!details.has('sender')) report('error', 'message-missing-sender', item.line, 'sender');
+    if (!details.has('recipient')) report('error', 'message-missing-recipient', item.line, 'recipient');
+
+    const start = details.get('notify_from');
+    const end = details.get('notify_to');
+    if (start && end) {
+        const from = isDate(start[0]) ? start[0] + 'T00:00' : start[0];
+        const to = isDate(end[0]) ? end[0] + 'T23:59:59' : end[0];
+        if (isReversedRange(from, to)) {
+            report('warning', 'notification-end-before-start', item.line, 'notify_to');
+        }
+    } else if (start || end) {
+        report('warning', 'notification-missing-boundary', item.line, start ? 'notify_to' : 'notify_from');
+    }
+
+    if (item.status === '[N]') report('warning', 'message-workflow-marker', item.line);
+}
+
 function validateItemDetails(item, report) {
     let hasTypeError = false;
+    if (item.type === 'M' && item.status === '[N]') {
+        report('warning', 'note-marker-with-actionable-type', item.line);
+    }
     for (const [key, values] of item.details) {
         if (key === 'requires') {
             for (const value of values) {
@@ -267,7 +295,7 @@ function validateItemDetails(item, report) {
         } else if (REFERENCE_KEYS.includes(key)) {
             code = 'invalid-reference-id';
             accepts = value => ID_VALUE.test(value);
-        } else if (key !== 'repeat') {
+        } else if (key !== 'repeat' && key !== 'sender' && key !== 'recipient') {
             continue;
         }
         if (values.some(value => typeof value !== 'string')) {
@@ -277,11 +305,12 @@ function validateItemDetails(item, report) {
         }
         for (const value of values) {
             if (key === 'repeat') validateRepeat(value, item.line, report);
-            else if (!accepts(value)) report('warning', code, item.line, key);
+            else if (accepts && !accepts(value)) report('warning', code, item.line, key);
         }
     }
     if (item.type === 'E' && !hasTypeError) validateEventRange(item, report);
     if (item.type === 'S' && !hasTypeError) validateStatusItem(item, report);
+    if (item.type === 'M' && !hasTypeError) validateMessageItem(item, report);
 }
 
 function indexIds(items, report) {

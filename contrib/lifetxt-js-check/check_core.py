@@ -34,6 +34,9 @@ JS_CODES = {
     "E206": "message-missing-recipient",
     "W005": "unknown-escape",
     "W101": "note-marker-with-actionable-type",
+    "W102": "note-item-with-workflow-marker",
+    "W103": "completed-item-missing-done",
+    "W104": "done-without-completed-marker",
     "W201": "invalid-date",
     "W202": "invalid-datetime",
     "W203": "invalid-date-or-datetime",
@@ -653,6 +656,18 @@ def cases():
             diagnostic_parts=("id, parent, transaction, source_revision",
                               "id, parent, transaction, source_revision", "rogue"),
             check_cli=True,
+        ),
+        Case(
+            "note and journal markers and completion field presence",
+            "[N] T Task\n[ ] N Note\n[x] J Journal\n"
+            "[/] T Task done:invalid\n"
+            "[x] S Status from:2026-11-27T09:00 to:2026-11-27T10:00 state:focus\n"
+            "[x] T Empty done:json<< [] >>",
+            core=tuple(("warning", code, line, None) for code, line in (
+                ("W101", 1), ("W102", 2), ("W102", 3), ("W103", 3),
+                ("W104", 4), ("W203", 4),
+            )),
+            diagnostic_keys=("done", "done", "done"),
         ),
         Case(
             "non-text reference produces a type error and is not resolved in JS",

@@ -56,6 +56,7 @@ including directly supplying the profile if needed, validation, and human review
 | Find an installer or package | [Distribution](./docs/en/distribution.md) | [配布・インストール](./docs/ja/distribution.md) |
 | Look up a command | [CLI reference](./docs/en/cli.md) | [CLI リファレンス](./docs/ja/cli.md) |
 | Run the browser interface | [Web UI guide](./docs/en/web.md) | [Web UI ガイド](./docs/ja/web.md) |
+| Capture records with shorthand | [Quick capture](./docs/en/quick-capture.md) | [クイック入力](./docs/ja/quick-capture.md) |
 | Draft records with AI or connect via MCP | [AI integration](./docs/en/ai-integration.md) | [AI・MCP 連携](./docs/ja/ai-integration.md) |
 | Check the file syntax | [Format 1.0 specification](./docs/en/life_txt_format_spec.md) | [Format 1.0 仕様](./docs/ja/life_txt_format_spec.md) |
 
@@ -227,12 +228,8 @@ and pass both files to commands such as `agenda` or `check`. Use
 `--merge-existing --soft-delete-missing` when you want to preserve comments in
 the generated output while updating UID-backed records in place.
 
-An optional FastAPI REST API and browser GUI are available with:
-
-```sh
-pip install -r requirements-web.txt
-python -m lifetxt serve life.txt
-```
+The optional FastAPI REST API and browser GUI use the Web extra. See the
+[Web UI guide](./docs/en/web.md#install) for installation and startup.
 
 For MCP-compatible AI clients, use the dependency-free stdio server:
 
@@ -247,28 +244,11 @@ agenda, graph, blockers, links, latest status, notifications, and message
 operations. With multiple input files, read tools scan all files and write
 tools modify only `--write-file`.
 
-The Web UI uses a header Workspace for Dashboard, Items, Agenda, Timeline,
-Focus, Review, Messages, Team, Status, Notifications, Stats, Graph, Display,
-and Kiosk.
-The header includes a contextual View Guide for the active workspace, exposes
-the workspace switcher as a keyboard-friendly tablist, and provides a
-skip-to-content link for dense dashboards.
-Records open in centered modals with thread replies, dependency links, due
-quick actions, and Markdown previews. Review supports project/custom date
-filters and Markdown copy; Timeline preserves `range=today|24h|week` in the
-URL, shows guided empty states for ranges with no dated records, and marks
-records that overlap the selected range from earlier starts as `ongoing`.
-The Items view now has action-oriented empty states, and Team cards include a
-`View items` action that opens `user=PERSON&open_only=true` in the shared
-Items filter.
-Dashboard cards and theme tokens are configurable through `web.dashboard.*`
-and `web.theme.*`. Display mode has separate light/dark palettes. The `+ New`
-editor exposes viewport-aware hover/focus help for status, type, title, and
-detail fields. Press `Ctrl+K` for the fuzzy
-command palette, recently opened records, undo history, exports, theme toggles,
-and common actions. Use `--read-only` for public or wall-display deployments
-and `--write-file FILE` when reading multiple files but writing to a single
-hand-maintained file.
+The Web UI puts **Today**, **Items**, and **Dashboard** in the top bar, with
+**Calendar**, **Agenda**, **Focus**, **Review**, and other screens under
+**Features**. See the [Web UI guide](./docs/en/web.md) for each screen,
+including Desk, Planner, Display, and Kiosk, and for the server's read-only
+and writable configuration.
 
 Terminal-oriented helpers are available through `tui`, `fzf`, `timer`, `stats`,
 `git-hook`, and `completion`. `fzf` requires `fzf` or `peco` in `PATH`; the

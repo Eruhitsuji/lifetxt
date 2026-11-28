@@ -76,6 +76,6 @@ python -m lifetxt check examples/minimal_life.txt
 [#454](https://github.com/Eruhitsuji/lifetxt/issues/454) で確立された
 reduced Stable-release gate をこの patch release でも再利用します:
 release-critical な最小要件は、`1.0.0`/`1.0.1` について
-[Stable Release Artifact Verification](stable-release-artifact-verification.md)
+[Stable Release Artifact Verification](../en/stable-release-artifact-verification.md)
 に記録されているのと同じ、clean な wheel/sdist の build、fresh
 environment への install、representative な core smoke です。

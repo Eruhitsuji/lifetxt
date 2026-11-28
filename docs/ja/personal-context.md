@@ -199,7 +199,7 @@ Python is the user's favorite programming language
 このガイドでは、新しい `assertion:`、`subject:` vocabularyを導入しません。
 それらは実利用からstable contractが必要だと分かるまで保留します。opt-inで
 factの根拠と確信度を記録する方法については、後述の
-[Optional epistemic metadata](#5-optional-epistemic-metadata-この-recordはどのくらい確からしいか)
+[Optional epistemic metadata](#5-optional-epistemic-metadata-このrecordはどのくらい確からしいか)
 を参照してください。
 
 ## 5. Optional epistemic metadata: このrecordはどのくらい確からしいか

@@ -1,31 +1,24 @@
 # Getting Started: The Beginner / Minimal Profile
 
-`life.txt` has a lot of surface area: 9 item types, 7 statuses, dozens of
-detail keys, hierarchy, links, recurrence, messages, and more. You do not
-need any of that to start.
+[日本語](../ja/getting-started.md) · [Documentation index](readme.md)
 
-This page teaches the **Beginner / Minimal Profile** -- a small, named
-subset of the existing [format specification](./life_txt_format_spec.md).
-It is not a second format:
+Write tasks, events and notes in a plain-text file using the **Beginner /
+Minimal Profile**. It is a subset of [Format 1.0](life_txt_format_spec.md),
+so you can add more fields and record types as you need them.
 
-> Every Beginner Profile record is already valid Full Format syntax. Nothing
-> you write here needs to be migrated, converted, or rewritten when you learn
-> more of the format later.
+## Install and try the tour
 
-```text
-life.txt Format 1.0
-├── Beginner / Minimal Profile   <- this page, level 1
-├── Daily Use                    <- this page, level 2
-└── Full Format                  <- life_txt_format_spec.md, level 3
-```
-
-Want to see it work before reading further? `lifetxt tour` shows a tiny
-Beginner Profile sample and one real derived view over it -- no config, no
-`life.txt`, and no setup required:
+The CLI requires Python 3.10 or newer. Install it and try the built-in tour
+without creating a workspace.
 
 ```sh
-lifetxt tour
+python -m pip install lifetxt
+python -m lifetxt tour
 ```
+
+See the [distribution guide](distribution.md) for Desktop, containers and
+other installation methods. For browser use, follow the
+[Web UI installation steps](web.md#install).
 
 ## Level 1 -- Minimum (5 minutes)
 

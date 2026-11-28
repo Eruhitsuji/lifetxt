@@ -213,13 +213,9 @@ regression test reproducing the exact `-v ...:/data:ro` failure.
 
 - Immutable version tags never change once published — safe to pin
   indefinitely.
-- `latest` and the `<major>`/`<major>.<minor>` convenience tags are
-  re-pointed by `docker-publish.yml` on every matching release; re-pull
-  (`docker pull` / `docker compose pull`) to pick up a new version, they are
-  not pushed automatically to a running container.
-- The base image (`python:3.12-slim`) receives periodic OS-level security
-  patches independent of lifetxt's own releases; rebuilding/re-pulling a
-  convenience tag periodically is recommended even between lifetxt releases.
+- The release workflow updates `latest`, `<major>` and `<major>.<minor>`
+  after the full acceptance gate. Pull again (`docker pull` or
+  `docker compose pull`) and recreate the container to use the updated image.
 
 ### How images reach GHCR
 

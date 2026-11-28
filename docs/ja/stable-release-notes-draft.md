@@ -45,8 +45,8 @@ stable coreは、依存関係の少ないCLIとローカルのlife.txtワーク�
 stableな書き込み移行は、無版入力からFormat 1.0への移行だけです。既存の
 Format 1.0はno-opです。legacy、unknown、future、downgradeの変換は
 inspection-onlyまたはwrite前拒否です。詳細は
-[Format migration](format-migration.md)、
-[compatibility matrix](format-compatibility-matrix.md)、および
+[Format migration](../en/format-migration.md)、
+[compatibility matrix](../en/format-compatibility-matrix.md)、および
 `docs/en/format-1.0-finalization-review.md`を参照してください。
 
 ## 検証状況
@@ -99,9 +99,9 @@ releaseはありません。そのため以下のmigrationはこのrelease自体
 - **Format**: `#! format_version:`directiveのない既存のlife.txt fileは、
   無版入力として引き続き有効であり、`1.0.0`のinstallやrunによって変更
   されません。`format_version: 1`への唯一のサポートされた明示的な
-  revision-checked migrationについては[Format migration](format-migration.md)
+  revision-checked migrationについては[Format migration](../en/format-migration.md)
   を、inspection-onlyのまま残る範囲については
-  [compatibility matrix](format-compatibility-matrix.md)を参照してください。
+  [compatibility matrix](../en/format-compatibility-matrix.md)を参照してください。
 - **Configuration**: `.lifetxt.json` fileは`1.0.0`のinstallによる影響を
   受けません。将来のconfiguration schema変更に向けて`lifetxt config
   migrate`は引き続き利用可能です。[config.md](config.md)を参照してください。
@@ -139,7 +139,7 @@ deprecationとmigrationのlifecycleについては
   （`format canon`、`format migrate --write`、いずれもrevision-checkedな
   atomic-write contract経由）、re-read、recovery-safeな書き込みpath。
   完全な証跡記録は
-  [Stable Release Artifact Verification](stable-release-artifact-verification.md)
+  [Stable Release Artifact Verification](../en/stable-release-artifact-verification.md)
   を参照してください。
 - **`v1.0.0`**: 2026-08-22に、commit
   `4f6eead6587c383eac7ee8e92873bb1596cc1c69`（PR #469、release-metadata-only
@@ -172,6 +172,6 @@ python -m lifetxt check examples/minimal_life.txt
 ```
 
 この smoke に対する release-critical な最小要件は、#454により
-[Stable Release Artifact Verification](stable-release-artifact-verification.md)
+[Stable Release Artifact Verification](../en/stable-release-artifact-verification.md)
 に記録されたminimal clean-artifact検証です。より網羅的な外部環境検証手順は、
 追加の（release blockerではない）実機証跡として引き続き利用できます。

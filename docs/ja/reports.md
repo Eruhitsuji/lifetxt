@@ -94,7 +94,7 @@ python -m lifetxt report inspect weekly --format json
 ```
 
 `validate`/`inspect`/`preview`/`run` の使い分けと完全な契約については、
-下記の[「profile を validate / inspect する」](#profile-を-validate-inspect-する)
+下記の[「profile を validate / inspect する」](#profile-を-validate--inspect-する)
 を参照してください。
 
 ## 生成 metadata

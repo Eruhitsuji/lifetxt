@@ -1,5 +1,23 @@
 # life.txt Web API / GUI
 
+[English](../en/web.md) · [ドキュメント索引](readme.md)
+
+[Web UI をインストールして起動](#install)し、目的に合った画面を開きます。
+
+| やりたいこと | 画面 | 解説 |
+| --- | --- | --- |
+| 今日の優先事項と直近の予定を確認する | **今日（Today）** | [今日の一覧](life-hub.md) |
+| レコードを検索・編集し、タスクをカードで整理する | **アイテム（Items）** | [絞り込みと並び替え](#itemsの絞り込みと並び替え)、[タスクのボード表示](#タスクのボード表示) |
+| 日時のあるレコードを一覧またはカレンダーで見る | **予定（Agenda）** または **カレンダー（Calendar）** | [Agenda の詳細](#agendaからレコード詳細を開く)、[カレンダーの表示モード](#gui) |
+| スマートフォンから記録・在席状況を更新する | `/capture` または `/state` | [クイックキャプチャ](#モバイル向けクイックキャプチャ)、[在席状況](#モバイル-state在席状況) |
+| 1 日の計画を立て、過去の活動を振り返る | `/planner` | [Day Planner](#モバイル-day-planner)、[画面構成の共有](#plannerの表示カスタマイズ) |
+| デスクの画面に必要な情報をまとめて表示する | `/desk` | [Desk と画面構成の共有](#desk-desk) |
+| 共用ディスプレイに常時表示する | **Display** または **Kiosk** | [常時表示モード](#display-mode) |
+
+外部連携・サーバー運用には [REST API](#rest-api)、[MCP サーバー](#mcp-server)、
+[Web 通信のセキュリティ](web-transport-security.md)、
+[本番環境の導入手順（英語）](../deployment/ubuntu-server.md)を参照してください。
+
 Web interface は任意機能です。FastAPI と uvicorn を使いますが、core parser と
 CLI は外部依存なしのままです。
 
@@ -27,11 +45,26 @@ Git SHAは**サーバー起動時に読み込むlifetxtパッケージのソー�
 
 ## install
 
+配布パッケージから Web UI に必要な依存関係を含めてインストールします。
+
 ```sh
-pip install -r requirements-web.txt
+python -m pip install "lifetxt[web]"
 ```
 
+ソースからインストールする場合は、リポジトリのルートで
+`python -m pip install ".[web]"` を実行します。
+
 ## 起動
+
+既存のファイルをブラウザーで開きます。
+
+```sh
+python -m lifetxt web life.txt --host 127.0.0.1 --port 8000
+```
+
+最初のファイルを作る場合は、新しいワークスペースで先に
+`python -m lifetxt init` を実行します。ブラウザーを自動で開かずに
+サーバーだけを起動する場合は `serve` を使います。
 
 ```sh
 python -m lifetxt serve life.txt --host 127.0.0.1 --port 8000
@@ -577,9 +610,9 @@ report を返します: `completed_tasks` / `open_tasks` の件数、`completed`
 - item 一覧と filter
 - line、time、title、type、status、source による item 並び替え
 - URL parameter による filter、順序、件数、view 指定
-- 1画面1コンテンツの view bar: Dashboard、Items、Agenda、Timeline、Calendar、Focus、
-  Review、Messages、Team、Status、Notifications、Stats、Graph、Display、Kiosk —
-  常に 1 つの view だけを全画面表示
+- 上部の **今日**、**アイテム**、**ダッシュボード** から主要な画面を開けます。
+  **Calendar**、**Agenda**、**Focus**、**Review**、**Graph** などは
+  **機能一覧**にあります。
 - Dashboard view: クリック可能な KPI tile(open / due today / overdue /
   blocked / 直近完了数)、今日の agenda、要対応一覧、14日間の完了 chart、
   project 別進捗。`web.dashboard.cards` と `web.dashboard.limits` で
@@ -591,12 +624,6 @@ report を返します: `completed_tasks` / `open_tasks` の件数、`completed`
 - Review view: `GET /api/review` を使い、今週 / 先週 / 今月 / 先月 preset、
   project filter、custom from/to date、`id:` がある完了 task のクリック詳細表示、
   Markdown copy に対応。CLI の weekly-review workflow をブラウザで扱える
-- Timeline view: agenda record を時系列に並べたボード。赤い「now」ライン、
-  type 別の色付きレールノード、時刻ラベル、all-day 行、日付ヘッダー、過去
-  record の減光、URL に保存される Today / Next 24h / Week の範囲プリセット、
-  選択範囲に dated record がない場合の guided empty state、選択範囲より前に
-  開始して現在も重なっている record の `ongoing` badge に対応し、card
-  クリックで record detail modal を開く
 - Calendar view は **Day / Week / Month** の3モード。Day と Week は時間グリッド
   (時間軸、長さに応じたブロック、重なる予定の横並び、終日行、現在時刻線)で、
   Timeline view は Calendar に統合され `?view=timeline` は Calendar の Day へ
@@ -655,16 +682,12 @@ report を返します: `completed_tasks` / `open_tasks` の件数、`completed`
 `.generated/google_calendar.life.txt` など生成ファイル由来の item は read-only として
 表示します。
 
-layout は「1画面1コンテンツ」を基本とします。header の view bar で選んだ
-1 つの page(Items、Dashboard、Agenda、Timeline、Focus、Review、Messages、
-Team、Status、Notifications、Stats、Graph、Display、Kiosk)だけが全幅で表示され、他の
-コンテンツと画面を奪い合いません。record editor は `＋ New` から中央 modal として開き、item を
-クリックした詳細表示も中央の record detail modal として表示します。
-
+選択したビューがメイン領域に表示されます。**作成**でレコードエディターを開き、
+既存のレコードを選ぶと詳細が開きます。
 
 ### JSON 値と着手条件
 
-レコードエディターまたは Drawer の編集で「詳細」を開き、フィールドを１行ずつ入力します。複数のタグは `tag:json<< ["work","calls"] >>`、`id:review` の項目の完了を待つ場合は `requires:review=done` と書けます。JSON ブロック内は改行できます。Agenda と Timeline では「条件待ち」と「判定不能」を区別します。
+レコードエディターまたは Drawer の編集で「詳細」を開き、フィールドを１行ずつ入力します。複数のタグは `tag:json<< ["work","calls"] >>`、`id:review` の項目の完了を待つ場合は `requires:review=done` と書けます。JSON ブロック内は改行できます。Agenda では「条件待ち」と「判定不能」を区別します。
 
 ### Beginner Authoring Mode
 
@@ -813,7 +836,7 @@ GUI は読み込み時に query parameter を読みます。bookmark、常時表
 http://127.0.0.1:8000/?kind=T&open_only=true&sort=time&order=asc
 http://127.0.0.1:8000/?view=dashboard&refresh=60
 http://127.0.0.1:8000/?view=agenda&around=now&window=1d
-http://127.0.0.1:8000/?view=timeline&range=week&refresh=120
+http://127.0.0.1:8000/?view=calendar&calmode=week&refresh=120
 http://127.0.0.1:8000/?view=focus&theme=dark
 http://127.0.0.1:8000/?mode=display&window=12h&sort=time&order=asc&limit=20&refresh=60
 http://127.0.0.1:8000/?mode=display&type=S&person=self&refresh=30
@@ -823,7 +846,8 @@ http://127.0.0.1:8000/?mode=display&type=S&person=self&refresh=30
 
 | Parameter | 意味 |
 |---|---|
-| `view=dashboard\|agenda\|timeline\|focus\|review\|messages\|team\|status\|notifications\|stats\|graph` | 全画面 view を開く。`view=messages` は type `M` を default filter にする |
+| `view=today\|dashboard\|agenda\|calendar\|focus\|matrix\|review\|messages\|team\|status\|notifications\|stats\|graph` | 全画面 view を開く。`view=messages` は type `M` を default filter にする |
+| `view=timeline` | 今日の Calendar Day を開く互換用の指定 |
 | `mode=display` または `view=display` | 常時表示mode。編集UIを隠し、自動更新を有効化 |
 | `mode=kiosk` または `view=kiosk` | 常時表示向け kiosk board。auto-scroll と card grid を使う |
 | `preset=NAME` | config `views.NAME` のURL parameterを適用 |
@@ -843,7 +867,6 @@ http://127.0.0.1:8000/?mode=display&type=S&person=self&refresh=30
 | `limit=N` | item と agenda の表示件数上限 |
 | `around=now`、`window=1d` | agenda 範囲 |
 | `from=YYYY-MM-DD`、`to=YYYY-MM-DD` | agenda 範囲 |
-| `range=today\|24h\|week` | `view=timeline` 時の Timeline 範囲。UI の範囲ボタンを押すとこの値も更新 |
 | `calmode=day\|week\|month` | `view=calendar` 時の Calendar モード。Day/Week/Month ボタンで更新 |
 | `cal=YYYY-MM-DD` | 表示中の Calendar 期間の基準日。Prev/Next/Today 操作で更新 |
 | `after=VALUE`、`before=VALUE` | item の時刻filter |
@@ -1098,8 +1121,7 @@ curl "http://127.0.0.1:8000/api/chart/elapsed?from=2026-06-01&to=2026-06-30&proj
 
 - Display mode / Kiosk mode は URL 状態に追従します。ブラウザの戻る/進む操作で mode が外れた場合、専用 CSS、時計、auto-scroll、Exit ボタンも解除されます。
 - `display_title=TEXT` を付けると、Display mode 中だけ subtitle を差し替えられます。
-- Timeline view は表示中に now line を定期的に更新します。対象期間に dated record がない場合は、`due:` / `from:` / `notify_at:` などの追加例を含む empty state を表示します。
-- Header button、workspace tab、Timeline / Calendar control、sort/group/export、record editor には viewport-aware な hover/focus help が表示されます。
+- Header button、workspace tab、カレンダーの操作ボタン、sort/group/export、record editor には viewport-aware な hover/focus help が表示されます。
 
 Display mode は常時表示ディスプレイ向けです。read-only 表示にし、文字を大きくし、
 editor と filter controls を隠し、自動更新します。
@@ -1246,7 +1268,7 @@ lifetxt serve life.txt --port 8080
 この節は英語版の追加内容に合わせた要約です。
 
 - Web Agenda は CLI の agenda と同じ日付範囲、timezone、繰り返し展開の考え方を使います。複数日にまたがる item や RRULE の occurrence は、表示範囲に含まれる日だけに展開されます。
-- Dashboard、Items、Team、Timeline の各表示は、同じ parse 結果と link graph を共有します。`duplicate_of:`、`replaced_by:`、`depends_on:`、`blocks:` の関係は Link API と GUI の両方で確認できます。
+- Dashboard、Items、Team などの各表示は、同じ parse 結果と link graph を共有します。`duplicate_of:`、`replaced_by:`、`depends_on:`、`blocks:` の関係は Link API と GUI の両方で確認できます。
 - 古い Calendar 連携の説明は、実装済み機能として扱いません。現在の Web 画面で確認できるのは、life.txt ファイルから読み込んだ item、通知、リンク、補完、MCP/REST API です。
 - `/api/items`、`/api/agenda`、`/api/links` は UI と同じ workspace 解決を使います。設定や入力ファイルを切り替えた場合は、Web UI の表示と言語設定も同じ対象を見ていることを確認します。
 

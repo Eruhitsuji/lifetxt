@@ -1,5 +1,23 @@
 # life.txt Web API And GUI
 
+[日本語](../ja/web.md) · [Documentation index](readme.md)
+
+[Install and start the Web UI](#install), then choose a screen for what you want to do.
+
+| Goal | Screen | Guide |
+| --- | --- | --- |
+| See today's priorities and upcoming records | **Today** | [Daily command center](life-hub.md) |
+| Search, edit or organize tasks as cards | **Items** | [Filters and sorting](#items-filters-and-sorting), [task board](#task-board) |
+| Browse dated records in order or on a grid | **Agenda** or **Calendar** | [Agenda details](#agenda-record-details), [Calendar modes](#gui) |
+| Capture a record or change your availability on a phone | `/capture` or `/state` | [Quick Capture](#mobile-quick-capture), [State](#mobile-state) |
+| Plan a day and review past activity | `/planner` | [Day Planner](#mobile-day-planner), [share its layout](#planner-presentation-customization) |
+| Keep a customizable overview on a desk screen | `/desk` | [Desk and layout sharing](#desk-desk) |
+| Keep an overview running on a shared screen | **Display** or **Kiosk** | [Display modes](#display-mode) |
+
+For integrations or server administration, see the [REST API](#rest-api),
+[MCP server](#mcp-server), [transport security](web-transport-security.md)
+and [deployment runbook](../deployment/ubuntu-server.md).
+
 The web interface is optional. It uses FastAPI and uvicorn, but the core parser
 and CLI remain dependency-free.
 
@@ -27,11 +45,25 @@ Finished/cancelled records omit completion actions; readonly records explain why
 
 ## Install
 
+Install the Web dependencies with the published package.
+
 ```sh
-pip install -r requirements-web.txt
+python -m pip install "lifetxt[web]"
 ```
 
+If you are working from a source checkout, use
+`python -m pip install ".[web]"` from the repository root.
+
 ## Start
+
+To open an existing file, run:
+
+```sh
+python -m lifetxt web life.txt --host 127.0.0.1 --port 8000
+```
+
+If you need a starter file, run `python -m lifetxt init` in a new workspace
+first. Use `serve` for a server process that leaves opening the browser to you.
 
 ```sh
 python -m lifetxt serve life.txt --host 127.0.0.1 --port 8000
@@ -656,18 +688,18 @@ The browser GUI supports:
 - URL-driven filters, ordering, limits, and view selection
 - A contextual View Guide below the header. It explains the active workspace
   and exposes the most common actions for that view, such as New record,
-  Quick add, Timeline range changes, Review Markdown copy, or Team/Status
+  Quick add, Calendar navigation, Review Markdown copy, or Team/Status
   navigation.
-- Contextual hover/focus help on primary controls, workspace tabs, Timeline
-  range buttons, Calendar navigation, export/group/sort controls, and the
+- Contextual hover/focus help on primary controls, workspace tabs,
+  Calendar navigation, export/group/sort controls, and the
   record editor. Tooltips are viewport-aware so they avoid clipping at the
   edges of small browser windows.
 - Keyboard-friendly workspace navigation: the header view bar is exposed as a
   tablist, `Left`/`Right` move between views, `Home`/`End` jump to the ends,
   and a skip-to-content link lets keyboard users bypass the header.
-- A single-content view bar: Dashboard, Items, Agenda, Timeline, Calendar, Focus,
-  Review, Messages, Team, Status, Notifications, Stats, Graph, Display, and Kiosk —
-  exactly one view fills the screen at a time
+- **Today**, **Items** and **Dashboard** in the top bar, with other views
+  such as **Calendar**, **Agenda**, **Focus**, **Review** and **Graph**
+  available through **Features**.
 - A Dashboard view with clickable KPI tiles (open, due today, overdue,
   blocked, recent completions), today's agenda, a needs-attention list, a
   14-day completion chart, and per-project progress. Dashboard cards can be
@@ -681,21 +713,9 @@ The browser GUI supports:
   month / Last month presets, project filtering, custom from/to dates,
   clickable completed-task rows when records have an `id:`, and a Markdown
   copy action for weekly-report or chat handoff workflows
-- A Timeline view: a chronological board of agenda records with a red "now"
-  line, per-type colored rail nodes, hour labels, all-day rows, day headers,
-  dimmed past records, URL-persisted Today / Next 24h / Week range presets,
-  a refreshed "now" line while the view stays open, guided empty states with
-  dated-key examples when the selected range has no dated records, a "no
-  upcoming records left today" banner when all today records are already in
-  the past, and `ongoing` badges for records that started before the selected
-  range but still overlap it; cards open the record detail modal. A record
-  with more than one in-window occurrence (a multi-day `on:` span, or several
-  repeat occurrences) gets one row per occurrence, each carrying a `day X of
-  Y` span badge, instead of collapsing to a single row.
 - An Agenda view: a flat, filterable list backed by `GET /api/agenda` (see
-  [URL Parameters](#url-parameters)) with the same per-occurrence expansion as
-  Timeline -- a record matching several days/occurrences within the selected
-  range produces one row per match, each with its own `when`.
+  [URL Parameters](#url-parameters)) with one row per matching day or occurrence in the
+  selected range, each with its own `when`.
 - A Calendar view with **Day**, **Week** and **Month** modes. Day and Week use
   a time grid (hour axis, blocks sized by duration, side-by-side columns for
   overlapping events, an all-day row, and a current-time line); the Timeline
@@ -775,13 +795,8 @@ The browser GUI supports:
 Editable items are items from the writable file. Items loaded from generated
 files, such as `.generated/google_calendar.life.txt`, are shown read-only.
 
-The layout follows a one-screen-one-content rule: the header view bar picks a
-single full-width page (Items, Dashboard, Agenda, Timeline, Focus, Review,
-Messages, Team, Status, Notifications, Stats, Graph, Display, or Kiosk), and nothing else
-competes for space. The
-record editor opens as a centered modal from `＋ New`, and clicking an item
-opens a centered record detail modal.
-
+The selected view fills the main content area. Use **Create** to open the record
+editor, or select an existing record to open its detail drawer.
 
 ### Beginner Authoring Mode
 
@@ -804,7 +819,7 @@ Full mode, so nothing changes for an existing user until they opt in.
 
 ### JSON values and start conditions
 
-In the record editor or Drawer Edit, open Details and enter one field per line. Use `tag:json<< ["work","calls"] >>` for multiple tags, or `requires:review=done` to wait for the item with `id:review` to complete. A JSON block can span lines. Agenda and Timeline distinguish waiting for a condition from a condition that cannot be evaluated.
+In the record editor or Drawer Edit, open Details and enter one field per line. Use `tag:json<< ["work","calls"] >>` for multiple tags, or `requires:review=done` to wait for the item with `id:review` to complete. A JSON block can span lines. Agenda distinguishes waiting for a condition from a condition that cannot be evaluated.
 
 ### Set up habit guidance in the record editor
 
@@ -934,7 +949,7 @@ Examples:
 http://127.0.0.1:8000/?kind=T&open_only=true&sort=time&order=asc
 http://127.0.0.1:8000/?view=dashboard&refresh=60
 http://127.0.0.1:8000/?view=agenda&around=now&window=1d
-http://127.0.0.1:8000/?view=timeline&range=week&refresh=120
+http://127.0.0.1:8000/?view=calendar&calmode=week&refresh=120
 http://127.0.0.1:8000/?view=focus&theme=dark
 http://127.0.0.1:8000/?mode=display&window=12h&sort=time&order=asc&limit=20&refresh=60
 http://127.0.0.1:8000/?mode=display&type=S&person=self&refresh=30
@@ -944,7 +959,8 @@ Supported parameters:
 
 | Parameter | Meaning |
 |---|---|
-| `view=dashboard\|agenda\|timeline\|focus\|review\|messages\|team\|status\|notifications\|stats\|graph` | Open a full-screen view; `view=messages` also defaults the item filter to type `M` |
+| `view=today\|dashboard\|agenda\|calendar\|focus\|matrix\|review\|messages\|team\|status\|notifications\|stats\|graph` | Open a full-screen view; `view=messages` also defaults the item filter to type `M` |
+| `view=timeline` | Compatibility alias that opens Calendar Day on today |
 | `mode=display` or `view=display` | Wall-display mode: hides editing controls and enables auto-refresh |
 | `mode=kiosk` or `view=kiosk` | Always-on kiosk board mode with auto-scroll and card grid |
 | `preset=NAME` | Apply URL parameters from config `views.NAME` |
@@ -964,7 +980,6 @@ Supported parameters:
 | `limit=N` | Limit item and agenda results |
 | `around=now`, `window=1d` | Agenda range |
 | `from=YYYY-MM-DD`, `to=YYYY-MM-DD` | Agenda range |
-| `range=today\|24h\|week` | Timeline range when `view=timeline`; the UI updates this value when range buttons are clicked |
 | `calmode=day\|week\|month` | Calendar mode when `view=calendar`; the UI updates this value when the Day/Week/Month buttons are used |
 | `cal=YYYY-MM-DD` | Anchor date of the visible calendar period; the UI updates this value on Prev/Next/Today navigation |
 | `after=VALUE`, `before=VALUE` | Item time filters |
@@ -1323,7 +1338,7 @@ port above 1024.
 Start with Today to see what needs attention, Items to find records, and Create
 to add a task, event, or note. Empty views explain whether there is no data or
 only no matching result and provide a safe next action. Open **Features** to
-browse destinations by purpose, including Timeline, Graph, and Stats.
+browse destinations by purpose, including Calendar, Graph, and Stats.
 
 Under **Plan your time**, Calendar shows a day, week or month view, Agenda lists
 upcoming items in date order, and Planner lets you plan a day and log habits.

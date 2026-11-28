@@ -1,128 +1,115 @@
-# lifetxt documentation
+# lifetxt Documentation
 
-`life.txt` is a plain-text format and toolset for tasks, events, deadlines,
-reminders, habits, status/presence records, messages, notes, journals, project
-work, and remote-safe workflows.
+[日本語](../ja/readme.md) · [Documentation home](../README.md) · [Project website](https://eruhitsuji.github.io/lifetxt/en/)
 
-Start with:
+`life.txt` is a plain-text format for tasks, events, notes, journals and other records.
+Follow the [beginner guide](getting-started.md) to write your first file.
+See [examples/](../../examples/) for sample records.
 
-- [getting-started.md](./getting-started.md) for a 5-minute introduction to
-  `life.txt`'s Beginner / Minimal Profile before the full specification.
-- [philosophy.md](./philosophy.md) for why lifetxt exists and the
-  principles behind it.
-- [life_txt_format_spec.md](./life_txt_format_spec.md) for the file format.
-- [cli.md](./cli.md) for command usage and compatibility.
-- [quick-capture.md](./quick-capture.md) for the authoritative Quick capture
-  shorthand, precedence, edge cases, and surface differences.
-- [config.md](./config.md) for configuration files and effective settings.
-- [web.md](./web.md) for the optional FastAPI/Web UI surface.
-- [ai-integration.md](./ai-integration.md) for AI text drafting, manual Web sharing, and MCP client usage.
-- [personal-context.md](./personal-context.md) for AI-assisted Personal Context /
-  Personal DB authoring, maintenance, and reuse.
-- [use-cases.md](./use-cases.md) for practical setups.
+## Get started
 
-Using an ordinary AI chat? Start with the
-[Prompt Profile workflow](./ai-integration.md#a-copyable-prompt-profile-workflow)
-without installing lifetxt, or use a running Web UI for
-[export → AI → Preview → approved Add all](./ai-integration.md#manual-sharing-with-an-external-ai).
-Neither requires MCP, an AI API, or a plugin. MCP connects compatible clients
-to a workspace and has separate access and setup requirements.
+- [Learn the file format in five minutes](getting-started.md)
+- [Install CLI or Desktop, or run a container](distribution.md)
+- [Install lifetxt-mini](lifetxt-mini-distribution.md)
+- [Set up a text editor](editor.md)
+- [Use a text editor for a weekly routine](text-editor-only-workflow.md)
+- [Choose a setup for your use case](use-cases.md)
+- [Read the project philosophy](philosophy.md)
 
-## Minimal life.txt
+## Use lifetxt
 
-```txt
-[ ] T Write_Report due:2026-06-12 project:university assignee:alice
-[ ] E Seminar from:2026-06-08T13:00 to:2026-06-08T14:30 loc:university attendee:alice
-[/] S Working from:2026-06-06T14:00 state:busy person:self
-[ ] M "Review slides" sender:self recipient:alice notify_at:2026-06-06T09:00 channel:teams
-[N] J "Research day" on:2026-06-23 mood:good tag:lab
-| Read papers in the morning.
-| Wrote parser tests in the afternoon.
-[N] N Research_Memo project:research
-```
+- [CLI command reference](cli.md)
+- [Web UI and REST API](web.md)
+- [Quick capture and todo.txt input](quick-capture.md)
+- [CLI workflow examples](new-cli-workflows.md)
+- [Today view, areas and backlinks](life-hub.md)
+- [Queries and saved views](query.md)
+- [Search and fuzzy matching](search.md)
+- [Importance and priority matrix](priority-matrix.md)
+- [Notes](ordinary-notes.md)
+- [Links between records](item-links.md)
+- [Inbox and proposals](inbox.md)
+- [Projects and portfolios](projects.md)
+- [Development tickets](tickets.md)
+- [Ticket and project reports](ticket-projects.md)
+- [People and groups](people.md)
+- [Messaging and delivery state](messaging.md)
+- [Periodic Markdown reports](reports.md)
+- [Procedure guidance](procedure-guidance.md)
+- [Workspace life timeline](workspace-life-timeline.md)
+- [Native temporal timeline](native-timeline.md)
+- [Review records across time](temporal-review-reads.md)
+- [Lifecycle analytics](lifecycle-analytics.md)
+- [Future intent snapshots](future-intent-snapshot.md)
 
-## Topic index
+## AI and personal context
 
-Every Markdown file under `docs/en/` is listed here.
+- [Draft records, share manually, or connect via MCP](ai-integration.md)
+- [Record examples for AI drafting](ai-patterns.md)
+- [Build and use personal context](personal-context.md)
+- [Personal context toolkit](personal-context-toolkit.md)
 
-| Topic | Document |
-| --- | --- |
-| AI drafting, manual sharing, and MCP integration | [ai-integration.md](./ai-integration.md) |
-| Personal Context / Personal DB with AI | [personal-context.md](./personal-context.md) |
-| CLI reference | [cli.md](./cli.md) |
-| CI responsibilities | [ci-responsibilities.md](./ci-responsibilities.md) |
-| Quick capture and shorthand | [quick-capture.md](./quick-capture.md) |
-| Configuration | [config.md](./config.md) |
-| Delegated mutations, remote attachments, recovery | [delegated-remote-attachments-and-recovery.md](./delegated-remote-attachments-and-recovery.md) |
-| Editor setup and safe edit flow | [editor.md](./editor.md) |
-| Getting started (Beginner / Minimal Profile) | [getting-started.md](./getting-started.md) |
-| Inbox workflows | [inbox.md](./inbox.md) |
-| Format specification | [life_txt_format_spec.md](./life_txt_format_spec.md) |
-| Daily hub, areas, backlinks | [life-hub.md](./life-hub.md) |
-| Messaging and notifications | [messaging.md](./messaging.md) |
-| New CLI workflows | [new-cli-workflows.md](./new-cli-workflows.md) |
-| Native semantic history design | [native-semantic-history.md](./native-semantic-history.md) |
-| Native Temporal Timeline | [native-timeline.md](./native-timeline.md) |
-| Native History / Git consistency | [native-git-history-consistency.md](./native-git-history-consistency.md) |
-| People, teams, groups | [people.md](./people.md) |
-| Philosophy and long-term vision | [philosophy.md](./philosophy.md) |
-| Process boundaries and transaction admin | [process-boundaries-attachments-and-transaction-admin.md](./process-boundaries-attachments-and-transaction-admin.md) |
-| Projects and portfolios | [projects.md](./projects.md) |
-| Public surface revisions | [public-surface-revisions.md](./public-surface-revisions.md) |
-| Query language and saved views | [query.md](./query.md) |
-| Documentation index | [readme.md](./readme.md) |
-| Release baselines | [release-baselines.md](./release-baselines.md) |
-| Release policy gates | [release-policy-gates.md](./release-policy-gates.md) |
-| Release safety foundations | [release-safety-foundations.md](./release-safety-foundations.md) |
-| Remote Safe Mode | [remote.md](./remote.md) |
-| Remote CLI write client | [remote-client-writes.md](./remote-client-writes.md) |
-| Remote compatibility | [remote-compatibility.md](./remote-compatibility.md) |
-| Remote ticket mutations | [remote-ticket-writes.md](./remote-ticket-writes.md) |
-| Round-trip and multiline body rules | [roundtrip-and-body.md](./roundtrip-and-body.md) |
-| Safe writes, attachments, work sessions | [safe-writes-attachments-and-work-sessions.md](./safe-writes-attachments-and-work-sessions.md) |
-| Search and fuzzy matching | [search.md](./search.md) |
-| Shared mutation routing | [shared-mutation-routing.md](./shared-mutation-routing.md) |
-| Ticket projects | [ticket-projects.md](./ticket-projects.md) |
-| Tickets and workflow history | [tickets.md](./tickets.md) |
-| Timezone-aware datetimes | [timezone-aware-datetimes.md](./timezone-aware-datetimes.md) |
-| Timezone, revisions, workspace safety | [timezone-revision-workspace-safety.md](./timezone-revision-workspace-safety.md) |
-| Transaction recovery and strict timers | [transaction-recovery-and-strict-timers.md](./transaction-recovery-and-strict-timers.md) |
-| Use-case guide | [use-cases.md](./use-cases.md) |
-| Text-editor-only workflow | [text-editor-only-workflow.md](./text-editor-only-workflow.md) |
-| VM (opt-in Turing-complete execution model) | [vm.md](./vm.md) |
-| Web API and UI | [web.md](./web.md) |
+## Format and behavior reference
 
-## Examples
+- [Format 1.0 specification](life_txt_format_spec.md)
+- [Round trips and multiline bodies](roundtrip-and-body.md)
+- [Timezone-aware datetimes](timezone-aware-datetimes.md)
+- [Item events](item-events.md)
+- [Native semantic history](native-semantic-history.md)
+- [Historical as-of semantics](historical-as-of-semantics.md)
+- [Native and Git history consistency](native-git-history-consistency.md)
+- [Git history evidence contract](git-historical-evidence-contract.md)
+- [MCP historical reads](mcp-semantic-as-of.md)
+- [Revision contracts for public interfaces](public-surface-revisions.md)
+- [Shared mutation routing](shared-mutation-routing.md)
+- [Resource reference projection](resource-reference-projection.md)
+- [Restricted resource resolution schema](resource-reference-resolution.md)
+- [TUI Unicode display width](tui-unicode-width.md)
+- [Opt-in virtual machine](vm.md)
 
-Sample files are available in [../../examples/](../../examples/), including:
+## Configure and operate
 
-- [minimal_life.txt](../../examples/minimal_life.txt)
-- [getting_started_life.txt](../../examples/getting_started_life.txt)
-- [tasks_life.txt](../../examples/tasks_life.txt)
-- [events_life.txt](../../examples/events_life.txt)
-- [habits_reminders_life.txt](../../examples/habits_reminders_life.txt)
-- [status_presence.txt](../../examples/status_presence.txt)
-- [team_status_life.txt](../../examples/team_status_life.txt)
-- [messages_life.txt](../../examples/messages_life.txt)
-- [diary_life.txt](../../examples/diary_life.txt)
-- [markdown_life.txt](../../examples/markdown_life.txt)
-- [linked_life.txt](../../examples/linked_life.txt)
-- [recurrence_time_life.txt](../../examples/recurrence_time_life.txt)
-- [hierarchy_life.txt](../../examples/hierarchy_life.txt)
-- [agenda_life.txt](../../examples/agenda_life.txt)
-- [json_roundtrip_life.txt](../../examples/json_roundtrip_life.txt)
-- [calendar_import.ics](../../examples/calendar_import.ics)
+- [Configuration and workspaces](config.md)
+- [Remote Safe Mode](remote.md)
+- [Remote CLI and TUI writes](remote-client-writes.md)
+- [Remote ticket writes](remote-ticket-writes.md)
+- [Remote client compatibility](remote-compatibility.md)
+- [Web transport security](web-transport-security.md)
+- [Safe writes, attachments and work sessions](safe-writes-attachments-and-work-sessions.md)
+- [Delegated writes and remote attachment recovery](delegated-remote-attachments-and-recovery.md)
+- [Confined attachment reads](attachment-snapshot-helper.md)
+- [Process boundaries and transaction administration](process-boundaries-attachments-and-transaction-admin.md)
+- [Transaction recovery and strict timers](transaction-recovery-and-strict-timers.md)
+- [Workspace safety, revisions and timezones](timezone-revision-workspace-safety.md)
+- [Storage checks and maintenance](storage-health.md)
+- [Confidentiality of stored attachments and recovery data](at-rest-confidentiality.md)
+- [External resource fetch policy](external-resource-fetch-policy.md)
+- [Restricted resource discovery and downloads](resource-reference-runtime.md)
+- [Optional dependency compatibility](optional-dependency-compatibility.md)
+- [Ubuntu Server deployment runbook](../deployment/ubuntu-server.md)
 
-## Verification
+## Maintain and release
 
-Install and run the minimal smoke check. `python -m pip install .` (not
-`-e .`) matches how a release artifact installs from a source checkout; once
-a version is published (see [distribution.md](./distribution.md)), `pip
-install lifetxt` is the primary end-user path instead. `-e .` is for editing
-lifetxt's own source, covered by
-[readme.md's Development environment section](../../readme.md#development-environment):
+- [CI responsibilities](ci-responsibilities.md)
+- [Verification across environments](external-environment-verification.md)
+- [Reviewed release baselines](release-baselines.md)
+- [Release compatibility policy](release-compatibility-policy.md)
+- [Release policy gates](release-policy-gates.md)
+- [Release safety and Format 1.0](release-safety-foundations.md)
+- [Release preflight evidence](release-preflight.md)
+- [Approved release publication](release-publication.md)
+- [Release artifact evidence](release-artifact-evidence.md)
+- [Engineering references and verification records](../development/README.md)
 
-```sh
-python -m pip install .
-python -m lifetxt check examples/minimal_life.txt
-```
+## Release notes, proposals and investigations
+
+- [v1.0.5 release notes](release-notes-v1.0.5.md)
+- [v1.0.4.3 release notes](release-notes-v1.0.4.3.md)
+- [v1.0.4.2 release notes](release-notes-v1.0.4.2.md)
+- [v1.0.4.1 release notes](release-notes-v1.0.4.1.md)
+- [v1.0.2 release notes](release-notes-v1.0.2.md)
+- [v1.0.0 release notes draft](stable-release-notes-draft.md)
+- [Daily Flow Lite proposal](daily-flow-lite-contract.md)
+- [Procedure guidance proposal](procedure-guidance-design.md)
+- [Git history disclosure investigation](git-historical-disclosure-policy.md)
+- [Roadmap and archived snapshots](../roadmap/README.md)

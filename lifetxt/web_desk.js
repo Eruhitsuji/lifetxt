@@ -1,7 +1,7 @@
 (() => {
   "use strict";
   const copy = {
-    en: {layout: "Layout", layoutTitle: "Screen layout", layoutPreset: "Preset", layoutCustom: "Custom", presetNames: {standard: "Standard", clock: "Clock", tasks: "Tasks", calendar: "Calendar"}, blockNames: {clock: "Clock", status: "Status", next: "Next event", calendar: "Calendar", tasks: "Tasks", capture: "Quick add"}, layoutColumns: ["Left column", "Right column"], layoutUp: "Move up", layoutDown: "Move down", layoutRight: "Move to right column", layoutLeft: "Move to left column", layoutSwap: "Swap columns", layoutReset: "Reset to standard", layoutRatio: "Column width", ratioNames: {balanced: "Balanced", left: "Wider left", right: "Wider right"}, layoutFont: "Text size", fontNames: {s: "Small", m: "Medium", l: "Large"}, layoutShow: "Checked items are shown. Settings are saved in this browser.",
+    en: {layout: "Layout", layoutTitle: "Screen layout", layoutPreset: "Preset", layoutCustom: "Custom", presetNames: {standard: "Standard", clock: "Clock", tasks: "Tasks", calendar: "Calendar"}, blockNames: {clock: "Clock", status: "Status", next: "Next event", calendar: "Calendar", tasks: "Tasks", capture: "Quick add"}, layoutColumns: ["Left column", "Right column"], layoutUp: "Move up", layoutDown: "Move down", layoutRight: "Move to right column", layoutLeft: "Move to left column", layoutSwap: "Swap columns", layoutReset: "Reset to standard", layoutRatio: "Column width", ratioNames: {balanced: "Balanced", left: "Wider left", right: "Wider right"}, layoutFont: "Text size", fontNames: {s: "Small", m: "Medium", l: "Large"}, layoutShow: "Checked items are shown. Settings are saved in this browser.", layoutBlockFont: "Text size", fontXl: "Extra large", fontDefault: "Default", layoutAuto: "Reset sizes", splitColumns: "Column width (drag or arrow keys, double-click to reset)", splitBlock: "Height of {name} (drag or arrow keys, double-click for automatic)",
       fullscreenOn: "Full screen", fullscreenOff: "Exit full screen", fullscreenFailed: "Could not change full screen mode.", statusNow: "Status", statusNone: "No status", statusChange: "Change status", statusEnd: "End current status", statusActivity: "Activity (optional)", statusCustom: "Custom status", statusSet: "Set custom status", statusForce: "Restart even if this status is already current", statusSame: "This status is already current; its start and title were kept.", statusRequired: "Enter a custom status.", since: "since {at} · {span}", spanMin: "{m} min", spanHour: "{h} h {m} min",
       stateNames: ["Available", "Busy", "Focus", "Meeting", "Away", "Offline", "Commuting", "Working", "Sleeping"],
       skip: "Skip to tasks", title: "Desk", reasonToday: "due today", reasonOverdue: "{n} overdue (days)", top: "Top", calendar: "Calendar", planner: "Planner", tasks: "Tasks", captureLabel: "Quick add", capturePlaceholder: "Quick add: title @project !high ^tomorrow", add: "Add", preview: "Preview", confirmCapture: "Confirm capture", editBtn: "Edit", detailsLabel: "Details (key:value per line)", themeAuto: "Theme: auto", themeDark: "Theme: dark", themeLight: "Theme: light", reviewFirst: "Review the mapped fields, then confirm.",
@@ -9,7 +9,7 @@
       markDone: "Mark as done", doneAt: "Completion date and time", completeNow: "Complete now", completeAt: "Complete at selected time", etaMin: "in {n} min", etaHour: "in {h} h {m} min", noNext: "No more events today", week: "Week {n}", dayOfYear: "Day {n}", loading: "Loading…",
       captured: "Added.", saved: "Updated.", readonly: "Read-only: changes are disabled.", error: "Could not load: ", conflict: "Data changed. Reload and try again.", noRevision: "Could not obtain a write revision. Reload and try again.", requestFailed: "Request failed", due: "due {d}",
       modeDay: "Today", modeWeek: "7 days", modeMonth: "Month", save: "Save", evTitle: "Title", evDate: "Date", evStart: "Start", evEnd: "End", badRange: "End must be after start.", requiredFields: "Enter a title, date, and time.", requiredTitle: "Enter a title.", requiredDate: "Choose a date.", dueDate: "Due date", changeDue: "Change due", openInPlanner: "Open in Planner", details: "Details", close: "Close", type: "Type", statusLabel: "Status", when: "When", openDetails: "Show details: "},
-    ja: {layout: "画面構成", layoutTitle: "画面構成", layoutPreset: "プリセット", layoutCustom: "カスタム", presetNames: {standard: "標準", clock: "時計中心", tasks: "タスク中心", calendar: "カレンダー中心"}, blockNames: {clock: "時計", status: "状態", next: "次の予定", calendar: "カレンダー", tasks: "タスク", capture: "クイック追加"}, layoutColumns: ["左の列", "右の列"], layoutUp: "上へ", layoutDown: "下へ", layoutRight: "右の列へ", layoutLeft: "左の列へ", layoutSwap: "左右を入れ替える", layoutReset: "標準に戻す", layoutRatio: "列の幅", ratioNames: {balanced: "均等", left: "左を広く", right: "右を広く"}, layoutFont: "文字サイズ", fontNames: {s: "小", m: "中", l: "大"}, layoutShow: "チェックした項目を表示します。設定はこのブラウザに保存されます。",
+    ja: {layout: "画面構成", layoutTitle: "画面構成", layoutPreset: "プリセット", layoutCustom: "カスタム", presetNames: {standard: "標準", clock: "時計中心", tasks: "タスク中心", calendar: "カレンダー中心"}, blockNames: {clock: "時計", status: "状態", next: "次の予定", calendar: "カレンダー", tasks: "タスク", capture: "クイック追加"}, layoutColumns: ["左の列", "右の列"], layoutUp: "上へ", layoutDown: "下へ", layoutRight: "右の列へ", layoutLeft: "左の列へ", layoutSwap: "左右を入れ替える", layoutReset: "標準に戻す", layoutRatio: "列の幅", ratioNames: {balanced: "均等", left: "左を広く", right: "右を広く"}, layoutFont: "文字サイズ", fontNames: {s: "小", m: "中", l: "大"}, layoutShow: "チェックした項目を表示します。設定はこのブラウザに保存されます。", layoutBlockFont: "文字サイズ", fontXl: "特大", fontDefault: "全体と同じ", layoutAuto: "大きさを戻す", splitColumns: "列の幅（ドラッグまたは矢印キー、ダブルクリックで戻す）", splitBlock: "{name}の高さ（ドラッグまたは矢印キー、ダブルクリックで自動）",
       fullscreenOn: "全画面", fullscreenOff: "全画面を終了", fullscreenFailed: "全画面表示を切り替えられませんでした。", statusNow: "状態", statusNone: "現在設定なし", statusChange: "状態を切り替える", statusEnd: "現在の状態を終了", statusActivity: "活動名（任意）", statusCustom: "カスタム状態", statusSet: "カスタム状態を設定", statusForce: "同じ状態でも再開始する", statusSame: "すでに同じ状態です。開始時刻とタイトルは維持しました。", statusRequired: "カスタム状態を入力してください。", since: "{at} から · {span}", spanMin: "{m}分", spanHour: "{h}時間{m}分",
       stateNames: ["対応可能", "取り込み中", "集中", "会議中", "離席中", "オフライン", "移動中", "作業中", "睡眠中"],
       skip: "タスクへ移動", title: "Desk", reasonToday: "今日が期限", reasonOverdue: "{n}日超過", top: "トップ", calendar: "カレンダー", planner: "Planner", tasks: "タスク", captureLabel: "クイック追加", capturePlaceholder: "クイック追加: タイトル @project !高 ^明日", add: "追加", preview: "プレビュー", confirmCapture: "追加を確定", editBtn: "編集", detailsLabel: "詳細 (1行に key:value)", themeAuto: "テーマ: 自動", themeDark: "テーマ: ダーク", themeLight: "テーマ: ライト", reviewFirst: "変換結果を確認して確定してください。",
@@ -679,28 +679,118 @@
   }
   // ---- Layout: per-browser arrangement of the screen blocks ----
   const BLOCKS = ["clock", "status", "next", "calendar", "tasks", "capture"];
+  const FLEXIBLE = ["calendar", "tasks"];
   const RATIOS = ["balanced", "left", "right"], FONTS = ["s", "m", "l"];
-  const preset = (left, right, hidden = [], ratio = "balanced", font = "m") => ({cols: [left, right], hidden, ratio, font});
+  const BLOCK_FONTS = ["s", "m", "l", "xl"], ZOOM = {s: .9, m: 1, l: 1.2, xl: 1.45};
+  const MIN_HEIGHT = 48, MAX_HEIGHT = 2000, MIN_SPLIT = 25, MAX_SPLIT = 75;
+  const clamp = (v, low, high) => Math.min(high, Math.max(low, Math.round(v)));
+  const preset = (left, right, hidden = [], ratio = "balanced", font = "m") => ({cols: [left, right], hidden, ratio, font, split: null, heights: {}, fonts: {}});
   const PRESETS = {
     standard: preset(["clock", "status", "next", "calendar"], ["tasks", "capture"]),
     clock: preset(["clock", "status", "next"], ["calendar", "tasks", "capture"], ["capture"], "left", "l"),
     tasks: preset(["tasks", "capture"], ["clock", "status", "next", "calendar"], [], "left"),
     calendar: preset(["calendar"], ["clock", "status", "next", "tasks", "capture"], [], "left")
   };
-  const copyLayout = v => ({cols: v.cols.map(c => [...c]), hidden: [...v.hidden], ratio: v.ratio, font: v.font});
+  const copyLayout = v => ({cols: v.cols.map(c => [...c]), hidden: [...v.hidden], ratio: v.ratio, font: v.font, split: v.split, heights: {...v.heights}, fonts: {...v.fonts}});
   const validLayout = v => Boolean(v) && Array.isArray(v.cols) && v.cols.length === 2 && v.cols.every(Array.isArray) &&
     v.cols.flat().length === BLOCKS.length && BLOCKS.every(b => v.cols.flat().includes(b)) &&
     Array.isArray(v.hidden) && v.hidden.every(b => BLOCKS.includes(b)) && RATIOS.includes(v.ratio) && FONTS.includes(v.font);
+  // Sizes are optional so an arrangement saved before they existed still loads;
+  // an unusable size is dropped without discarding the arrangement.
+  function readLayout(v) {
+    if (!validLayout(v)) return null;
+    const number = (n, low, high) => Number.isFinite(n) ? clamp(n, low, high) : null;
+    const entries = (o, read) => Object.fromEntries(BLOCKS.map(b => [b, read(o?.[b])]).filter(e => e[1] !== null));
+    return copyLayout({...v, split: number(v.split, MIN_SPLIT, MAX_SPLIT),
+      heights: entries(v.heights, n => number(n, MIN_HEIGHT, MAX_HEIGHT)),
+      fonts: entries(v.fonts, f => BLOCK_FONTS.includes(f) ? f : null)});
+  }
   let layout = copyLayout(PRESETS.standard), loaded = false;
+  const zoomOf = name => ZOOM[layout.fonts[name] || layout.font];
+  function saveLayout() { try { localStorage.setItem("desk-layout", JSON.stringify(layout)); } catch (_) {} }
+  function sizeZone(name) {
+    const zone = $(name + "-zone"), height = layout.heights[name], zoom = zoomOf(name);
+    zone.style.zoom = zoom === 1 ? "" : zoom;
+    zone.classList.toggle("sized", Boolean(height));
+    // The stored height is in screen pixels; CSS lengths inside a zoomed block are scaled.
+    if (height) zone.style.setProperty("--block-height", height / zoom + "px");
+    else zone.style.removeProperty("--block-height");
+  }
+  function currentSplit() {
+    const left = $("col-0").offsetWidth, right = $("col-1").offsetWidth;
+    return left + right ? clamp(left * 100 / (left + right), MIN_SPLIT, MAX_SPLIT) : 50;
+  }
+  function placeColumnSplitter() {
+    const bar = $("col-splitter"), left = $("col-0");
+    bar.hidden = $("cols").classList.contains("single");
+    if (bar.hidden) return;
+    bar.style.left = (left.offsetLeft + left.offsetWidth + $("col-1").offsetLeft) / 2 + "px";
+    bar.setAttribute("aria-valuenow", String(currentSplit()));
+  }
+  function sizeColumns() {
+    const cols = $("cols");
+    cols.toggleAttribute("data-split", layout.split !== null);
+    if (layout.split !== null) {
+      cols.style.setProperty("--left", layout.split + "fr");
+      cols.style.setProperty("--right", 100 - layout.split + "fr");
+    }
+    placeColumnSplitter();
+  }
+  // Pointer and keyboard resizing share one path: change, show, then save once.
+  function resizer(bar, vertical, begin, apply, reset) {
+    const finish = () => { saveLayout(); if (loaded) renderTimeline(); };
+    bar.onpointerdown = e => {
+      if (e.button) return;
+      e.preventDefault();
+      const origin = vertical ? e.clientX : e.clientY, from = begin();
+      let moved = false;
+      bar.setPointerCapture(e.pointerId);
+      bar.onpointermove = ev => {
+        const by = (vertical ? ev.clientX : ev.clientY) - origin;
+        if (by || moved) { moved = true; apply(from, by); }
+      };
+      bar.onpointerup = bar.onpointercancel = () => {
+        bar.onpointermove = bar.onpointerup = bar.onpointercancel = null;
+        if (moved) finish();
+      };
+    };
+    bar.onkeydown = e => {
+      const keys = vertical ? {ArrowLeft: -1, ArrowRight: 1} : {ArrowUp: -1, ArrowDown: 1};
+      if (keys[e.key]) { e.preventDefault(); apply(begin(), keys[e.key] * 16); finish(); }
+      else if (e.key === "Enter" || e.key === "Home") { e.preventDefault(); reset(); finish(); }
+    };
+    bar.ondblclick = () => { reset(); finish(); };
+  }
+  function blockSplitter(name) {
+    const bar = document.createElement("div");
+    bar.className = "splitter row-splitter"; bar.tabIndex = 0; bar.dataset.block = name;
+    bar.setAttribute("role", "separator"); bar.setAttribute("aria-orientation", "horizontal");
+    bar.setAttribute("aria-label", fmt(t.splitBlock, {name: t.blockNames[name]}));
+    resizer(bar, false, () => $(name + "-zone").getBoundingClientRect().height,
+      (from, by) => { layout.heights[name] = clamp(from + by, MIN_HEIGHT, MAX_HEIGHT); sizeZone(name); },
+      () => { delete layout.heights[name]; sizeZone(name); });
+    return bar;
+  }
+  function initColumnSplitter() {
+    resizer($("col-splitter"), true,
+      () => ({split: layout.split ?? currentSplit(), width: $("col-0").offsetWidth + $("col-1").offsetWidth}),
+      (from, by) => { layout.split = clamp(from.split + by * 100 / (from.width || 1), MIN_SPLIT, MAX_SPLIT); sizeColumns(); },
+      () => { layout.split = null; sizeColumns(); });
+    $("col-splitter").setAttribute("aria-label", t.splitColumns);
+    new ResizeObserver(placeColumnSplitter).observe($("cols"));
+  }
   function applyLayout() {
+    document.querySelectorAll(".row-splitter").forEach(n => n.remove());
     layout.cols.forEach((names, index) => {
       const column = $("col-" + index);
       const shown = names.filter(n => !layout.hidden.includes(n));
-      const flexible = shown.includes("calendar") || shown.includes("tasks");
+      const flexible = shown.some(n => FLEXIBLE.includes(n) && !layout.heights[n]);
       for (const name of names) {
         const zone = $(name + "-zone");
         zone.hidden = !shown.includes(name);
         column.append(zone);
+        if (!zone.hidden && name !== shown.at(-1)) column.append(blockSplitter(name));
+        sizeZone(name);
       }
       if (names.includes("clock")) $("clock-zone").classList.toggle("grow", !flexible);
       column.hidden = !shown.length;
@@ -709,11 +799,12 @@
     $("cols").dataset.ratio = layout.ratio;
     $("desk").dataset.font = layout.font;
     document.querySelector(".skip").hidden = layout.hidden.includes("tasks");
+    sizeColumns();
     if (loaded) renderTimeline();
   }
   function changeLayout(next, focus) {
     layout = next;
-    try { localStorage.setItem("desk-layout", JSON.stringify(layout)); } catch (_) {}
+    saveLayout();
     applyLayout();
     renderLayoutDialog(focus);
   }
@@ -741,7 +832,7 @@
     note.className = "muted"; note.textContent = t.layoutShow;
     const nodes = [detailFields(
       select("preset", t.layoutPreset, presets, current, v => { if (PRESETS[v]) changeLayout(copyLayout(PRESETS[v]), "preset"); }),
-      select("ratio", t.layoutRatio, RATIOS.map(v => [v, t.ratioNames[v]]), layout.ratio, v => edit("ratio", n => { n.ratio = v; })),
+      select("ratio", t.layoutRatio, RATIOS.map(v => [v, t.ratioNames[v]]), layout.ratio, v => edit("ratio", n => { n.ratio = v; n.split = null; })),
       select("font", t.layoutFont, FONTS.map(v => [v, t.fontNames[v]]), layout.font, v => edit("font", n => { n.font = v; }))), note];
     layout.cols.forEach((names, c) => {
       const group = document.createElement("fieldset"), legend = document.createElement("legend");
@@ -753,7 +844,15 @@
         label.append(check, t.blockNames[name]);
         const shift = by => edit(name + (by < 0 ? "-up" : "-down"), n => { const list = n.cols[c]; [list[i], list[i + by]] = [list[i + by], list[i]]; });
         const other = c ? t.layoutLeft : t.layoutRight;
-        row.append(label,
+        const size = document.createElement("select");
+        size.dataset.key = name + "-font"; size.setAttribute("aria-label", t.blockNames[name] + ": " + t.layoutBlockFont);
+        for (const v of ["", ...BLOCK_FONTS]) {
+          const o = document.createElement("option");
+          o.value = v; o.textContent = !v ? t.fontDefault : v === "xl" ? t.fontXl : t.fontNames[v]; size.append(o);
+        }
+        size.value = layout.fonts[name] || "";
+        size.onchange = () => edit(name + "-font", n => { if (size.value) n.fonts[name] = size.value; else delete n.fonts[name]; });
+        row.append(label, size,
           button(name + "-up", "↑", t.blockNames[name] + ": " + t.layoutUp, () => shift(-1), i === 0),
           button(name + "-down", "↓", t.blockNames[name] + ": " + t.layoutDown, () => shift(1), i === names.length - 1),
           button(name + "-move", c ? "←" : "→", t.blockNames[name] + ": " + other,
@@ -764,7 +863,8 @@
     });
     const actions = document.createElement("div");
     actions.className = "layout-actions";
-    actions.append(button("swap", t.layoutSwap, t.layoutSwap, () => edit("swap", n => { n.cols.reverse(); })),
+    actions.append(button("swap", t.layoutSwap, t.layoutSwap, () => edit("swap", n => { n.cols.reverse(); if (n.split !== null) n.split = 100 - n.split; })),
+      button("auto", t.layoutAuto, t.layoutAuto, () => edit("auto", n => { n.heights = {}; n.split = null; })),
       button("reset", t.layoutReset, t.layoutReset, () => changeLayout(copyLayout(PRESETS.standard), "reset")));
     nodes.push(actions);
     box.replaceChildren(...nodes);
@@ -781,7 +881,8 @@
     try { saved = JSON.parse(localStorage.getItem("desk-layout")); } catch (_) {}
     // A preset in the URL is shown without overwriting the saved arrangement.
     if (Object.hasOwn(PRESETS, wanted || "")) layout = copyLayout(PRESETS[wanted]);
-    else if (validLayout(saved)) layout = copyLayout(saved);
+    else layout = readLayout(saved) || layout;
+    initColumnSplitter();
     applyLayout();
     $("layout-open").onclick = () => { renderLayoutDialog(); $("layout-dialog").showModal(); $("layout-content").scrollTop = 0; $("layout-close").focus(); };
     $("layout-close").onclick = () => $("layout-dialog").close();

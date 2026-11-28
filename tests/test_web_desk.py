@@ -94,6 +94,13 @@ class DeskPageTests(unittest.TestCase):
         for name in ("clock", "status", "next", "calendar", "tasks", "capture"):
             self.assertEqual(text.count(f'id="{name}-zone"'), 1, name)
 
+    def test_resize_controls_present(self):
+        text = self.client.get("/desk").text
+        self.assertIn('id="col-splitter"', text)
+        self.assertIn('role="separator"', text)
+        self.assertIn("row-splitter", text)
+        self.assertIn('size.dataset.key = name + "-font"', text)
+
     def test_manifest(self):
         r = self.client.get("/desk.webmanifest")
         self.assertEqual(r.status_code, 200)

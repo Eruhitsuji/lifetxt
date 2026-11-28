@@ -66,6 +66,7 @@ lifetxt = [
   "web_desk.html",
   "web_desk.css",
   "web_desk.js",
+  "web_desk_clock.js",
   "web_planner.html",
   "web_planner.css",
   "web_planner.js",

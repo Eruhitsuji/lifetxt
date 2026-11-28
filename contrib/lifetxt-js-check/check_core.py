@@ -12,6 +12,7 @@ import time
 import unittest
 from unittest.mock import patch
 
+from lifetxt.attachments import hash_directory
 from lifetxt.model import DATETIME_KEYS, DATE_KEYS, DATE_OR_DATETIME_KEYS, TIME_OR_DATETIME_KEYS
 from lifetxt.model import KNOWN_KEYS, REFERENCE_KEYS, STATUS_STATE_VALUES
 from lifetxt.parser import parse_text
@@ -1006,13 +1007,64 @@ class CoreComparisonTests(unittest.TestCase):
             )
             self.assertNotIn("attachment-", metadata.stdout)
 
-            first.write_text("[ ] T Directory dir:.#sha256=abcd\n", encoding="utf-8")
-            directory_result = subprocess.run(
-                ["node", checker, "--verify-files", str(first)],
+    def test_cli_verifies_directory_hashes_against_core(self):
+        checker = Path("contrib/lifetxt-js-check/check.mjs").resolve()
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            tree = root / "assets"
+            (tree / "nested").mkdir(parents=True)
+            (tree / ".git").mkdir()
+            (root / "empty").mkdir()
+            (tree / "nested/ä.txt").write_bytes(b"nested")
+            (tree / "𐀀.txt").write_bytes(b"supplementary")
+            (tree / "Ａ.txt").write_bytes(b"fullwidth")
+            (tree / ".git/ignored").write_bytes(b"ignored")
+            # Core includes links to files and does not walk directory links.
+            try:
+                (tree / "file-link").symlink_to(tree / "Ａ.txt")
+                (tree / "dir-link").symlink_to(tree, target_is_directory=True)
+            except OSError:
+                pass
+            digest = hash_directory(tree, length=64)
+            empty = sha256(b"").hexdigest()
+            source = root / "inbox.txt"
+            source.write_text(
+                f"[ ] T Match dir:assets#sha256={digest[:16].upper()} dir:assets#sha256={digest} "
+                f"dir:empty#sha256={empty}\n"
+                "[ ] T Changed dir:assets#sha256=0000\n"
+                "[ ] T Over-limit dir:large#sha256=0000\n",
+                encoding="utf-8",
+            )
+            (root / "large").mkdir()
+            with (root / "large/sparse.bin").open("wb") as large:
+                large.truncate(200 * 1024 * 1024 + 1)
+            (root / "many").mkdir()
+            for i in range(2001):
+                (root / "many" / str(i)).touch()
+            with source.open("a", encoding="utf-8") as stream:
+                stream.write("[ ] T Too-many dir:many#sha256=0000\n")
+            config = root / "config.json"
+            config.write_text("{}", encoding="utf-8")
+            options = ["--config", str(config)]
+            core = subprocess.run(
+                [sys.executable, "-m", "lifetxt", *options,
+                 "check", "--verify-files", "--format", "json", str(source)],
+                check=True, cwd=root, env={**os.environ, "PYTHONPATH": str(checker.parents[2])},
                 capture_output=True, encoding="utf-8",
             )
-            self.assertEqual(directory_result.returncode, 3)
-            self.assertIn("Line 1: unsupported attachment-directory-hash-unsupported", directory_result.stdout)
+            self.assertEqual(
+                [(d["severity"], d["line"], d["code"]) for d in json.loads(core.stdout)],
+                [("warning", 2, "W402"), ("warning", 3, "W407"), ("warning", 4, "W407")],
+            )
+            checked = subprocess.run(
+                ["node", checker, "--verify-files", *options, str(source)],
+                check=True, capture_output=True, encoding="utf-8",
+            )
+            lines = checked.stdout.splitlines()
+            self.assertEqual(len(lines), 4)
+            self.assertIn(f"Line 2: warning attachment-hash-changed (dir: SHA-256 {digest[:4]})", lines[0])
+            self.assertIn("Line 3: warning attachment-directory-limit (dir: More than 209715200 bytes)", lines[1])
+            self.assertIn("Line 4: warning attachment-directory-limit (dir: More than 2000 files)", lines[2])
 
     def test_event_ranges_use_core_local_wall_clock(self):
         # The same input has different ordering in UTC and during the New York

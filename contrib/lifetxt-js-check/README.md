@@ -39,10 +39,12 @@ attachment values. It supports native absolute paths and `~` for the current
 user. Hash fragments are checked for hexadecimal syntax. Use
 `--verify-files` to also compare a recorded `file:` SHA-256 prefix, such as
 `file:report.pdf#sha256=0123456789abcdef`, with the file's content. Only
-regular files with a nonempty digest are read. Recorded directory hashes
-are reported as unchecked. Use `lifetxt check --verify-files` to verify
-directory hashes and get portability warnings. Attachment paths are
-accessed only when one of the two options is passed.
+regular files are read. The same option verifies recorded `dir:` hashes
+by hashing the relative paths and content hashes of the files in the tree.
+It uses Core's default ignore list and caps each directory at 2,000 files
+and 200 MiB. It skips directory symlinks inside the tree. Use the Python
+checker for custom attachment traversal settings and portability warnings.
+Attachment paths are accessed only when one of the two options is passed.
 
 In the browser, choose an attachment folder under Checker settings. Pasted
 text and selected life.txt inputs use the folder root as their base directory.

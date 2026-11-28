@@ -794,7 +794,6 @@ class CoreComparisonTests(unittest.TestCase):
     def test_records_and_diagnostics(self):
         self.check_cases(cases())
 
-    @unittest.skipUnless(hasattr(time, "tzset"), "requires a configurable local timezone")
     def test_cli_checks_multiple_files_with_core_locations(self):
         checker = Path("contrib/lifetxt-js-check/check.mjs").resolve()
         with TemporaryDirectory() as directory:
@@ -1133,6 +1132,73 @@ class CoreComparisonTests(unittest.TestCase):
                     self.assertIn("More than 1 bytes", lines[0])
                     self.assertIn("More than 1 files", lines[1])
 
+    def test_cli_combines_configured_references_and_attachment_diagnostics(self):
+        checker = Path("contrib/lifetxt-js-check/check.mjs").resolve()
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            assets = root / "inbox/assets"
+            archive = root / "archive"
+            assets.mkdir(parents=True)
+            archive.mkdir()
+            (assets / "report.txt").write_bytes(b"a")
+            (assets / "cache.tmp").write_bytes(b"ignored")
+            (archive / "report.txt").write_bytes(b"b")
+            config = root / "settings.json"
+            config.write_text(json.dumps({
+                "ids": {"key": "uid"},
+                "attachments": {"ignore": ["cache.tmp"], "max_files": 1, "max_bytes": 1},
+            }), encoding="utf-8")
+            tree_digest = hash_directory(assets, ignores=["cache.tmp"])
+            first = root / "inbox/main.life.txt"
+            second = archive / "log.life.txt"
+            first.write_text(
+                f"[ ] T Root uid:root dir:assets#sha256={tree_digest}\n"
+                "  [ ] T Child uid:child\n", encoding="utf-8",
+            )
+            second.write_text(
+                "# Header\n"
+                f"[ ] T Link uid:link ref:child requires:root=done file:report.txt#sha256={sha256(b'a').hexdigest()[:16]}\n"
+                "[ ] T Lost ref:missing\n"
+                "[ ] T Typed owner:json<< true >>\n",
+                encoding="utf-8",
+            )
+            options = ["--config", str(config)]
+            paths = [str(first), str(second)]
+            for verify in (False, True):
+                with self.subTest(verify=verify):
+                    core_flag = "--verify-files" if verify else "--no-files"
+                    js_flags = ["--verify-files"] if verify else []
+                    core = subprocess.run(
+                        [sys.executable, "-m", "lifetxt", *options, "check", core_flag,
+                         "--format", "json", *paths],
+                        capture_output=True, encoding="utf-8",
+                    )
+                    js = subprocess.run(
+                        ["node", checker, *options, *js_flags, *paths],
+                        capture_output=True, encoding="utf-8",
+                    )
+                    self.assertEqual(core.returncode, 1, core.stderr or core.stdout)
+                    self.assertEqual(js.returncode, 1, js.stderr or js.stdout)
+                    rows = json.loads(core.stdout)
+                    expected = [
+                        (str(second), 4, "error", "E025"),
+                        (str(second), 3, "warning", "W215"),
+                    ]
+                    if verify:
+                        expected.append((None, 2, "warning", "W402"))
+                    self.assertEqual(
+                        [(d.get("source"), d["line"], d["severity"], d["code"]) for d in rows],
+                        expected,
+                    )
+                    lines = js.stdout.splitlines()
+                    self.assertEqual(len(lines), len(rows))
+                    for actual, (source, line, severity, code) in zip(lines, expected):
+                        js_code = "attachment-hash-changed" if code == "W402" else JS_CODES[code]
+                        # Core omits the attachment source. JS still reports its file.
+                        filename = json.dumps(source or str(second))
+                        self.assertTrue(actual.startswith(f"{filename}: line {line}: {severity} {js_code} "), actual)
+
+    @unittest.skipUnless(hasattr(time, "tzset"), "requires a configurable local timezone")
     def test_event_ranges_use_core_local_wall_clock(self):
         # The same input has different ordering in UTC and during the New York
         # fall-back hour. Scope the timezone change to these fixtures.

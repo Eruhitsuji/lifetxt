@@ -131,7 +131,7 @@ may be nested up to 32 levels.
 An indented item inherits `parent:` from the first `id:` value of the nearest
 less-indented item unless it already has a parent value. An indented item
 without an ancestor, or with an ancestor that has no ID, produces a warning.
-The checker uses the default `id:` key and leaves the input text intact.
+The checker uses the configured ID key (default `id:`) and leaves the input text intact.
 
 A backslash at the end of a physical line joins it to the next line.
 Leave a space before the backslash when the next line starts a new detail.
@@ -170,6 +170,32 @@ checker's supported range. Built-in keys require text values, except for
 are recognized for their corresponding `record:` markers. Validation against
 user-defined custom field declarations requires `lifetxt check`.
 
+## Compatibility with Python Core
+
+The reference for this comparison is lifetxt 1.0.5 at commit
+[`6266fa5`](https://github.com/Eruhitsuji/lifetxt/commit/6266fa5165de5e32f7b69eb8e26cc9939f91deed).
+The comparison suite uses the Python Core from the same checkout so that
+changes to either implementation are visible in CI.
+
+| Area | JavaScript checker behavior |
+| --- | --- |
+| Format 1 | Checks the syntax, values, hierarchy, references, and histories described above. Reports physical lines with symbolic codes. Python uses numeric codes and can also report columns. |
+| Input and settings | Supports up to 64 input files, each up to 16 KiB, and shows up to 100 diagnostics. Supply settings explicitly. Node applies the ID and attachment options documented above. The browser applies the ID option. |
+| File and directory attachments | Node uses the location of each input file and enables filesystem checks via `--check-files` or `--verify-files`. The browser uses the selected folder as the common base and can only check files exposed by the picker. |
+| Hashes | Both check SHA-256 prefixes for files and directories when enabled. Browser hashing requires Web Crypto and limits each file to 16 MiB. Directories that the picker does not expose, including empty ones, are reported as unchecked. |
+
+### Known diagnostic differences
+
+- JSON integers beyond JavaScript's safe range and unsupported format versions
+  are reported as unchecked. The date and recurrence checks use ASCII digits.
+- JavaScript skips non-text IDs and reference values when resolving links.
+  Python can coerce some values and report additional duplicate or reference
+  diagnostics.
+- JavaScript reports an attachment's source file in multiple-file mode. Some
+  Python attachment diagnostics omit the source even when several files were supplied.
+- Python offers additional configuration and reporting, including custom
+  field declarations, diagnostic filtering, and JSON or SARIF output.
+
 ## Core comparison
 
 From the repository root, run the same checks as the JS checker CI:
@@ -186,5 +212,8 @@ fixture expectations. The current JS diagnostic format has no column field.
 
 Fixtures also document the current engine-specific results for known gaps,
 including oversized JSON integers and non-text ID or reference values.
-A changed diagnostic fails CI with the fixture name and engine.
+The CLI comparison also combines multiple files, a custom ID key, and
+directory and file attachments to check diagnostic code, severity, file
+when available, and physical line. A changed diagnostic fails CI with the
+fixture name and engine.
 Update the corresponding expectations when a gap is resolved (#1731).

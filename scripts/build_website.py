@@ -6,6 +6,7 @@ import argparse
 import html
 import json
 from pathlib import Path
+import re
 import shutil
 from urllib.parse import urlsplit
 
@@ -87,28 +88,50 @@ def render(
         + f">{escape(label)}</a>"
         for slug, label in zip(PAGES, copy["nav"], strict=True)
     )
-    checker_action = ""
-    if checker_link and page == "index":
-        label = "ブラウザで試す" if lang == "ja" else "Try in your browser"
-        target = f"{lang}/check/" if root else "check/"
-        checker_action = f'<a class="button" href="{target}">{label}</a>'
-    card_html = "".join(
-        f'<article class="card"><span class="number">{escape(number)}</span>'
-        f"<h3>{escape(heading)}</h3><p>{escape(body)}</p>"
-        f'<a href="{escape(href(target, lang, prefix))}">{escape(label)} →</a></article>'
-        for number, heading, body, target, label in cards
+    actions = []
+    if page == "index":
+        if checker_link:
+            actions.append((f"{lang}/check/" if root else "check/", copy["try"]))
+        actions.append((href("get-started", lang, prefix), copy["start"]))
+        if not checker_link:
+            actions.append((href("download", lang, prefix), copy["download"]))
+    action_html = "".join(
+        f'<a class="button{" primary" if index == 0 else ""}" href="{escape(url)}">'
+        f'{escape(label)} <span aria-hidden="true">→</span></a>'
+        for index, (url, label) in enumerate(actions)
     )
-    sample = escape((SOURCE / "example.txt").read_text(encoding="utf-8"))
+    if actions:
+        action_html = f'<div class="actions">{action_html}</div>'
+    if checker_link and page == "index":
+        action_html += f'<p class="fine">{escape(copy["checker_hint"])}</p>'
+    card_html = "".join(
+        f'<article class="card"><h3>{escape(heading)}</h3><p>{escape(body)}</p>'
+        f'<a href="{escape(href(target, lang, prefix))}">{escape(label)} '
+        '<span aria-hidden="true">→</span></a></article>'
+        for heading, body, target, label in cards
+    )
     show_sample = page in ("index", "get-started")
     hero_title = copy["headline"] if page == "index" else title
     hero_intro = copy["intro"] if page == "index" else intro
-    file_html = (
-        '<div><div class="file"><div class="file-label">life.txt</div>'
-        f"<pre><code>{sample}</code></pre></div>"
-        f'<p class="file-caption">{escape(copy["sample"])}</p></div>'
-        if show_sample
-        else ""
-    )
+    file_html = ""
+    if show_sample:
+        sample = escape((SOURCE / "example.txt").read_text(encoding="utf-8"))
+        sample = re.sub(
+            r"^(\[[^\]\n]\] [A-Z])",
+            r'<span class="record-kind">\1</span>',
+            sample,
+            flags=re.M,
+        )
+        sample = re.sub(
+            r"\b((?:due|on|done):\d{4}-\d{2}-\d{2})\b",
+            r'<span class="record-date">\1</span>',
+            sample,
+        )
+        file_html = (
+            '<figure class="sample"><div class="file"><div class="file-label">life.txt</div>'
+            f"<pre><code>{sample}</code></pre></div>"
+            f"<figcaption>{escape(copy['sample'])}</figcaption></figure>"
+        )
     switch = f"{prefix}{other}/{filename}"
     footer = "".join(
         f'<a href="{escape(href(target, lang, prefix))}">{escape(copy[label])}</a>'
@@ -130,26 +153,23 @@ def render(
 <meta property="og:url" content="{escape(canonical)}">
 <link rel="icon" type="image/svg+xml" href="{prefix}assets/lifetxt-favicon.svg">
 <link rel="stylesheet" href="{prefix}style.css">
-</head><body>
+</head><body class="site">
 <a class="skip" href="#main">{escape(copy["skip"])}</a>
 <header><div class="wrap header-inner">
-<a class="brand" href="{escape(href("index", lang, prefix))}"><img src="{prefix}assets/lifetxt-symbol.svg" width="48" height="48" alt="">lifetxt</a>
-<nav aria-label="{"メイン" if lang == "ja" else "Main"}">{nav}<a href="{REPO}">GitHub</a></nav>
-<a class="language" href="{switch}" lang="{other}" hreflang="{other}">{escape(copy["switch"])}</a>
+<a class="brand" href="{escape(href("index", lang, prefix))}"><img src="{prefix}assets/lifetxt-symbol.svg" width="42" height="42" alt="">lifetxt</a>
+<nav aria-label="{"メイン" if lang == "ja" else "Main"}">{nav}<a href="{REPO}">GitHub</a>
+<a class="language" href="{switch}" lang="{other}" hreflang="{other}">{escape(copy["switch"])}</a></nav>
 </div></header>
 <main id="main" class="wrap" tabindex="-1">
-<section class="{"hero" if show_sample else ""}" aria-labelledby="page-title"><div>
-<p class="eyebrow">{escape(copy["eyebrow"])}</p>
+<section class="{"hero" if show_sample else "page-intro"}" aria-labelledby="page-title"><div>
 <h1 id="page-title">{escape(hero_title)}</h1><p class="lead">{escape(hero_intro)}</p>
-<div class="actions"><a class="button primary" href="{escape(href("get-started", lang, prefix))}">{escape(copy["start"])} →</a>{checker_action}
-<a class="button" href="{escape(href("releases" if page == "download" else "download", lang, prefix))}">{escape(copy["releases"] if page == "download" else copy["download"])}</a></div>
+{action_html}
 </div>{file_html}</section>
-<section class="section" aria-labelledby="section-title"><div class="section-title">
-<h2 id="section-title">{escape(copy["cards_title"] if page == "index" else title)}</h2></div>
+<section class="section" aria-labelledby="section-title">
+<h2 id="section-title">{escape(copy["sections"][page])}</h2>
 <div class="cards">{card_html}</div></section>
-<aside class="note">{escape(copy["notice"])}</aside>
 </main><footer><div class="wrap"><div class="footer-links">{footer}<a href="{REPO}">GitHub</a></div>
-<p>Your life. In text. Connected.</p><p class="fine">{escape(copy["privacy"])}</p></div></footer>
+<p class="fine">{escape(copy["privacy"])}</p></div></footer>
 </body></html>
 '''
 

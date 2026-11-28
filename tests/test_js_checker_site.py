@@ -42,7 +42,7 @@ class JSCheckerSiteTests(unittest.TestCase):
             self.assertEqual((self.site / name).read_bytes(), (intro / name).read_bytes(), name)
         for name, href in (("index.html", "en/check/"), ("ja/index.html", "check/"), ("en/index.html", "check/")):
             html = (self.site / name).read_text(encoding="utf-8")
-            self.assertIn(f'<a class="button" href="{href}">', html)
+            self.assertIn(f'<a class="button primary" href="{href}">', html)
             self.assertEqual(html.count(f'href="{href}"'), 1)
             self.assertNotIn(f'href="{href}"', (intro / name).read_text(encoding="utf-8"))
             self.assertNotIn("<script", html)

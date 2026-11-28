@@ -68,6 +68,27 @@ class WebsiteTests(unittest.TestCase):
             )
         self.assertEqual(check(self.output), [])
 
+    def test_onboarding_promotes_the_available_next_step(self):
+        for lang, hint in (
+            ("ja", "入力したテキストはブラウザー内でチェックされます。"),
+            ("en", "The checker processes your text in your browser."),
+        ):
+            with self.subTest(lang=lang):
+                home = (self.output / lang / "index.html").read_text(encoding="utf-8")
+                main = home.split("<main", 1)[1].split("</main>", 1)[0]
+                self.assertIn(
+                    '<a class="button primary" href="./get-started.html">', main
+                )
+                self.assertNotIn(hint, main)
+                self.assertNotIn('href="check/"', main)
+
+                start = (self.output / lang / "get-started.html").read_text(
+                    encoding="utf-8"
+                )
+                main = start.split("<main", 1)[1].split("</main>", 1)[0]
+                self.assertNotIn('href="./get-started.html"', main)
+                self.assertIn('href="../example.txt"', main)
+
     def test_wrong_default_or_localized_language_is_reported(self):
         for relative, before, after in (
             ("index.html", "en", "ja"),
@@ -157,6 +178,11 @@ class WebsiteCheckerArtifactAuditTests(unittest.TestCase):
             self.assertTrue(check(site))
             home = site / "ja/index.html"
             original = home.read_text(encoding="utf-8")
+            self.assertIn(
+                "入力したテキストはブラウザー内でチェックされます。", original
+            )
+            english = (site / "en/index.html").read_text(encoding="utf-8")
+            self.assertIn("The checker processes your text in your browser.", english)
             home.write_text(original.replace('href="check/"', 'href="../example.txt"'), encoding="utf-8")
             self.assertIn("ja/index.html: missing checker link", check(site, with_js_checker=True))
             home.write_text(original, encoding="utf-8")

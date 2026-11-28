@@ -1,6 +1,7 @@
 """Compare shared behavior and explicit compatibility gaps with Python Core."""
 
 from dataclasses import dataclass
+from hashlib import sha256
 import json
 import os
 from pathlib import Path
@@ -959,6 +960,59 @@ class CoreComparisonTests(unittest.TestCase):
             )
             self.assertIn("Line 2: warning attachment-wrong-type", single.stdout)
             self.assertNotIn("attachment-missing", single.stdout)
+
+    def test_cli_verifies_file_hashes_against_core(self):
+        checker = Path("contrib/lifetxt-js-check/check.mjs").resolve()
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            config = root / "config.json"
+            config.write_text("{}", encoding="utf-8")
+            for name in ("first", "second"):
+                (root / name).mkdir()
+            first = root / "first" / "inbox.txt"
+            second = root / "second" / "archive.txt"
+            original = bytes(range(256)) * 600
+            digest = sha256(original).hexdigest()
+            (first.parent / "data.bin").write_bytes(original)
+            (second.parent / "data.bin").write_bytes(b"changed")
+            first.write_text(
+                f"[ ] T Match file:data.bin#sha256={digest[:16].upper()} "
+                f"file:data.bin#sha256={digest} file:data.bin\n", encoding="utf-8",
+            )
+            second.write_text(
+                f"[ ] T Changed file:data.bin#sha256={digest[:16]}\n", encoding="utf-8",
+            )
+            paths = [str(first), str(second)]
+            options = ["--config", str(config)]
+            core = subprocess.run(
+                [sys.executable, "-m", "lifetxt", *options,
+                 "check", "--verify-files", "--format", "json", *paths],
+                check=True, capture_output=True, encoding="utf-8",
+            )
+            self.assertEqual(
+                [(d["severity"], d["line"], d["code"]) for d in json.loads(core.stdout)],
+                [("warning", 1, "W402")],
+            )
+            checked = subprocess.run(
+                ["node", checker, "--verify-files", *options, *paths],
+                check=True, capture_output=True, encoding="utf-8",
+            )
+            self.assertIn(f"{json.dumps(str(second))}: line 1: warning attachment-hash-changed", checked.stdout)
+            self.assertIn(sha256(b"changed").hexdigest()[:16], checked.stdout)
+            self.assertEqual(len(checked.stdout.splitlines()), 2)
+            metadata = subprocess.run(
+                ["node", checker, "--check-files", *options, *paths],
+                check=True, capture_output=True, encoding="utf-8",
+            )
+            self.assertNotIn("attachment-", metadata.stdout)
+
+            first.write_text("[ ] T Directory dir:.#sha256=abcd\n", encoding="utf-8")
+            directory_result = subprocess.run(
+                ["node", checker, "--verify-files", str(first)],
+                capture_output=True, encoding="utf-8",
+            )
+            self.assertEqual(directory_result.returncode, 3)
+            self.assertIn("Line 1: unsupported attachment-directory-hash-unsupported", directory_result.stdout)
 
     def test_event_ranges_use_core_local_wall_clock(self):
         # The same input has different ordering in UTC and during the New York

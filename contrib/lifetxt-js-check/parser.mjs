@@ -1265,8 +1265,8 @@ export function parseCheckerConfig(text) {
 
 const HASH_MARKER = '#sha256=';
 
-/** Extract the attachment path and validate any hash fragment. */
-export function attachmentPath(value) {
+/** Split an attachment value and validate any hash fragment. */
+export function splitAttachmentValue(value) {
     const text = value.trim();
     const separator = text.lastIndexOf(HASH_MARKER);
     const path = (separator < 0 ? text : text.slice(0, separator)).trim().replaceAll('\\', '/');
@@ -1274,5 +1274,9 @@ export function attachmentPath(value) {
     if (!path || path.includes('\0') || !/^[0-9a-f]*$/i.test(digest)) {
         return null;
     }
-    return path;
+    return { path, digest: digest.toLowerCase() };
+}
+
+export function attachmentPath(value) {
+    return splitAttachmentValue(value)?.path ?? null;
 }

@@ -8,6 +8,7 @@ CLI requires Node.js 22 or later.
 node check.mjs life.txt
 node check.mjs inbox.life.txt projects.life.txt
 node check.mjs --check-files inbox.life.txt projects.life.txt
+node check.mjs --verify-files inbox.life.txt projects.life.txt
 node check.mjs --config lifetxt.config.json inbox.life.txt projects.life.txt
 ```
 
@@ -35,9 +36,13 @@ your inputs. Relative `file:` and `dir:` paths resolve from the life.txt file
 that contains them. The checker looks up filesystem metadata, follows
 symlinks, and warns about missing targets, incorrect kinds, or invalid
 attachment values. It supports native absolute paths and `~` for the current
-user. Hash fragments are checked for hexadecimal syntax. Use `lifetxt check
---verify-files` for hash verification and `lifetxt check` for portability warnings.
-Without `--check-files`, attachment paths are not accessed.
+user. Hash fragments are checked for hexadecimal syntax. Use
+`--verify-files` to also compare a recorded `file:` SHA-256 prefix, such as
+`file:report.pdf#sha256=0123456789abcdef`, with the file's content. Only
+regular files with a nonempty digest are read. Recorded directory hashes
+are reported as unchecked. Use `lifetxt check --verify-files` to verify
+directory hashes and get portability warnings. Attachment paths are
+accessed only when one of the two options is passed.
 
 In the browser, choose an attachment folder under Checker settings. Pasted
 text and selected life.txt inputs use the folder root as their base directory.

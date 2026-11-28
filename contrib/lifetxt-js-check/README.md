@@ -37,8 +37,15 @@ symlinks, and warns about missing targets, incorrect kinds, or invalid
 attachment values. It supports native absolute paths and `~` for the current
 user. Hash fragments are checked for hexadecimal syntax. Use `lifetxt check
 --verify-files` for hash verification and `lifetxt check` for portability warnings.
-Attachment lookup in the JavaScript checker is available through Node.
 Without `--check-files`, attachment paths are not accessed.
+
+In the browser, choose an attachment folder under Checker settings. Pasted
+text and selected life.txt inputs use the folder root as their base directory.
+The checker uses file paths exposed by the browser and infers directories
+from their files. It marks out-of-folder paths, unobserved directories
+(including empty ones), and references without a selected folder as
+unchecked. It checks the syntax of hash fragments without reading attachment
+contents.
 
 The checker reads item headers, titles, details, backslash line joins, and
 `|` body lines. It preserves unknown and repeated detail keys. Unsupported

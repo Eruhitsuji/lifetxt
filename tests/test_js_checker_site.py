@@ -106,6 +106,7 @@ class JSCheckerSiteTests(unittest.TestCase):
                     expect(page.locator("#load-sample")).to_be_disabled()
                     expect(page.locator("#files")).to_be_disabled()
                     expect(page.locator("#checker-config")).to_be_disabled()
+                    expect(page.locator("#attachment-folder")).to_be_disabled()
                     context.close()
                     browser.close()
             finally:
@@ -409,6 +410,45 @@ class JSCheckerSiteTests(unittest.TestCase):
                 expect(status).to_contain_text(message)
                 expect(output).to_be_empty()
             clear_config.click()
+            folder = page.locator("#attachment-folder")
+            clear_folder = page.locator("#clear-folder")
+            text.fill("[ ] T Docs file:docs/report.bin#sha256=ABCD dir:docs")
+            button.click()
+            expect(output).to_contain_text("attachment-folder-unavailable")
+            expect(status).to_contain_text("検査対象外" if lang == "ja" else "not checked")
+            expect(clear_folder).to_be_disabled()
+            with TemporaryDirectory() as directory:
+                root = Path(directory)
+                (root / "docs").mkdir()
+                (root / "empty").mkdir()
+                (root / "docs/report.bin").write_bytes(b"\xff")
+                folder.set_input_files(root)
+                expect(output).to_be_empty()
+                button.click()
+                expect(output).to_be_empty()
+                text.fill(
+                    "[ ] T Bad file:missing file:docs dir:docs/report.bin "
+                    "dir:empty file:../outside file:/absolute file:docs/report.bin#sha256=xyz"
+                )
+                button.click()
+                expect(output).to_contain_text("attachment-missing")
+                expect(output).to_contain_text("attachment-directory-unobserved")
+                expect(output).to_contain_text("attachment-outside-folder")
+                expect(output).to_contain_text("attachment-invalid-value")
+                self.assertEqual(output.inner_text().count("attachment-wrong-type"), 2)
+                files.set_input_files({
+                    "name": "inbox.txt", "mimeType": "text/plain",
+                    "buffer": b"[ ] T Docs file:docs/report.bin dir:. file:missing",
+                })
+                button.click()
+                expect(output).to_contain_text("attachment-missing")
+                expect(output).to_contain_text('"inbox.txt"')
+                self.assertEqual(len(output.inner_text().splitlines()), 1)
+                clear_folder.click()
+                expect(output).to_be_empty()
+                button.click()
+                expect(output).to_contain_text("attachment-folder-unavailable")
+                clear_files.click()
             text.fill("[ ] T Paste-survives")
 
             # Hold a file read open until the selection is cleared.

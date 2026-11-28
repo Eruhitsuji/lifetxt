@@ -51,6 +51,9 @@ COPY = {
         "設定JSON（任意）",
         "設定を解除",
         "UTF-8のJSONを1ファイル（16 KiBまで）。貼り付け本文と選択ファイルの検査に、ids.key または api.id_key を適用します。",
+        "添付フォルダー（任意）",
+        "フォルダー選択を解除",
+        "選んだフォルダーの直下に入力文書があるものとして、file: と dir: を検査します。貼り付けた本文にも同じ基準を使います。空のフォルダーとハッシュは確認できません。",
     ),
     "en": (
         "Syntax check",
@@ -82,6 +85,9 @@ COPY = {
         "JSON configuration (optional)",
         "Clear configuration",
         "Choose one UTF-8 JSON file up to 16 KiB. Applies ids.key or api.id_key to pasted text and selected files.",
+        "Attachment folder (optional)",
+        "Clear folder selection",
+        "Checks file: and dir: paths from the selected folder, treating each input document or pasted text as being at its root. Empty folders and hashes cannot be verified.",
     ),
 }
 
@@ -91,6 +97,7 @@ def render(lang: str, base: str) -> str:
         title, home, scope, excluded, limits, label, button, load, hint, guide, noscript,
         lesson, exercise, state_help, type_help, title_help, due_help, coverage, reference,
         files_label, clear_files, files_hint, settings, config_label, clear_config, config_hint,
+        folder_label, clear_folder, folder_hint,
     ) = map(escape, COPY[lang])
     example = (ROOT / "website/example.txt").read_text(encoding="utf-8")
     sample = escape(example)
@@ -139,6 +146,10 @@ def render(lang: str, base: str) -> str:
 <input id="checker-config" type="file" accept=".json,application/json" disabled aria-describedby="config-hint limits"></p>
 <button class="button" id="clear-config" type="button" disabled>{clear_config}</button>
 <p id="config-hint">{config_hint}</p>
+<p><label for="attachment-folder">{folder_label}</label>
+<input id="attachment-folder" type="file" webkitdirectory disabled aria-describedby="folder-hint"></p>
+<button class="button" id="clear-folder" type="button" disabled>{clear_folder}</button>
+<p id="folder-hint">{folder_hint}</p>
 </details>
 <p id="status" role="status"></p>
 <pre id="output" tabindex="0" aria-label="{title}"></pre>

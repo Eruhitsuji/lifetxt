@@ -1,18 +1,11 @@
 import { stat } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname, resolve } from 'node:path';
-import { MAX_DIAGNOSTICS } from './parser.mjs';
-
-const HASH_MARKER = '#sha256=';
+import { MAX_DIAGNOSTICS, attachmentPath } from './parser.mjs';
 
 async function attachmentProblem(value, key, source) {
-    const text = value.trim();
-    const separator = text.lastIndexOf(HASH_MARKER);
-    const path = (separator < 0 ? text : text.slice(0, separator)).trim().replaceAll('\\', '/');
-    const digest = separator < 0 ? '' : text.slice(separator + HASH_MARKER.length).trim();
-    if (!path || path.includes('\0') || !/^[0-9a-f]*$/i.test(digest)) {
-        return 'attachment-invalid-value';
-    }
+    const path = attachmentPath(value);
+    if (path === null) return 'attachment-invalid-value';
 
     let resolved;
     if (path === '~' || path.startsWith('~/')) {

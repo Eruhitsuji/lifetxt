@@ -20736,7 +20736,7 @@ traceability:
       capability_id: cap-web-desk
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1821
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1824
       tests_or_evidence:
         - tests/test_web_desk_pending.py
         - tests/test_web_desk.py
@@ -20747,7 +20747,7 @@ traceability:
       capability_id: cap-import-export-format-expansion
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1822
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1824
       tests_or_evidence:
         - tests/test_batch_preview.py (declared source order, missing optional source, missing required source, reason messages)
         - tests/test_web_native_workflow.py
@@ -20757,7 +20757,7 @@ traceability:
       capability_id: cap-context-aware-related-item-create
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1823
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1824
       tests_or_evidence:
         - tests/test_web_context_create_js.py
         - tests/test_web_assets.py

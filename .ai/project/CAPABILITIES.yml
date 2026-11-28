@@ -31,6 +31,8 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/1805
       - https://github.com/Eruhitsuji/lifetxt/issues/1806
       - https://github.com/Eruhitsuji/lifetxt/issues/1821
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/1824
     reuse_policy: Reuse command-center, agenda, items and capture APIs and the Planner revision contract; no new API or mutation path.
     notes: Today/7-day/month calendar, detail editing, completion time, Quick/todo.txt capture and theme toggle. Status uses the existing /api/status contract. The normal layout is stored in browser localStorage. A versioned layout in the URL overrides presentation without updating the saved layout. Resizing, optional information blocks and clock settings reuse existing read APIs. Clock settings stay browser-local. No service worker or offline queue.
 
@@ -11220,6 +11222,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/1443
       - https://github.com/Eruhitsuji/lifetxt/issues/1822
     related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/1824
       - https://github.com/Eruhitsuji/lifetxt/pull/828
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
@@ -11791,7 +11794,8 @@ capabilities:
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/770
       - https://github.com/Eruhitsuji/lifetxt/issues/1823
-    related_pull_requests: []
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/1824
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       Self-scoped and implemented per explicit repository owner instruction

@@ -1,7 +1,13 @@
-import { MAX_BYTES, MAX_FILES, parse, parseCheckerConfig, parseDocuments } from './parser.mjs';
+import { MAX_BYTES, MAX_DIAGNOSTICS, MAX_FILES, attachmentPath, parse, parseCheckerConfig, parseDocuments } from './parser.mjs';
 
 const messages = {
     ja: {
+        'attachment-invalid-value': value => `${JSON.stringify(value)} のパスまたはハッシュの形式が無効です。`,
+        'attachment-folder-unavailable': value => `${JSON.stringify(value)} を確認するには添付フォルダーを選択してください。`,
+        'attachment-outside-folder': value => `${JSON.stringify(value)} は選択フォルダー内の相対パスとして確認できません。`,
+        'attachment-missing': value => `${JSON.stringify(value)} は選択フォルダーに見つかりません。`,
+        'attachment-wrong-type': value => `${JSON.stringify(value)} は指定された種別と異なります。`,
+        'attachment-directory-unobserved': value => `${JSON.stringify(value)} に属するファイルが見つかりません。空のフォルダーは確認できません。`,
         readingFiles: 'ファイルを読み込み中です。',
         invalidConfig: name => `${name} の設定が無効です。JSONオブジェクトとIDキーを確認してください。`,
         tooManyFiles: limit => `選択できるのは最大${limit}ファイルです。`,
@@ -123,6 +129,12 @@ const messages = {
         },
     },
     en: {
+        'attachment-invalid-value': value => `${JSON.stringify(value)} has an invalid path or hash fragment.`,
+        'attachment-folder-unavailable': value => `Select an attachment folder to check ${JSON.stringify(value)}.`,
+        'attachment-outside-folder': value => `${JSON.stringify(value)} cannot be checked as a relative path inside the selected folder.`,
+        'attachment-missing': value => `${JSON.stringify(value)} was not found in the selected folder.`,
+        'attachment-wrong-type': value => `${JSON.stringify(value)} has the wrong kind of target.`,
+        'attachment-directory-unobserved': value => `No files under ${JSON.stringify(value)} were exposed. Empty folders cannot be verified.`,
         readingFiles: 'Reading files…',
         invalidConfig: name => `${name} has invalid configuration. Check the JSON object and ID key.`,
         tooManyFiles: limit => `Select up to ${limit} files.`,
@@ -254,6 +266,8 @@ const files = document.getElementById('files');
 const clearFiles = document.getElementById('clear-files');
 const config = document.getElementById('checker-config');
 const clearConfig = document.getElementById('clear-config');
+const folder = document.getElementById('attachment-folder');
+const clearFolder = document.getElementById('clear-folder');
 const status = document.getElementById('status');
 const output = document.getElementById('output');
 
@@ -270,6 +284,7 @@ function syncInputs() {
     loadSample.disabled = hasFiles || input.value !== '';
     clearFiles.disabled = !hasFiles;
     clearConfig.disabled = !config.files.length;
+    clearFolder.disabled = !folder.files.length;
 }
 
 function resetCheck() {
@@ -292,6 +307,12 @@ clearConfig.addEventListener('click', () => {
     resetCheck();
     config.focus();
 });
+folder.addEventListener('change', resetCheck);
+clearFolder.addEventListener('click', () => {
+    folder.value = '';
+    resetCheck();
+    folder.focus();
+});
 input.addEventListener('input', resetCheck);
 loadSample.addEventListener('click', () => {
     if (loadSample.disabled) return;
@@ -303,10 +324,79 @@ window.addEventListener('pagehide', () => {
     input.value = '';
     files.value = '';
     config.value = '';
+    folder.value = '';
     resetCheck();
 });
 
+function relativeAttachmentPath(path) {
+    if (/^(?:\/|~|[a-z]:)/i.test(path)) return null;
+    const parts = [];
+    for (const part of path.split('/')) {
+        if (!part || part === '.') continue;
+        if (part === '..') {
+            if (!parts.length) return null;
+            parts.pop();
+        } else {
+            parts.push(part);
+        }
+    }
+    return parts.join('/');
+}
+
+function checkFolderAttachments(result) {
+    const selectedFiles = new Set();
+    const directories = new Set();
+    for (const file of folder.files) {
+        const parts = file.webkitRelativePath.split('/').slice(1);
+        if (!parts.length) continue;
+        selectedFiles.add(parts.join('/'));
+        parts.pop();
+        while (parts.length) {
+            const directory = parts.join('/');
+            if (directories.has(directory)) break;
+            directories.add(directory);
+            parts.pop();
+        }
+    }
+    if (selectedFiles.size) directories.add('');
+
+    for (const { details, source, line } of result.items) {
+        for (const [key, values] of details) {
+            if (key !== 'file' && key !== 'dir') continue;
+            for (const value of values) {
+                if (typeof value !== 'string') continue;
+                const path = attachmentPath(value);
+                const relative = path === null ? null : relativeAttachmentPath(path);
+                let severity = 'warning';
+                let code;
+                if (path === null) code = 'attachment-invalid-value';
+                else if (!selectedFiles.size) {
+                    code = 'attachment-folder-unavailable';
+                    severity = 'unsupported';
+                } else if (relative === null) {
+                    code = 'attachment-outside-folder';
+                    severity = 'unsupported';
+                } else if (key === 'file' ? directories.has(relative) : selectedFiles.has(relative)) {
+                    code = 'attachment-wrong-type';
+                } else if (key === 'file' && !selectedFiles.has(relative)) {
+                    code = 'attachment-missing';
+                } else if (key === 'dir' && !directories.has(relative)) {
+                    code = 'attachment-directory-unobserved';
+                    severity = 'unsupported';
+                }
+                if (code === undefined) continue;
+                result.incomplete ||= severity === 'unsupported';
+                result.diagnosticCount++;
+                if (result.diagnostics.length < MAX_DIAGNOSTICS) {
+                    result.diagnostics.push({ severity, code, source, line, key, value });
+                }
+            }
+        }
+    }
+}
+
 function displayResult(result) {
+    checkFolderAttachments(result);
     const summaries = [];
     if (result.hasErrors) summaries.push(copy.errors);
     if (result.incomplete) summaries.push(copy.incomplete);
@@ -387,4 +477,5 @@ button.addEventListener('click', async () => {
 button.disabled = false;
 files.disabled = false;
 config.disabled = false;
+folder.disabled = !('webkitdirectory' in folder);
 syncInputs();

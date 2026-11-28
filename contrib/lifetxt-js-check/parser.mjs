@@ -1262,3 +1262,17 @@ export function parseCheckerConfig(text) {
     }
     return {};
 }
+
+const HASH_MARKER = '#sha256=';
+
+/** Extract the attachment path and validate any hash fragment. */
+export function attachmentPath(value) {
+    const text = value.trim();
+    const separator = text.lastIndexOf(HASH_MARKER);
+    const path = (separator < 0 ? text : text.slice(0, separator)).trim().replaceAll('\\', '/');
+    const digest = separator < 0 ? '' : text.slice(separator + HASH_MARKER.length).trim();
+    if (!path || path.includes('\0') || !/^[0-9a-f]*$/i.test(digest)) {
+        return null;
+    }
+    return path;
+}

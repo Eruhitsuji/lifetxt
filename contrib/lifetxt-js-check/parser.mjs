@@ -1280,3 +1280,11 @@ export function splitAttachmentValue(value) {
 export function attachmentPath(value) {
     return splitAttachmentValue(value)?.path ?? null;
 }
+
+// Match the Python checker's default attachment settings.
+export const DIRECTORY_IGNORES = Object.freeze([
+    '.git', '.hg', '.svn', '.venv', 'venv', '__pycache__', 'node_modules',
+    '.mypy_cache', '.pytest_cache', '.DS_Store', 'Thumbs.db',
+]);
+export const MAX_DIRECTORY_FILES = 2000;
+export const MAX_DIRECTORY_BYTES = 200 * 1024 * 1024;

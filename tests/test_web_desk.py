@@ -17,7 +17,9 @@ class DeskPageTests(unittest.TestCase):
         path = os.path.join(self.dir.name, "life.txt")
         with open(path, "w", encoding="utf-8") as f:
             f.write('[ ] T "a"\n')
-            f.write('[ ] T "Repeat" id:repeat-1 due:2026-01-01 repeat:daily repeat_base:done done:2026-01-01\n')
+            f.write(
+                '[ ] T "Repeat" id:repeat-1 due:2026-01-01 repeat:daily repeat_base:done done:2026-01-01\n'
+            )
         self.client = TestClient(create_app([path]))
 
     def tearDown(self):
@@ -35,7 +37,7 @@ class DeskPageTests(unittest.TestCase):
     def test_week_toggle_present(self):
         r = self.client.get("/desk")
         self.assertIn('id="mode-week"', r.text)
-        self.assertIn('aria-pressed', r.text)
+        self.assertIn("aria-pressed", r.text)
 
     def test_month_toggle_present(self):
         self.assertIn('id="mode-month"', self.client.get("/desk").text)
@@ -79,7 +81,9 @@ class DeskPageTests(unittest.TestCase):
         for value in (None, "2026-01-06", "2026-01-06T13:27Z", "2026-02-30T13:27"):
             with self.subTest(value=value):
                 self.assertEqual(self.complete_repeat(done_at=value).status_code, 400)
-        self.assertEqual(self.client.get("/api/items/id/repeat-1").json()["item"]["status"], "[ ]")
+        self.assertEqual(
+            self.client.get("/api/items/id/repeat-1").json()["item"]["status"], "[ ]"
+        )
 
     def test_status_card_present(self):
         self.assertIn('id="status-card"', self.client.get("/desk").text)
@@ -91,7 +95,18 @@ class DeskPageTests(unittest.TestCase):
         text = self.client.get("/desk").text
         self.assertIn('id="layout-open"', text)
         self.assertIn('id="layout-dialog"', text)
-        for name in ("clock", "status", "next", "calendar", "tasks", "capture"):
+        for name in (
+            "clock",
+            "status",
+            "next",
+            "calendar",
+            "tasks",
+            "capture",
+            "habits",
+            "messages",
+            "deadlines",
+            "summary",
+        ):
             self.assertEqual(text.count(f'id="{name}-zone"'), 1, name)
 
     def test_resize_controls_present(self):
@@ -100,6 +115,22 @@ class DeskPageTests(unittest.TestCase):
         self.assertIn('role="separator"', text)
         self.assertIn("row-splitter", text)
         self.assertIn('size.dataset.key = name + "-font"', text)
+
+    def test_information_block_sources_work(self):
+        text = self.client.get("/desk").text
+        for part in (
+            "/api/items?type=H",
+            "/api/notes?limit=5",
+            "&horizon=14",
+            "&person=self",
+        ):
+            self.assertIn(part, text)
+        for url in (
+            "/api/items?type=H",
+            "/api/notes?limit=5",
+            "/api/command-center?person=self&horizon=14",
+        ):
+            self.assertEqual(self.client.get(url).status_code, 200, url)
 
     def test_manifest(self):
         r = self.client.get("/desk.webmanifest")

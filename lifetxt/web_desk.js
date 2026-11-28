@@ -1,7 +1,7 @@
 (() => {
   "use strict";
   const copy = {
-    en: {layout: "Layout", layoutTitle: "Screen layout", layoutPreset: "Preset", layoutCustom: "Custom", presetNames: {standard: "Standard", clock: "Clock", tasks: "Tasks", calendar: "Calendar"}, blockNames: {clock: "Clock", status: "Status", next: "Next event", calendar: "Calendar", tasks: "Tasks", capture: "Quick add"}, layoutColumns: ["Left column", "Right column"], layoutUp: "Move up", layoutDown: "Move down", layoutRight: "Move to right column", layoutLeft: "Move to left column", layoutSwap: "Swap columns", layoutReset: "Reset to standard", layoutRatio: "Column width", ratioNames: {balanced: "Balanced", left: "Wider left", right: "Wider right"}, layoutFont: "Text size", fontNames: {s: "Small", m: "Medium", l: "Large"}, layoutShow: "Checked items are shown. Settings are saved in this browser.", layoutBlockFont: "Text size", fontXl: "Extra large", fontDefault: "Default", layoutAuto: "Reset sizes", splitColumns: "Column width (drag or arrow keys, double-click to reset)", splitBlock: "Height of {name} (drag or arrow keys, double-click for automatic)",
+    en: {layout: "Layout", layoutTitle: "Screen layout", layoutPreset: "Preset", layoutCustom: "Custom", presetNames: {standard: "Standard", clock: "Clock", tasks: "Tasks", calendar: "Calendar"}, blockNames: {clock: "Clock", status: "Status", next: "Next event", calendar: "Calendar", tasks: "Tasks", capture: "Quick add", habits: "Habits", messages: "Messages and notes", deadlines: "Upcoming deadlines", summary: "Summary"}, habitsTitle: "Habits", messagesTitle: "Messages and notes", deadlinesTitle: "Upcoming deadlines", summaryTitle: "Summary", habitDone: "Done today", habitOpen: "Not yet", habitCount: "{done} / {total} done", noHabits: "No habits.", messagesHeading: "Messages", notesHeading: "Recent notes", noMessages: "No messages or notes.", noDeadlines: "No deadlines in the next 14 days.", daysToday: "Today", daysLeft: "{n} d left", doneToday: "Done today", openTasks: "Open tasks", noProject: "No project", projectsHeading: "Projects", projectCounts: "{open} open · {overdue} overdue · {done} done today", layoutColumns: ["Left column", "Right column"], layoutUp: "Move up", layoutDown: "Move down", layoutRight: "Move to right column", layoutLeft: "Move to left column", layoutSwap: "Swap columns", layoutReset: "Reset to standard", layoutRatio: "Column width", ratioNames: {balanced: "Balanced", left: "Wider left", right: "Wider right"}, layoutFont: "Text size", fontNames: {s: "Small", m: "Medium", l: "Large"}, layoutShow: "Checked items are shown. Settings are saved in this browser.", layoutBlockFont: "Text size", fontXl: "Extra large", fontDefault: "Default", layoutAuto: "Reset sizes", splitColumns: "Column width (drag or arrow keys, double-click to reset)", splitBlock: "Height of {name} (drag or arrow keys, double-click for automatic)",
       fullscreenOn: "Full screen", fullscreenOff: "Exit full screen", fullscreenFailed: "Could not change full screen mode.", statusNow: "Status", statusNone: "No status", statusChange: "Change status", statusEnd: "End current status", statusActivity: "Activity (optional)", statusCustom: "Custom status", statusSet: "Set custom status", statusForce: "Restart even if this status is already current", statusSame: "This status is already current; its start and title were kept.", statusRequired: "Enter a custom status.", since: "since {at} · {span}", spanMin: "{m} min", spanHour: "{h} h {m} min",
       stateNames: ["Available", "Busy", "Focus", "Meeting", "Away", "Offline", "Commuting", "Working", "Sleeping"],
       skip: "Skip to tasks", title: "Desk", reasonToday: "due today", reasonOverdue: "{n} overdue (days)", top: "Top", calendar: "Calendar", planner: "Planner", tasks: "Tasks", captureLabel: "Quick add", capturePlaceholder: "Quick add: title @project !high ^tomorrow", add: "Add", preview: "Preview", confirmCapture: "Confirm capture", editBtn: "Edit", detailsLabel: "Details (key:value per line)", themeAuto: "Theme: auto", themeDark: "Theme: dark", themeLight: "Theme: light", reviewFirst: "Review the mapped fields, then confirm.",
@@ -9,7 +9,7 @@
       markDone: "Mark as done", doneAt: "Completion date and time", completeNow: "Complete now", completeAt: "Complete at selected time", etaMin: "in {n} min", etaHour: "in {h} h {m} min", noNext: "No more events today", week: "Week {n}", dayOfYear: "Day {n}", loading: "Loading…",
       captured: "Added.", saved: "Updated.", readonly: "Read-only: changes are disabled.", error: "Could not load: ", conflict: "Data changed. Reload and try again.", noRevision: "Could not obtain a write revision. Reload and try again.", requestFailed: "Request failed", due: "due {d}",
       modeDay: "Today", modeWeek: "7 days", modeMonth: "Month", save: "Save", evTitle: "Title", evDate: "Date", evStart: "Start", evEnd: "End", badRange: "End must be after start.", requiredFields: "Enter a title, date, and time.", requiredTitle: "Enter a title.", requiredDate: "Choose a date.", dueDate: "Due date", changeDue: "Change due", openInPlanner: "Open in Planner", details: "Details", close: "Close", type: "Type", statusLabel: "Status", when: "When", openDetails: "Show details: "},
-    ja: {layout: "画面構成", layoutTitle: "画面構成", layoutPreset: "プリセット", layoutCustom: "カスタム", presetNames: {standard: "標準", clock: "時計中心", tasks: "タスク中心", calendar: "カレンダー中心"}, blockNames: {clock: "時計", status: "状態", next: "次の予定", calendar: "カレンダー", tasks: "タスク", capture: "クイック追加"}, layoutColumns: ["左の列", "右の列"], layoutUp: "上へ", layoutDown: "下へ", layoutRight: "右の列へ", layoutLeft: "左の列へ", layoutSwap: "左右を入れ替える", layoutReset: "標準に戻す", layoutRatio: "列の幅", ratioNames: {balanced: "均等", left: "左を広く", right: "右を広く"}, layoutFont: "文字サイズ", fontNames: {s: "小", m: "中", l: "大"}, layoutShow: "チェックした項目を表示します。設定はこのブラウザに保存されます。", layoutBlockFont: "文字サイズ", fontXl: "特大", fontDefault: "全体と同じ", layoutAuto: "大きさを戻す", splitColumns: "列の幅（ドラッグまたは矢印キー、ダブルクリックで戻す）", splitBlock: "{name}の高さ（ドラッグまたは矢印キー、ダブルクリックで自動）",
+    ja: {layout: "画面構成", layoutTitle: "画面構成", layoutPreset: "プリセット", layoutCustom: "カスタム", presetNames: {standard: "標準", clock: "時計中心", tasks: "タスク中心", calendar: "カレンダー中心"}, blockNames: {clock: "時計", status: "状態", next: "次の予定", calendar: "カレンダー", tasks: "タスク", capture: "クイック追加", habits: "習慣", messages: "メッセージ・メモ", deadlines: "今後の締切", summary: "集計"}, habitsTitle: "習慣", messagesTitle: "メッセージ・メモ", deadlinesTitle: "今後の締切", summaryTitle: "集計", habitDone: "今日は完了", habitOpen: "未完了", habitCount: "{done} / {total} 完了", noHabits: "習慣はありません。", messagesHeading: "メッセージ", notesHeading: "最近のメモ", noMessages: "メッセージやメモはありません。", noDeadlines: "14日以内の締切はありません。", daysToday: "今日", daysLeft: "あと{n}日", doneToday: "今日の完了", openTasks: "未完了タスク", noProject: "プロジェクトなし", projectsHeading: "プロジェクト", projectCounts: "未完了 {open} · 期限超過 {overdue} · 今日完了 {done}", layoutColumns: ["左の列", "右の列"], layoutUp: "上へ", layoutDown: "下へ", layoutRight: "右の列へ", layoutLeft: "左の列へ", layoutSwap: "左右を入れ替える", layoutReset: "標準に戻す", layoutRatio: "列の幅", ratioNames: {balanced: "均等", left: "左を広く", right: "右を広く"}, layoutFont: "文字サイズ", fontNames: {s: "小", m: "中", l: "大"}, layoutShow: "チェックした項目を表示します。設定はこのブラウザに保存されます。", layoutBlockFont: "文字サイズ", fontXl: "特大", fontDefault: "全体と同じ", layoutAuto: "大きさを戻す", splitColumns: "列の幅（ドラッグまたは矢印キー、ダブルクリックで戻す）", splitBlock: "{name}の高さ（ドラッグまたは矢印キー、ダブルクリックで自動）",
       fullscreenOn: "全画面", fullscreenOff: "全画面を終了", fullscreenFailed: "全画面表示を切り替えられませんでした。", statusNow: "状態", statusNone: "現在設定なし", statusChange: "状態を切り替える", statusEnd: "現在の状態を終了", statusActivity: "活動名（任意）", statusCustom: "カスタム状態", statusSet: "カスタム状態を設定", statusForce: "同じ状態でも再開始する", statusSame: "すでに同じ状態です。開始時刻とタイトルは維持しました。", statusRequired: "カスタム状態を入力してください。", since: "{at} から · {span}", spanMin: "{m}分", spanHour: "{h}時間{m}分",
       stateNames: ["対応可能", "取り込み中", "集中", "会議中", "離席中", "オフライン", "移動中", "作業中", "睡眠中"],
       skip: "タスクへ移動", title: "Desk", reasonToday: "今日が期限", reasonOverdue: "{n}日超過", top: "トップ", calendar: "カレンダー", planner: "Planner", tasks: "タスク", captureLabel: "クイック追加", capturePlaceholder: "クイック追加: タイトル @project !高 ^明日", add: "追加", preview: "プレビュー", confirmCapture: "追加を確定", editBtn: "編集", detailsLabel: "詳細 (1行に key:value)", themeAuto: "テーマ: 自動", themeDark: "テーマ: ダーク", themeLight: "テーマ: ライト", reviewFirst: "変換結果を確認して確定してください。",
@@ -585,6 +585,106 @@
     $("detail-close").focus();
   }
 
+  // ---- Optional information blocks: fetched only while shown ----
+  const first = (record, key) => { const v = (record.details || {})[key]; return String((Array.isArray(v) ? v[0] : v) || ""); };
+  function infoRow(title, note, mark, record, when, item) {
+    const row = document.createElement("div"), text = document.createElement("div");
+    row.className = "task"; text.className = "tt";
+    text.append(document.createTextNode(title));
+    if (note) { const s = document.createElement("small"); s.textContent = note; text.append(s); }
+    detailButton(text, title, record, when, item, "");
+    row.append(text);
+    if (mark) { const pill = document.createElement("span"); pill.className = "pill " + mark[0]; pill.textContent = mark[1]; row.append(pill); }
+    return row;
+  }
+  function heading(label) {
+    const h = document.createElement("div");
+    h.className = "sec info"; h.textContent = label;
+    return h;
+  }
+  function fill(name, nodes, empty) {
+    const box = $(name), keep = box.scrollTop;
+    if (!nodes.length) { const p = document.createElement("p"); p.className = "empty"; p.textContent = empty; nodes = [p]; }
+    box.replaceChildren(...nodes);
+    box.scrollTop = keep;
+  }
+  function renderHabits(list) {
+    const habits = (list.items || []).filter(i => ["[ ]", "[/]"].includes(i.status));
+    const doneToday = i => [].concat((i.details || {}).done || []).some(v => String(v).slice(0, 10) === today);
+    const done = habits.filter(doneToday).length;
+    $("count-habits").textContent = habits.length ? fmt(t.habitCount, {done, total: habits.length}) : "";
+    fill("habits", habits.map(i => infoRow(i.title, first(i, "project"),
+      doneToday(i) ? ["pill-ok", t.habitDone] : ["pill-warn", t.habitOpen], i, "", i)), t.noHabits);
+  }
+  function renderMessages(day, notes) {
+    const messages = day.messages || [], recent = notes.items || [];
+    $("count-messages").textContent = messages.length ? t.messagesHeading + " " + messages.length : "";
+    const nodes = [];
+    if (messages.length) nodes.push(heading(t.messagesHeading), ...messages.map(r => infoRow(r.title, r.project || "", null, r, "", null)));
+    if (recent.length) nodes.push(heading(t.notesHeading), ...recent.map(i => infoRow(i.title, first(i, "project"), null, i, "", i)));
+    fill("messages", nodes, t.noMessages);
+  }
+  function renderDeadlines(day) {
+    const refs = [...(day.due_today || []), ...(day.upcoming || [])]
+      .sort((a, b) => String(a.due || "").localeCompare(String(b.due || "")));
+    $("count-deadlines").textContent = refs.length ? String(refs.length) : "";
+    fill("deadlines", refs.map(r => {
+      const date = String(r.due || "").slice(0, 10);
+      const left = Math.round((Date.parse(date) - Date.parse(today)) / 86400000);
+      const item = r.kind === "T" ? findItem(r) : null;
+      return infoRow(r.title, [date, r.project].filter(Boolean).join(" · "),
+        Number.isFinite(left) ? [left <= 0 ? "pill-warn" : "pill-info", left <= 0 ? t.daysToday : fmt(t.daysLeft, {n: left})] : null,
+        item ? Object.assign({}, r, item) : r, date, item);
+    }), t.noDeadlines);
+  }
+  function renderSummary(day, all) {
+    const done = (all.items || []).filter(i => i.status === "[x]" && first(i, "done").slice(0, 10) === today);
+    const overdue = (day.overdue || []).filter(r => r.kind === "T");
+    const projects = new Map();
+    const count = (name, key) => {
+      const row = projects.get(name || "") || {open: 0, overdue: 0, done: 0};
+      row[key]++; projects.set(name || "", row);
+    };
+    items.forEach(i => count(first(i, "project"), "open"));
+    overdue.forEach(r => count(r.project, "overdue"));
+    done.forEach(i => count(first(i, "project"), "done"));
+    const totals = document.createElement("div");
+    totals.className = "totals";
+    for (const [label, value] of [[t.doneToday, done.length], [t.overdue, overdue.length], [t.openTasks, items.length]]) {
+      const cell = document.createElement("div"), number = document.createElement("strong"), name = document.createElement("span");
+      number.textContent = String(value); name.textContent = label; cell.append(number, name); totals.append(cell);
+    }
+    const nodes = [totals];
+    if (projects.size) nodes.push(heading(t.projectsHeading));
+    for (const [name, row] of [...projects].sort((a, b) => b[1].overdue - a[1].overdue || b[1].open - a[1].open || a[0].localeCompare(b[0], lang))) {
+      const line = document.createElement("div"), text = document.createElement("div"), s = document.createElement("small");
+      line.className = "task"; text.className = "tt";
+      text.append(document.createTextNode(name || t.noProject)); s.textContent = fmt(t.projectCounts, row); text.append(s);
+      line.append(text); nodes.push(line);
+    }
+    fill("summary", nodes, "");
+  }
+  // Each block loads on its own, so one failing request leaves the others usable.
+  function loadExtras(mine) {
+    const date = "/api/command-center?date=" + today;
+    const sources = {
+      habits: [["/api/items?type=H"], renderHabits],
+      messages: [[date + "&person=self", "/api/notes?limit=5"], renderMessages],
+      deadlines: [[date + "&horizon=14"], renderDeadlines],
+      summary: [[date, "/api/items?type=T"], renderSummary]
+    };
+    for (const [name, [paths, render]] of Object.entries(sources)) {
+      if (layout.hidden.includes(name)) continue;
+      Promise.all(paths.map(p => api(p)))
+        .then(data => { if (mine === generation) render(...data); })
+        .catch(e => {
+          if (mine !== generation) return;
+          $("count-" + name)?.replaceChildren();
+          fill(name, [], t.error + e.message);
+        });
+    }
+  }
+
   function addDays(iso, n) {
     const d = new Date(iso + "T00:00:00Z");
     d.setUTCDate(d.getUTCDate() + n);
@@ -605,6 +705,7 @@
       loaded = true; renderStatus(status); renderTimeline(); renderTasks(day); updateNext(wallNow());
       $("open-top").href = "/" + (lang === "ja" ? "?lang=ja" : "");
       $("open-planner").href = "/planner?date=" + today + (lang === "ja" ? "&lang=ja" : "");
+      loadExtras(mine);
     } catch (e) { if (mine === generation) say(t.error + e.message); }
   }
   async function syncConfig() {
@@ -678,13 +779,15 @@
     refreshTimer = setInterval(() => { syncConfig().then(load); }, REFRESH_MS);
   }
   // ---- Layout: per-browser arrangement of the screen blocks ----
-  const BLOCKS = ["clock", "status", "next", "calendar", "tasks", "capture"];
-  const FLEXIBLE = ["calendar", "tasks"];
+  const EXTRAS = ["habits", "messages", "deadlines", "summary"];
+  const BLOCKS = ["clock", "status", "next", "calendar", "tasks", "capture", ...EXTRAS];
+  const FLEXIBLE = ["calendar", "tasks", ...EXTRAS];
   const RATIOS = ["balanced", "left", "right"], FONTS = ["s", "m", "l"];
   const BLOCK_FONTS = ["s", "m", "l", "xl"], ZOOM = {s: .9, m: 1, l: 1.2, xl: 1.45};
   const MIN_HEIGHT = 48, MAX_HEIGHT = 2000, MIN_SPLIT = 25, MAX_SPLIT = 75;
   const clamp = (v, low, high) => Math.min(high, Math.max(low, Math.round(v)));
-  const preset = (left, right, hidden = [], ratio = "balanced", font = "m") => ({cols: [left, right], hidden, ratio, font, split: null, heights: {}, fonts: {}});
+  // Information blocks start hidden at the end of the right column.
+  const preset = (left, right, hidden = [], ratio = "balanced", font = "m") => ({cols: [left, [...right, ...EXTRAS]], hidden: [...hidden, ...EXTRAS], ratio, font, split: null, heights: {}, fonts: {}});
   const PRESETS = {
     standard: preset(["clock", "status", "next", "calendar"], ["tasks", "capture"]),
     clock: preset(["clock", "status", "next"], ["calendar", "tasks", "capture"], ["capture"], "left", "l"),
@@ -697,7 +800,14 @@
     Array.isArray(v.hidden) && v.hidden.every(b => BLOCKS.includes(b)) && RATIOS.includes(v.ratio) && FONTS.includes(v.font);
   // Sizes are optional so an arrangement saved before they existed still loads;
   // an unusable size is dropped without discarding the arrangement.
-  function readLayout(v) {
+  // Blocks added after an arrangement was saved join it hidden.
+  function addMissing(v) {
+    if (!Array.isArray(v?.cols) || v.cols.length !== 2 || !v.cols.every(Array.isArray) || !Array.isArray(v.hidden)) return v;
+    const missing = EXTRAS.filter(b => !v.cols.flat().includes(b));
+    return {...v, cols: [v.cols[0], [...v.cols[1], ...missing]], hidden: [...v.hidden, ...missing]};
+  }
+  function readLayout(saved) {
+    const v = addMissing(saved);
     if (!validLayout(v)) return null;
     const number = (n, low, high) => Number.isFinite(n) ? clamp(n, low, high) : null;
     const entries = (o, read) => Object.fromEntries(BLOCKS.map(b => [b, read(o?.[b])]).filter(e => e[1] !== null));
@@ -803,9 +913,11 @@
     if (loaded) renderTimeline();
   }
   function changeLayout(next, focus) {
+    const added = EXTRAS.some(n => layout.hidden.includes(n) && !next.hidden.includes(n));
     layout = next;
     saveLayout();
     applyLayout();
+    if (added && loaded) load();
     renderLayoutDialog(focus);
   }
   function renderLayoutDialog(focus) {

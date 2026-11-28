@@ -200,6 +200,10 @@ button,input{font:inherit;color:var(--ink)}button:focus-visible,a:focus-visible,
 .layout-row{display:flex;align-items:center;gap:6px;min-height:40px}.layout-row label{flex:1;display:flex;align-items:center;gap:10px;font-size:14px;min-width:0}.layout-row input{width:18px;height:18px}.layout-row .go{min-width:36px;min-height:32px}
 .layout-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
 
+/* Information blocks */
+.col>#habits-zone,.col>#messages-zone,.col>#deadlines-zone,.col>#summary-zone{flex:1 1 0;min-height:160px}
+.totals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.totals div{display:flex;flex-direction:column;align-items:center;padding:8px;border-radius:10px;background:var(--raise);text-align:center}.totals strong{font-size:26px;font-variant-numeric:tabular-nums}.totals span{font-size:12px;color:var(--muted)}
+
 /* Resizing */
 .zh{flex-wrap:wrap}.zh h2{white-space:nowrap}
 .cols[data-split]{grid-template-columns:minmax(0,var(--left)) minmax(0,var(--right))}.cols.single{grid-template-columns:minmax(0,1fr)}

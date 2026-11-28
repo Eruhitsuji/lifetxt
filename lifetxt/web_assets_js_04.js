@@ -328,17 +328,17 @@
     function dueSoonDays() {
       return Number((appConfig?.web?.due_soon_days) ?? 3);
     }
+    function itemDueDayDifference(item) {
+      if (["[x]", "[-]"].includes(item?.status)) return null;
+      return workspaceCalendarDayDifference(item?.details?.due?.[0]);
+    }
+    function dueDayClass(days) {
+      if (days === null) return "";
+      if (days < 0) return "overdue";
+      return days <= dueSoonDays() ? "due-soon" : "";
+    }
     function itemDueSoonClass(item) {
-      const dueVals = item?.details?.due;
-      if (!dueVals || !dueVals.length) return "";
-      const due = new Date(dueVals[0]);
-      if (isNaN(due)) return "";
-      const today = new Date(); today.setHours(0,0,0,0);
-      const dueMid = new Date(due); dueMid.setHours(0,0,0,0);
-      const diffDays = Math.floor((dueMid - today) / 86400000);
-      if (diffDays < 0 && item.status !== "[x]" && item.status !== "[-]") return "overdue";
-      if (diffDays >= 0 && diffDays <= dueSoonDays() && item.status !== "[x]" && item.status !== "[-]") return "due-soon";
-      return "";
+      return dueDayClass(itemDueDayDifference(item));
     }
     function renderSummary(items, board = false) {
       const el = document.getElementById("stats-summary");
@@ -428,13 +428,8 @@
       return "";
     }
     function buildDueRelLabel(item) {
-      const due = item?.details?.due?.[0];
-      if (!due || ["[x]", "[-]"].includes(item.status)) return "";
-      const d = new Date(due);
-      if (isNaN(d)) return "";
-      const today = new Date(); today.setHours(0,0,0,0);
-      const dm = new Date(d); dm.setHours(0,0,0,0);
-      const diff = Math.round((dm - today) / 86400000);
+      const diff = itemDueDayDifference(item);
+      if (diff === null) return "";
       let text, cls = "";
       if (diff < 0) { text = `${-diff}d overdue`; cls = "overdue"; }
       else if (diff === 0) { text = "due today"; cls = "due-soon"; }
@@ -481,12 +476,8 @@
       // Days-remaining countdown for an agenda record, derived from its
       // occurrence date (works for due, do, and event records alike).
       if (["[x]", "[-]"].includes(record?.status)) return "";
-      const raw = record?.occurrence_start || record?.when || "";
-      const d = new Date(String(raw).replace(" ", "T"));
-      if (isNaN(d)) return "";
-      const today = new Date(); today.setHours(0, 0, 0, 0);
-      const dm = new Date(d); dm.setHours(0, 0, 0, 0);
-      const diff = Math.round((dm - today) / 86400000);
+      const diff = workspaceCalendarDayDifference(record?.occurrence_start || record?.when);
+      if (diff === null) return "";
       let text, cls = "";
       if (diff < 0) { text = `${-diff}d ago`; cls = "overdue"; }
       else if (diff === 0) { text = "today"; cls = "due-soon"; }

@@ -93,19 +93,27 @@
     // browser's own local date is only a fallback for the brief window
     // before that config has loaded.
     function _isoDateOnlyUTC(text) {
-      const match = String(text || "").match(/^(\d{4})-(\d{2})-(\d{2})/);
+      const match = String(text || "").match(/^(\d{4}-\d{2}-\d{2})(?=$|T| )/);
       if (!match) return null;
-      return Date.UTC(+match[1], +match[2] - 1, +match[3]);
+      const day = new Date(match[1] + "T00:00:00Z");
+      return Number.isFinite(day.getTime()) && day.toISOString().slice(0, 10) === match[1]
+        ? day.getTime() : null;
+    }
+
+    function workspaceCalendarDayDifference(isoString) {
+      const parsedUTC = _isoDateOnlyUTC(isoString);
+      if (parsedUTC === null) return null;
+      let referenceUTC = _isoDateOnlyUTC(appConfig?.today);
+      if (referenceUTC === null) {
+        const now = new Date();
+        referenceUTC = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+      }
+      return (parsedUTC - referenceUTC) / 86400000;
     }
 
     function relativeTime(isoString) {
-      const parsedUTC = _isoDateOnlyUTC(isoString);
-      if (parsedUTC === null) return "";
-      const now = new Date();
-      const referenceUTC =
-        _isoDateOnlyUTC(appConfig?.today) ??
-        Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
-      const days = Math.round((parsedUTC - referenceUTC) / 86400000);
+      const days = workspaceCalendarDayDifference(isoString);
+      if (days === null) return "";
       if (days === 0) return "today";
       if (days === 1) return "tomorrow";
       if (days === -1) return "yesterday";

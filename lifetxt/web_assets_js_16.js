@@ -187,11 +187,10 @@
     function updateAgendaOverdueBadge(records) {
       const badge = document.getElementById("agenda-overdue-badge");
       if (!badge) return;
-      const today = new Date(); today.setHours(0,0,0,0);
       const count = (records || []).filter(r => {
-        if (!r.when) return false;
-        const d = new Date(r.when); d.setHours(0,0,0,0);
-        return d < today && !["[x]","[-]"].includes(r.status);
+        if (["[x]", "[-]"].includes(r.status)) return false;
+        const days = workspaceCalendarDayDifference(r.when);
+        return days !== null && days < 0;
       }).length;
       badge.textContent = count > 0 ? String(count) : "";
       badge.style.display = count > 0 ? "" : "none";

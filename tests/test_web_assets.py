@@ -20,7 +20,7 @@ REVISION_BRIDGE_MARKER = "lifetxt-revision-contract-v1"
 # Keep the exact assembled page checksum gate in sync with reviewed asset changes.
 # Calculated using _CSS_RESOURCE_NAMES / _JS_RESOURCE_NAMES assembly order,
 # before brand injection (CSS 06/07 precede 05).
-LEGACY_PRISTINE_GIT_BLOB_SHA = "7896f512cbe476781cc7ff9976819504d9cb3fb7"
+LEGACY_PRISTINE_GIT_BLOB_SHA = "172200fa531d2ad36b15a0409360d7a9611ae1ad"
 WEBAPP_SOURCE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lifetxt", "webapp.py"
 )
@@ -235,6 +235,79 @@ class WebAssetExtractionTests(unittest.TestCase):
         finally:
             os.unlink(script_path)
         self.assertEqual(0, proc.returncode, proc.stderr or proc.stdout)
+
+    @unittest.skipUnless(shutil.which("node"), "node is not on PATH")
+    def test_due_indicators_use_workspace_calendar_days(self):
+        def extract(start, end):
+            source = web_assets.HTML_PAGE
+            offset = source.index(start)
+            return source[offset : source.index(end, offset)]
+
+        source = "\n".join(
+            [
+                extract(
+                    "function _isoDateOnlyUTC(", "function buildRelativeTimeBadge("
+                ),
+                extract("function dueSoonDays(", "function renderSummary("),
+                extract("function buildDueRelLabel(", "// ── progress: presentation"),
+                extract("function agendaCountdownLabel(", "function guidedEmptyState("),
+                extract(
+                    "function agendaDueSoonClass(", "// ── Notification permission"
+                ),
+                extract("function updateAgendaOverdueBadge(", "// ── Stats summary"),
+            ]
+        )
+        harness = r"""
+const assert = require("node:assert/strict");
+const appConfig = {today: "2026-03-07", web: {due_soon_days: 2}};
+const badge = {style: {}};
+const document = {getElementById: () => badge};
+const escapeHtml = text => text;
+const task = (due, status = "[ ]") => ({details: {due: [due]}, status});
+for (const [due, days, state, label] of [
+  ["2026-03-06", -1, "overdue", "1d overdue"],
+  ["2026-03-07", 0, "due-soon", "due today"],
+  ["2026-03-07T00:15:00+09:00", 0, "due-soon", "due today"],
+  ["2026-03-09", 2, "due-soon", "in 2d"],
+  ["2026-03-10", 3, "", "in 3d"],
+]) {
+  const item = task(due);
+  assert.equal(workspaceCalendarDayDifference(due), days);
+  assert.equal(itemDueSoonClass(item), state);
+  assert.equal(agendaDueSoonClass(item), state);
+  assert.ok(buildDueRelLabel(item).includes(">" + label + "<"));
+}
+assert.equal(relativeTime("2026-03-08"), "tomorrow");
+assert.equal(workspaceCalendarDayDifference("2026-02-30"), null);
+assert.equal(itemDueSoonClass(task("")), "");
+for (const status of ["[x]", "[-]"]) {
+  assert.equal(itemDueSoonClass(task("2026-03-06", status)), "");
+  assert.equal(buildDueRelLabel(task("2026-03-06", status)), "");
+}
+assert.match(
+  agendaCountdownLabel({when: "2026-03-06", occurrence_start: "2026-03-07"}),
+  /due-soon.*>today</,
+);
+updateAgendaOverdueBadge([
+  {when: "2026-03-06", status: "[ ]", matches: [{}, {}]},
+  {when: "2026-03-07", status: "[ ]"},
+  {when: "2026-03-06", status: "[x]"},
+  {when: "2026-02-30", status: "[ ]"},
+]);
+assert.equal(badge.textContent, "1");
+updateAgendaOverdueBadge([]);
+assert.equal(badge.style.display, "none");
+"""
+        for zone in ("America/Los_Angeles", "Asia/Tokyo"):
+            with self.subTest(zone=zone):
+                result = subprocess.run(
+                    ["node", "-e", source + harness],
+                    env={**os.environ, "TZ": zone},
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
 
 
 if __name__ == "__main__":

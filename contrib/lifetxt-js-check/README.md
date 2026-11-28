@@ -7,6 +7,7 @@ CLI requires Node.js 22 or later.
 ```sh
 node check.mjs life.txt
 node check.mjs inbox.life.txt projects.life.txt
+node check.mjs --check-files inbox.life.txt projects.life.txt
 node check.mjs --config lifetxt.config.json inbox.life.txt projects.life.txt
 ```
 
@@ -28,6 +29,16 @@ parent lookup. The option applies only this setting and does not discover
 configuration files automatically. In the browser, select the JSON under
 Checker settings to apply the same ID key to pasted text or selected life.txt
 files. Clear that selection to use `id:` again.
+
+The Node CLI checks attachment paths when you pass `--check-files` before
+your inputs. Relative `file:` and `dir:` paths resolve from the life.txt file
+that contains them. The checker looks up filesystem metadata, follows
+symlinks, and warns about missing targets, incorrect kinds, or invalid
+attachment values. It supports native absolute paths and `~` for the current
+user. Hash fragments are checked for hexadecimal syntax. Use `lifetxt check
+--verify-files` for hash verification and `lifetxt check` for portability warnings.
+Attachment lookup in the JavaScript checker is available through Node.
+Without `--check-files`, attachment paths are not accessed.
 
 The checker reads item headers, titles, details, backslash line joins, and
 `|` body lines. It preserves unknown and repeated detail keys. Unsupported
@@ -109,7 +120,7 @@ array is kept as one value. A JSON integer outside the JavaScript safe range
 (−(2^53 − 1) through 2^53 − 1) leaves the check incomplete. Use
 `lifetxt check` for those values and for key-specific validation.
 
-The distribution ZIP contains the parser, CLI, this README, and LICENSE.
+The distribution ZIP contains the parser, CLI, attachment checker, this README, and LICENSE.
 
 Progress accepts percentages such as `75%` and fractions such as `3/5`.
 The checker also validates `record:progress_event` notes and their sequence,

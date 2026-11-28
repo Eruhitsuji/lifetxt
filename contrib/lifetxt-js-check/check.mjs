@@ -1,5 +1,6 @@
 import { constants } from 'node:fs';
 import { open } from 'node:fs/promises';
+import { checkAttachments } from './attachments.mjs';
 import { MAX_BYTES, MAX_FILES, parse, parseCheckerConfig, parseDocuments } from './parser.mjs';
 
 function escapeConsole(text) {
@@ -10,7 +11,7 @@ function escapeConsole(text) {
 function quoteId(value) {
     return escapeConsole(JSON.stringify(value));
 }
-const usage = 'Usage: node check.mjs [--config PATH] FILE [FILE ...]';
+const usage = 'Usage: node check.mjs [--config PATH] [--check-files] FILE [FILE ...]';
 
 async function readInput(path) {
     const file = await open(path, constants.O_RDONLY | (constants.O_NONBLOCK ?? 0));
@@ -43,9 +44,13 @@ if (args.length === 1 && args[0] === '--help') {
     console.log(`${usage}\nChecks supported life.txt syntax and values.`);
 } else {
     let configPath;
-    if (args[0] === '--config') {
-        configPath = args[1];
-        args.splice(0, 2);
+    let checkFilesOption = false;
+    while (args[0] === '--config' || args[0] === '--check-files') {
+        if (args.shift() === '--config') {
+            configPath = args.shift();
+        } else {
+            checkFilesOption = true;
+        }
     }
     if (args[0] === '--') args.shift();
     if (args.length === 0 || args.length > MAX_FILES) {
@@ -53,11 +58,11 @@ if (args.length === 1 && args[0] === '--help') {
         if (args.length > MAX_FILES) console.error(`Pass at most ${MAX_FILES} files.`);
         process.exitCode = 2;
     } else {
-        await checkFiles(args, configPath);
+        await checkFiles(args, configPath, checkFilesOption);
     }
 }
 
-async function checkFiles(paths, configPath) {
+async function checkFiles(paths, configPath, checkFilesOption) {
     try {
         const options = configPath === undefined ? {} : await readConfig(configPath);
         const documents = [];
@@ -72,6 +77,7 @@ async function checkFiles(paths, configPath) {
         const result = documents.length === 1
             ? parse(documents[0].text, options)
             : parseDocuments(documents, options);
+        if (checkFilesOption) await checkAttachments(result, paths[0]);
         for (const { severity, code, line, key, part, firstLine, source, firstSource, value, path, childCount } of result.diagnostics) {
             const field = key ? ` (${escapeConsole(key)}:${part ? ` ${escapeConsole(part)}` : ''})` : '';
             let target = '';

@@ -894,6 +894,72 @@ class CoreComparisonTests(unittest.TestCase):
             self.assertEqual(invalid.stdout, "")
             self.assertIn("Expected a JSON object", invalid.stderr)
 
+    def test_cli_checks_attachment_metadata_against_each_input(self):
+        checker = Path("contrib/lifetxt-js-check/check.mjs").resolve()
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            first = root / "inbox" / "inbox.txt"
+            second = root / "archive" / "archive.txt"
+            first.parent.mkdir()
+            second.parent.mkdir()
+            (first.parent / "photos").mkdir()
+            (first.parent / "note#sha256=section.txt").write_bytes(b"\xff")
+            first.write_text(
+                "[ ] T Note file:note#sha256=section.txt#sha256=abcd dir:photos\n"
+                "[ ] T Wrong-kind file:photos dir:note#sha256=section.txt#sha256=abcd\n",
+                encoding="utf-8",
+            )
+            second.write_text(
+                "[ ] T Missing file:note#sha256=section.txt#sha256=abcd dir:photos\n"
+                "[ ] T Invalid file:note#sha256=bad-hash dir:#sha256=abc\n",
+                encoding="utf-8",
+            )
+            paths = [str(first), str(second)]
+            config = root / "config.json"
+            config.write_text("{}", encoding="utf-8")
+            options = ["--config", str(config)]
+            core = subprocess.run(
+                [sys.executable, "-m", "lifetxt", *options,
+                 "check", "--format", "json", *paths],
+                check=True, capture_output=True, encoding="utf-8",
+            )
+            expected = [
+                (first, 2, "W403", "attachment-wrong-type", "file"),
+                (first, 2, "W403", "attachment-wrong-type", "dir"),
+                (second, 1, "W401", "attachment-missing", "file"),
+                (second, 1, "W401", "attachment-missing", "dir"),
+                (second, 2, "W407", "attachment-invalid-value", "file"),
+                (second, 2, "W407", "attachment-invalid-value", "dir"),
+            ]
+            self.assertEqual(
+                [(d["severity"], d["line"], d["code"]) for d in json.loads(core.stdout)],
+                [("warning", line, code) for _, line, code, _, _ in expected],
+            )
+            checked = subprocess.run(
+                ["node", checker, "--check-files", *options, *paths],
+                check=True, cwd=root, capture_output=True, encoding="utf-8",
+            )
+            lines = checked.stdout.splitlines()
+            self.assertEqual(len(lines), len(expected) + 1)
+            for line, (path, number, _, code, key) in zip(lines, expected):
+                self.assertTrue(
+                    line.startswith(f"{json.dumps(str(path))}: line {number}: warning {code} ({key}:)"),
+                    line,
+                )
+
+            unchecked = subprocess.run(
+                ["node", checker, *options, *paths],
+                check=True, capture_output=True, encoding="utf-8",
+            )
+            self.assertNotIn("attachment-", unchecked.stdout)
+
+            single = subprocess.run(
+                ["node", checker, "--check-files", str(first)],
+                check=True, cwd=root, capture_output=True, encoding="utf-8",
+            )
+            self.assertIn("Line 2: warning attachment-wrong-type", single.stdout)
+            self.assertNotIn("attachment-missing", single.stdout)
+
     def test_event_ranges_use_core_local_wall_clock(self):
         # The same input has different ordering in UTC and during the New York
         # fall-back hour. Scope the timezone change to these fixtures.

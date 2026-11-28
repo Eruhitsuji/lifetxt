@@ -13,7 +13,7 @@ def main():
     output.mkdir(parents=True, exist_ok=True)
     source = Path(__file__).resolve().parent
     archive = output / "lifetxt-js-check.zip"
-    paths = [source / name for name in ("README.md", "check.mjs", "parser.mjs")]
+    paths = [source / name for name in ("README.md", "check.mjs", "parser.mjs", "attachments.mjs")]
     paths.append(source.parents[1] / "LICENSE")
     with ZipFile(archive, "x", compression=ZIP_DEFLATED) as zip_file:
         for path in paths:

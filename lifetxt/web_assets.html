@@ -702,6 +702,25 @@ __LIFETXT_WEB_STYLES__  </style>
       <div class="drawer-body" id="drawer-body" data-no-i18n></div>
     </div>
   </div>
+  <!-- After the detail dialog so that it stacks above it -->
+  <div id="related-modal" class="modal-backdrop" onclick="if(event.target===this)closeRelatedChoice()">
+    <section class="modal editor-modal" role="dialog" aria-modal="true" aria-labelledby="related-heading" aria-describedby="related-target">
+      <h3 id="related-heading">New related record</h3>
+      <p id="related-target" data-no-i18n></p>
+      <form onsubmit="event.preventDefault();confirmRelatedChoice()">
+        <fieldset class="related-choices">
+          <legend>How is the new record related to this one?</legend>
+          <label><input id="related-choice-related" type="radio" name="related-choice" checked><span><span>Related item</span> <code data-no-i18n>related:</code></span></label>
+          <label><input id="related-choice-parent" type="radio" name="related-choice"><span><span>Child item (this record is its parent)</span> <code data-no-i18n>parent:</code></span></label>
+          <label><input id="related-choice-ref" type="radio" name="related-choice"><span><span>Reference to this record</span> <code data-no-i18n>ref:</code></span></label>
+        </fieldset>
+        <div class="actions">
+          <button class="primary" type="submit">Continue</button>
+          <button class="secondary" type="button" onclick="closeRelatedChoice()">Cancel</button>
+        </div>
+      </form>
+    </section>
+  </div>
 
   <!-- Command palette -->
   <button type="button" class="mobile-fab" id="mobile-fab" onclick="toggleMobileMenu()" aria-label="Open actions" aria-controls="mobile-fab-menu" aria-expanded="false" title="Actions">⌘</button>

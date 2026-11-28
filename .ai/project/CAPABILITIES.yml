@@ -9,6 +9,7 @@ capabilities:
     source_requirements:
       - req-web-desk-v1
       - req-web-desk-layout-url
+      - req-web-desk-loading-and-stale-save
     implementation_locations:
       - lifetxt/web_desk.html
       - lifetxt/web_desk.css
@@ -29,6 +30,9 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/1804
       - https://github.com/Eruhitsuji/lifetxt/issues/1805
       - https://github.com/Eruhitsuji/lifetxt/issues/1806
+      - https://github.com/Eruhitsuji/lifetxt/issues/1821
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/1824
     reuse_policy: Reuse command-center, agenda, items and capture APIs and the Planner revision contract; no new API or mutation path.
     notes: Today/7-day/month calendar, detail editing, completion time, Quick/todo.txt capture and theme toggle. Status uses the existing /api/status contract. The normal layout is stored in browser localStorage. A versioned layout in the URL overrides presentation without updating the saved layout. Resizing, optional information blocks and clock settings reuse existing read APIs. Clock settings stay browser-local. No service worker or offline queue.
 
@@ -11120,6 +11124,7 @@ capabilities:
       - req-cli-todo-capture
       - req-web-todo-capture-preview
       - req-tui-todo-capture-preview
+      - req-web-preview-workspace-context
     implementation_locations:
       - lifetxt/json_details.py
       - lifetxt/batch_save.py
@@ -11215,7 +11220,9 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/1441
       - https://github.com/Eruhitsuji/lifetxt/issues/1442
       - https://github.com/Eruhitsuji/lifetxt/issues/1443
+      - https://github.com/Eruhitsuji/lifetxt/issues/1822
     related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/1824
       - https://github.com/Eruhitsuji/lifetxt/pull/828
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
@@ -11751,6 +11758,7 @@ capabilities:
     owner: Eruhitsuji
     source_requirements:
       - req-context-aware-related-item-create
+      - req-web-related-choice-dialog
     implementation_locations:
       - lifetxt/web_assets_js_05.js
       - lifetxt/web_assets_js_10.js
@@ -11785,7 +11793,9 @@ capabilities:
       - "scripts/validate_release_docs.py -> errors 0, ok true"
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/770
-    related_pull_requests: []
+      - https://github.com/Eruhitsuji/lifetxt/issues/1823
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/1824
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       Self-scoped and implemented per explicit repository owner instruction

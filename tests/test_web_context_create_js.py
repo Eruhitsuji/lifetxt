@@ -28,7 +28,7 @@ def _extract_script():
 
 def _extract_functions_under_test(full_script):
     start = full_script.index("function newItem(")
-    end_anchor = full_script.index("function drawerCreateRelated")
+    end_anchor = full_script.index("function confirmRelatedChoice")
     end = full_script.index("\n    }\n", end_anchor) + len("\n    }\n")
     return full_script[start:end]
 
@@ -61,8 +61,16 @@ global.showToast = (message, type) => { toasts.push({message, type}); };
 let drawerClosed = false;
 global.closeDrawer = () => { drawerClosed = true; };
 global.appConfig = { ids: { key: "id" } };
-let promptResponse = "related";
-global.prompt = (message, defaultValue) => promptResponse;
+for (const id of ["related-modal", "related-target", "related-choice-related", "related-choice-parent", "related-choice-ref"]) {
+  elements[id] = makeField("");
+}
+let choiceOpen = false;
+global.openManagedModal = () => { choiceOpen = true; };
+global.closeManagedModal = () => { choiceOpen = false; };
+function choose(name) {
+  for (const key of ["related", "parent", "ref"]) elements["related-choice-" + key].checked = key === name;
+  confirmRelatedChoice();
+}
 
 const results = {};
 
@@ -107,38 +115,38 @@ global.drawerItem = { title: "No ID item", details: {} };
 drawerCreateRelated();
 results.no_id_toast = toasts[toasts.length - 1];
 
-// -- drawerCreateRelated: happy path, default "related" ----------------------
+// -- drawerCreateRelated: default "related" is preselected --------------------
 toasts.length = 0;
 drawerClosed = false;
 elements["edit-details"].value = "";
 global.drawerItem = { id: "t9", title: "Selected item", details: { project: ["work"] } };
-promptResponse = "related";
 drawerCreateRelated();
+results.choice_opened = choiceOpen;
+results.choice_target = elements["related-target"].textContent;
+results.choice_default = elements["related-choice-related"].checked;
+results.drawer_open_before_confirm = !drawerClosed;
+confirmRelatedChoice();
 results.drawer_related_details = elements["edit-details"].value;
 results.drawer_related_closed = drawerClosed;
 
-// -- drawerCreateRelated: explicit "parent" choice ----------------------------
-elements["edit-details"].value = "";
-promptResponse = "parent";
+// -- explicit "parent" and "ref" choices --------------------------------------
 drawerCreateRelated();
+choose("parent");
 results.drawer_parent_details = elements["edit-details"].value;
+drawerCreateRelated();
+choose("ref");
+results.drawer_ref_details = elements["edit-details"].value;
 
-// -- drawerCreateRelated: user cancels the prompt (null) -- no creation opened
-toasts.length = 0;
+// -- cancel: nothing is opened and a later confirm cannot reuse the context ----
 elements["edit-details"].value = "unchanged";
 global._openedModal = false;
-promptResponse = null;
+drawerClosed = false;
 drawerCreateRelated();
+closeRelatedChoice();
+confirmRelatedChoice();
 results.cancel_details_unchanged = elements["edit-details"].value;
 results.cancel_opened_modal = global._openedModal;
-
-// -- drawerCreateRelated: invalid relation choice fails visibly, no silent rebind
-toasts.length = 0;
-elements["edit-details"].value = "unchanged2";
-promptResponse = "bogus";
-drawerCreateRelated();
-results.invalid_relation_toast = toasts[toasts.length - 1];
-results.invalid_relation_details_unchanged = elements["edit-details"].value;
+results.cancel_closed_drawer = drawerClosed;
 
 process.stdout.write(JSON.stringify(results));
 """
@@ -212,16 +220,22 @@ class ContextAwareCreateJsTests(unittest.TestCase):
         results = self._run()
         self.assertIn("parent:t9", results["drawer_parent_details"].split("\n"))
 
-    def test_cancelling_the_prompt_does_not_open_or_mutate_anything(self):
+    def test_choice_dialog_preselects_related_and_waits_for_confirmation(self):
+        results = self._run()
+        self.assertTrue(results["choice_opened"])
+        self.assertEqual("Selected item", results["choice_target"])
+        self.assertTrue(results["choice_default"])
+        self.assertTrue(results["drawer_open_before_confirm"])
+
+    def test_ref_relation_choice_is_honored(self):
+        results = self._run()
+        self.assertIn("ref:t9", results["drawer_ref_details"].splitlines())
+
+    def test_cancelling_the_choice_does_not_open_or_mutate_anything(self):
         results = self._run()
         self.assertEqual("unchanged", results["cancel_details_unchanged"])
         self.assertFalse(results["cancel_opened_modal"])
-
-    def test_invalid_relation_choice_fails_visibly_no_silent_rebind(self):
-        results = self._run()
-        self.assertEqual("error", results["invalid_relation_toast"]["type"])
-        self.assertIn("bogus", results["invalid_relation_toast"]["message"])
-        self.assertEqual("unchanged2", results["invalid_relation_details_unchanged"])
+        self.assertFalse(results["cancel_closed_drawer"])
 
 
 if __name__ == "__main__":

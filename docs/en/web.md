@@ -416,7 +416,12 @@ Unstable, unreadable, missing required sources, or unavailable context return
 and review again; manifest/glob membership mismatches require re-resolution by
 reloading/restarting the server. Named manifests and legacy `paths` globs/directories are re-resolved
 on each snapshot scan; plain explicit paths report `fixed_paths` scope.
-A writable target outside the effective read list requires source resolution.
+A writable target outside the effective read list requires source resolution:
+add the write file to the configured sources and restart the server.
+Named workspace sources not marked `required: true` may be absent; they are part
+of the review identity, so creating one later requires a new Preview. Membership
+is compared without regard to declared order. The error message states which of
+these causes applies.
 External config-file edits require reload/restart; the token covers effective
 runtime config. Acquisition uses bounded repeated reads, not a global lock.
 
@@ -1229,8 +1234,10 @@ backward compatibility are unchanged.
 
 From the record detail drawer, a `+ Related` button (#770) next to `Edit`
 lets you create a new record with a relation to the currently open record
-already proposed. Clicking it asks which relation to use (`parent`,
-`related`, or `ref` -- the same fields the Format already documents), then
+already proposed. Clicking it opens a dialog where you choose the relation from
+labeled options (`related`, preselected, `parent`, or `ref` -- the same fields
+the Format already documents). Choose with the pointer or the arrow keys,
+then **Continue**; **Cancel** or Escape leaves the open record unchanged. It then
 opens the ordinary "New Record" editor with that relation, and the open
 record's `project:` when it has one, prefilled as plain, fully editable
 lines in the details textarea. Nothing is created until you review the
@@ -1829,6 +1836,8 @@ Personal Context next-step links and the Server backup guide link use underlined
 ## Desk (`/desk`)
 
 A scroll-free, always-on work screen: workspace clock, today's calendar timeline and tasks. Click or press Enter on an event or task to see its details. Tasks can be completed or started/stopped, and quick add is available; all writes reuse the existing revision-guarded APIs and are disabled when read-only. The calendar zone toggles between today, the next 7 days and a month grid (pick a day to list its events). In a task's details you can change its due date; an event's details link to that day in Planner, and a timed event with a single start/end can have its title and times edited (changing the date shifts start and end by the same number of days); an event with a single `at` time can have its title, date and time edited. Use the completion button beside a task and choose **Complete now** or enter a date and time and choose **Complete at selected time**. The selected timestamp is stored in `done:` using the Desk clock’s time zone. Details offer a full Edit form (title, status, type, `key:value` details). Quick add supports the Quick and todo.txt syntaxes with the same preview/confirm flow as Quick Capture. A header button cycles the theme auto/dark/light. The **Full screen** button enters and leaves browser full screen (it follows Esc, and is hidden where the browser does not support it).
+
+Each block appears as soon as its own data arrives. Until then it shows **Loading…**; an empty message appears only after the data has been read, and a failed first read says it could not load. A change stays in progress (**Saving and refreshing…**) until the screen shows the result, and Desk asks you to wait if you start another one meanwhile. If the data changed elsewhere, nothing is saved: Desk reloads the latest content so you can check it and try again. It never retries a write automatically, and it tells you to reload the page if that refresh fails.
 
 The Layout dialog can also add information blocks, hidden by default. **Habits** lists open habits and whether each is done today; **Messages and notes** lists unacknowledged messages addressed to you (or to no one) and five recent notes; **Upcoming deadlines** lists items due from today through 14 days with the days left; **Summary** shows tasks done today, overdue and open counts, and a per-project breakdown. They load only while shown; select an item to open its details.
 

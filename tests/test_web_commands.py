@@ -22,7 +22,7 @@ def _handler_block():
 
 @unittest.skipUnless(shutil.which("node"), "Node.js unavailable")
 class CommandPaletteNavigationTests(unittest.TestCase):
-    def test_bilingual_workspace_search_runs_the_existing_navigation_paths(self):
+    def _run_palette(self, scenario):
         def extract(start, end):
             offset = SCRIPT.index(start)
             return SCRIPT[offset : SCRIPT.index(end, offset)]
@@ -30,9 +30,13 @@ class CommandPaletteNavigationTests(unittest.TestCase):
         source = "\n".join(
             (
                 extract("const UI_STRINGS = {", "const I18N_PATTERNS"),
-                extract("function fuzzyMatch(", "function recentItemKey("),
+                extract("function fuzzyMatch(", "const CMDK_ACTIONS"),
                 extract("const CMDK_ACTIONS = [", "let COMMAND_CATALOG"),
                 extract("function renderCmdk(", "function _cmdkMoveFocus("),
+                extract("function _drawerIdFor(", "function syncDrawerUrlForItem("),
+                extract(
+                    "async function openItemByLine(", "function syncDrawerFromUrl("
+                ),
             )
         )
         harness = (
@@ -42,7 +46,13 @@ const noop = () => {};
 const newItem = noop, refreshAll = noop, toggleDarkMode = noop;
 const toggleDisplayMode = noop, toggleKioskMode = noop, toggleAgendaBlocked = noop;
 const openUndoHistoryModal = noop, jumpToLine = noop, openHelpModal = noop;
-const appConfig = {}, currentItems = [], location = {};
+const appConfig = {ids: {key: "ref"}}, currentItems = [], location = {};
+const RECENT_ITEMS_STORAGE_KEY = "lifetxt_recent_items";
+let storedHistory = "[]";
+const localStorage = {
+  getItem: () => storedHistory,
+  setItem: (key, value) => { storedHistory = value; },
+};
 const list = {appendChild: noop};
 const document = {getElementById: () => list,
                   createElement: () => ({addEventListener: noop})};
@@ -52,7 +62,25 @@ const t = label => japanese ? UI_STRINGS.ja[label] || label : label;
 const switchWorkspace = view => { workspace = view; };
 """
             + source
-            + r"""
+            + scenario
+        )
+        # UI_STRINGS exceeds the Windows command-line limit, so run from a file.
+        with tempfile.TemporaryDirectory() as tmp:
+            script = os.path.join(tmp, "harness.js")
+            with open(script, "w", encoding="utf-8") as handle:
+                handle.write(harness)
+            result = subprocess.run(
+                ["node", script],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                timeout=10,
+            )
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_bilingual_workspace_search_runs_the_existing_navigation_paths(self):
+        self._run_palette(
+            r"""
 for (const [en, ja, destination] of [
   ["Today", "今日", "today"],
   ["Priority Matrix", "優先度マトリクス", "matrix"],
@@ -78,19 +106,57 @@ for (const [en, ja, destination] of [
 }
 """
         )
-        # UI_STRINGS exceeds the Windows command-line limit, so run from a file.
-        with tempfile.TemporaryDirectory() as tmp:
-            script = os.path.join(tmp, "harness.js")
-            with open(script, "w", encoding="utf-8") as handle:
-                handle.write(harness)
-            result = subprocess.run(
-                ["node", script],
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                timeout=10,
-            )
-        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_recent_history_reopens_the_current_record_by_exact_id(self):
+        self._run_palette(
+            r"""
+const requests = [], opened = [], selected = [], errors = [];
+const target = {id: "2", title: "Renamed", line: 8, source: "secondary.txt", type: "T"};
+const neighboring = {title: "Different record", line: 2, source: "primary.txt"};
+const openDrawer = (item, mode) => opened.push([item, mode]);
+const selectItem = item => selected.push(item);
+const showToast = (message, kind) => errors.push([message, kind]);
+const api = async (url, options) => {
+  requests.push([url, options]);
+  if (url === "/api/items/id/2") return {item: target};
+  if (url === "/api/items/2") return {item: neighboring};
+  throw Object.assign(new Error("missing"), {status: 404});
+};
+storedHistory = JSON.stringify([
+  {key: "2", line: 2, source: "secondary.txt", title: "Original", type: "T"},
+  {key: "primary.txt:3:No ID", line: 3, source: "primary.txt", title: "No ID"},
+  {id: "deleted", title: "Deleted"},
+  null,
+]);
+// A filtered list contains a different record at the old line.
+currentItems.push(neighboring);
+(async () => {
+  renderCmdk("");
+  const entries = _cmdkEntries.filter(row => row.section === "Recently Opened");
+  assert.deepEqual(entries.map(row => row.hint), ["2", "deleted"]);
+  await entries[0].run();
+  await entries[1].run();
+  assert.deepEqual(opened, [[target, "push"]]);
+  assert.deepEqual(selected, [target]);
+  assert.deepEqual(requests, [
+    ["/api/items/id/2", {cache: "no-store"}],
+    ["/api/items/id/deleted", {cache: "no-store"}],
+  ]);
+  assert.deepEqual(errors, [['No record found for id "deleted".', "error"]]);
+
+  rememberRecentItem(neighboring);
+  assert.equal(JSON.parse(storedHistory).length, 4);
+  rememberRecentItem({...target, id: undefined, details: {ref: ["2"]}});
+  assert.deepEqual(JSON.parse(storedHistory), [
+    {id: "2", title: "Renamed", type: "T"},
+    {id: "deleted", title: "Deleted"},
+  ]);
+  await openItemById("2", "none");
+  await openItemByLine(2);
+  assert.deepEqual(opened.slice(1), [[target, "none"], [neighboring, "push"]]);
+})().catch(error => { console.error(error); process.exitCode = 1; });
+"""
+        )
 
 
 class CommandCatalogTests(unittest.TestCase):
@@ -126,6 +192,21 @@ class CommandCatalogTests(unittest.TestCase):
             sorted(c.name for c in COMMANDS),
             sorted(row["name"] for row in payload["commands"]),
         )
+
+    def test_exact_item_route_follows_numeric_id_after_line_moves(self):
+        client, path = self._client('[ ] T "Original" id:2\n')
+        self.assertEqual(client.get("/api/items/id/2").json()["item"]["line"], 1)
+
+        with open(path, "w", encoding="utf-8") as handle:
+            handle.write('[ ] T "Different"\n[ ] T "Other"\n[ ] T "Renamed" id:2\n')
+
+        self.assertEqual(client.get("/api/items/2").json()["item"]["title"], "Other")
+        reopened = client.get("/api/items/id/2").json()["item"]
+        self.assertEqual((reopened["title"], reopened["line"]), ("Renamed", 3))
+
+        with open(path, "w", encoding="utf-8") as handle:
+            handle.write('[ ] T "Different"\n[ ] T "Other"\n')
+        self.assertEqual(client.get("/api/items/id/2").status_code, 404)
 
     def test_catalog_carries_alias_usage_and_summary(self):
         client, _path = self._client()

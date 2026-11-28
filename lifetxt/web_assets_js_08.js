@@ -749,20 +749,29 @@
       }
       return j === queryLower.length;
     }
-    function recentItemKey(item) {
-      return itemStableKey(item);
+    function recentHistoryId(row) {
+      if (typeof row?.id === "string") return row.id;
+      if (typeof row?.key !== "string") return "";
+      // Older rows stored either the ID or itemStableKey's display-only fallback.
+      const fallback = `${row.source || ""}:${row.line || ""}:${row.title || ""}`;
+      return row.key === fallback ? "" : row.key;
     }
     function loadRecentItems() {
       try {
         const raw = localStorage.getItem(RECENT_ITEMS_STORAGE_KEY);
         const rows = raw ? JSON.parse(raw) : [];
-        return Array.isArray(rows) ? rows : [];
+        return Array.isArray(rows)
+          ? rows.flatMap(row => {
+              const id = recentHistoryId(row);
+              return id ? [{id, title: row.title, type: row.type}] : [];
+            })
+          : [];
       } catch(_) {
         return [];
       }
     }
     function rememberRecentItem(item) {
-      if (!item) return;
+      const id = _drawerIdFor(item);
+      if (typeof id !== "string" || !id) return;
       try {
-        const key = recentItemKey(item);
         const row = {

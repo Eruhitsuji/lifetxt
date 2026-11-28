@@ -590,12 +590,10 @@
       } catch(e) { showToast("Line " + lineNum + ": " + e.message, "error"); }
     }
 
-    // Open a record directly by its canonical id: (#838), sharing the
-    // #837 exact-ID Web API route. An unknown id shows a clear
-    // not-found state rather than silently opening another record.
+    // Use the ID-only route so a numeric ID cannot be read as a line number.
     async function openItemById(itemId, urlMode = "push") {
       try {
-        const data = await api(`/api/items/${encodeURIComponent(itemId)}`);
+        const data = await api(`/api/items/id/${encodeURIComponent(itemId)}`, {cache: "no-store"});
         if (data?.item) { openDrawer(data.item, urlMode); selectItem(data.item); }
         else showToast(`No record found for id "${itemId}".`, "error");
       } catch(e) {

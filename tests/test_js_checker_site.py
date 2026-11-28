@@ -9,6 +9,7 @@ from tempfile import TemporaryDirectory
 from threading import Thread
 import unittest
 
+from lifetxt.attachments import hash_directory
 from scripts.build_js_checker_site import CSP, ROOT, build_candidate
 from scripts.build_website import build
 from scripts.check_website import check
@@ -450,7 +451,15 @@ class JSCheckerSiteTests(unittest.TestCase):
                 self.assertEqual(len(output.inner_text().splitlines()), 1)
                 clear_files.click()
                 with (root / "docs/large.bin").open("wb") as large:
-                    large.truncate(16 * 1024 * 1024 + 1)
+                    large.truncate(200 * 1024 * 1024 + 1)
+                hashed_tree = root / "tree"
+                (hashed_tree / "nested").mkdir(parents=True)
+                (hashed_tree / ".git").mkdir()
+                (hashed_tree / "nested/ä.txt").write_bytes(b"nested")
+                (hashed_tree / "𐀀.txt").write_bytes(b"supplementary")
+                (hashed_tree / "Ａ.txt").write_bytes(b"fullwidth")
+                (hashed_tree / ".git/ignored").write_bytes(b"ignored")
+                tree_digest = hash_directory(hashed_tree, length=64)
                 folder.set_input_files(root)
                 page.evaluate("""() => {
                     window.readAttachments = [];
@@ -464,7 +473,9 @@ class JSCheckerSiteTests(unittest.TestCase):
                 text.fill(
                     f"[ ] T Verify file:docs/report.bin#sha256={digest[:16].upper()} "
                     f"file:docs/report.bin#sha256={digest} file:docs/report.bin#sha256=ABCD "
-                    "file:docs/large.bin#sha256=abcd dir:docs#sha256=abcd"
+                    "file:docs/large.bin#sha256=abcd dir:docs#sha256=abcd\n"
+                    f"[ ] T Tree dir:tree#sha256={tree_digest[:16].upper()} dir:tree#sha256={tree_digest} "
+                    "dir:tree#sha256=0000"
                 )
                 button.click()
                 expect(output).to_be_empty()
@@ -473,10 +484,17 @@ class JSCheckerSiteTests(unittest.TestCase):
                 button.click()
                 expect(output).to_contain_text("attachment-hash-changed")
                 expect(output).to_contain_text("attachment-hash-too-large")
-                expect(output).to_contain_text("attachment-directory-hash-unsupported")
+                expect(output).to_contain_text("attachment-directory-limit")
                 expect(status).to_contain_text("検査対象外" if lang == "ja" else "not checked")
-                self.assertEqual(len(output.inner_text().splitlines()), 3)
-                self.assertEqual(page.evaluate("window.readAttachments"), ["report.bin"])
+                self.assertEqual(len(output.inner_text().splitlines()), 4)
+                expect(output).to_contain_text(f"SHA-256 {tree_digest[:4]}")
+                self.assertEqual(
+                    page.evaluate("window.readAttachments"),
+                    ["report.bin", "ä.txt", "Ａ.txt", "𐀀.txt"],
+                )
+                text.fill("[ ] T Empty dir:empty#sha256=0000")
+                button.click()
+                expect(output).to_contain_text("attachment-directory-unobserved")
 
                 page.evaluate("""() => {
                     File.prototype.arrayBuffer = function () {

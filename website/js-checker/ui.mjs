@@ -1,12 +1,15 @@
-import { MAX_BYTES, MAX_DIAGNOSTICS, MAX_FILES, parse, parseCheckerConfig, parseDocuments, splitAttachmentValue } from './parser.mjs';
+import {
+    DIRECTORY_IGNORES, MAX_BYTES, MAX_DIAGNOSTICS, MAX_DIRECTORY_BYTES, MAX_DIRECTORY_FILES, MAX_FILES,
+    parse, parseCheckerConfig, parseDocuments, splitAttachmentValue,
+} from './parser.mjs';
 
 const messages = {
     ja: {
         'attachment-hash-changed': value => `${JSON.stringify(value)} のSHA-256が記録と一致しません。`,
-        'attachment-hash-too-large': value => `${JSON.stringify(value)} は16 MiBを超えるため照合できません。`,
+        'attachment-hash-too-large': value => `${JSON.stringify(value)} は照合するファイルに16 MiBを超えるものがあるため確認できません。`,
         'attachment-hash-unavailable': value => `${JSON.stringify(value)} のSHA-256照合にはWeb Cryptoが利用できるブラウザー環境が必要です。`,
         'attachment-unreadable': value => `${JSON.stringify(value)} の内容を読み込めませんでした。`,
-        'attachment-directory-hash-unsupported': value => `${JSON.stringify(value)} のディレクトリハッシュは照合対象外です。`,
+        'attachment-directory-limit': value => `${JSON.stringify(value)} はディレクトリの照合上限（2,000ファイル・200 MiB）を超えています。`,
         'attachment-invalid-value': value => `${JSON.stringify(value)} のパスまたはハッシュの形式が無効です。`,
         'attachment-folder-unavailable': value => `${JSON.stringify(value)} を確認するには添付フォルダーを選択してください。`,
         'attachment-outside-folder': value => `${JSON.stringify(value)} は選択フォルダー内の相対パスとして確認できません。`,
@@ -135,10 +138,10 @@ const messages = {
     },
     en: {
         'attachment-hash-changed': value => `The SHA-256 for ${JSON.stringify(value)} differs from the recorded value.`,
-        'attachment-hash-too-large': value => `${JSON.stringify(value)} exceeds the 16 MiB verification limit.`,
+        'attachment-hash-too-large': value => `${JSON.stringify(value)} includes a file exceeding the 16 MiB verification limit.`,
         'attachment-hash-unavailable': value => `Verifying ${JSON.stringify(value)} requires Web Crypto in your browser.`,
         'attachment-unreadable': value => `Could not read the content of ${JSON.stringify(value)}.`,
-        'attachment-directory-hash-unsupported': value => `Directory hashes such as ${JSON.stringify(value)} are not checked.`,
+        'attachment-directory-limit': value => `${JSON.stringify(value)} exceeds the directory verification limit of 2,000 files or 200 MiB.`,
         'attachment-invalid-value': value => `${JSON.stringify(value)} has an invalid path or hash fragment.`,
         'attachment-folder-unavailable': value => `Select an attachment folder to check ${JSON.stringify(value)}.`,
         'attachment-outside-folder': value => `${JSON.stringify(value)} cannot be checked as a relative path inside the selected folder.`,
@@ -358,21 +361,69 @@ function relativeAttachmentPath(path) {
 
 const MAX_HASH_BYTES = 16 * 1024 * 1024;
 
-async function verifyFileHash(file, digest, hashes, revision) {
-    if (file.size > MAX_HASH_BYTES) {
+async function sha256(bytes) {
+    const hash = await globalThis.crypto.subtle.digest('SHA-256', bytes);
+    return Array.from(new Uint8Array(hash), byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
+async function fileHash(file, hashes, revision) {
+    if (hashes.has(file)) return hashes.get(file);
+    const bytes = await file.arrayBuffer();
+    if (revision !== selectionRevision) return;
+    const hash = await sha256(bytes);
+    hashes.set(file, hash);
+    return hash;
+}
+
+function compareBytes(left, right) {
+    for (let index = 0; index < Math.min(left.length, right.length); index++) {
+        if (left[index] !== right[index]) return left[index] - right[index];
+    }
+    return left.length - right.length;
+}
+
+function directoryEntries(files, directory) {
+    const prefix = directory ? `${directory}/` : '';
+    const entries = [];
+    const encoder = new TextEncoder();
+    for (const [path, file] of files) {
+        if (!path.startsWith(prefix)) continue;
+        const name = path.slice(prefix.length);
+        if (name.split('/').some(part => DIRECTORY_IGNORES.includes(part))) continue;
+        entries.push({ name, order: encoder.encode(name), file });
+        if (entries.length > MAX_DIRECTORY_FILES) break;
+    }
+    return entries;
+}
+
+async function verifyAttachmentHash(files, relative, key, digest, hashes, revision) {
+    const entries = key === 'dir' ? directoryEntries(files, relative) : [{ file: files.get(relative) }];
+    if (key === 'dir' && (entries.length > MAX_DIRECTORY_FILES ||
+        entries.reduce((size, { file }) => size + file.size, 0) > MAX_DIRECTORY_BYTES)) {
+        return { code: 'attachment-directory-limit', severity: 'unsupported' };
+    }
+    if (entries.some(({ file }) => file.size > MAX_HASH_BYTES)) {
         return { code: 'attachment-hash-too-large', severity: 'unsupported' };
     }
     if (!globalThis.crypto?.subtle) {
         return { code: 'attachment-hash-unavailable', severity: 'unsupported' };
     }
     try {
-        if (!hashes.has(file)) {
-            const bytes = await file.arrayBuffer();
+        let hash;
+        if (key === 'dir') {
+            entries.sort((left, right) => compareBytes(left.order, right.order));
+            const manifest = [];
+            for (const { file, name } of entries) {
+                const contentHash = await fileHash(file, hashes, revision);
+                if (revision !== selectionRevision) return;
+                manifest.push(`${name}\0${contentHash}\n`);
+            }
+            hash = await sha256(new TextEncoder().encode(manifest.join('')));
+        } else {
+            hash = await fileHash(entries[0].file, hashes, revision);
             if (revision !== selectionRevision) return;
-            const hash = await crypto.subtle.digest('SHA-256', bytes);
-            hashes.set(file, Array.from(new Uint8Array(hash), byte => byte.toString(16).padStart(2, '0')).join(''));
         }
-        const actual = hashes.get(file).slice(0, digest.length);
+        const actual = hash.slice(0, digest.length);
         if (actual !== digest) return { code: 'attachment-hash-changed', part: `SHA-256 ${actual}` };
     } catch {
         return { code: 'attachment-unreadable' };
@@ -422,14 +473,9 @@ async function checkFolderAttachments(result, revision) {
                     code = 'attachment-directory-unobserved';
                     severity = 'unsupported';
                 } else if (verifyHashes.checked && parsed.digest) {
-                    if (key === 'dir') {
-                        code = 'attachment-directory-hash-unsupported';
-                        severity = 'unsupported';
-                    } else {
-                        const problem = await verifyFileHash(selectedFiles.get(relative), parsed.digest, hashes, revision);
-                        if (revision !== selectionRevision) return;
-                        if (problem) ({ code, severity = 'warning', part } = problem);
-                    }
+                    const problem = await verifyAttachmentHash(selectedFiles, relative, key, parsed.digest, hashes, revision);
+                    if (revision !== selectionRevision) return;
+                    if (problem) ({ code, severity = 'warning', part } = problem);
                 }
                 if (code === undefined) continue;
                 result.incomplete ||= severity === 'unsupported';

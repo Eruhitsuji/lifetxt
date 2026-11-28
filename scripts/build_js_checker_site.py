@@ -53,8 +53,8 @@ COPY = {
         "UTF-8のJSONを1ファイル（16 KiBまで）。貼り付け本文と選択ファイルの検査に、ids.key または api.id_key を適用します。",
         "添付フォルダー（任意）",
         "フォルダー選択を解除",
-        "添付ファイルのSHA-256を照合",
-        "file: にハッシュがあるファイルだけを読み取ります。1ファイル16 MiBまで。ディレクトリのハッシュは対象外です。",
+        "添付のSHA-256を照合",
+        "file: と dir: の記録済みハッシュを照合します。1ファイル16 MiB、1ディレクトリ2,000ファイル・200 MiBまで。",
         "選んだフォルダーの直下に入力文書があるものとして、file: と dir: を検査します。貼り付けた本文にも同じ基準を使います。空のフォルダーは確認できません。",
     ),
     "en": (
@@ -89,8 +89,8 @@ COPY = {
         "Choose one UTF-8 JSON file up to 16 KiB. Applies ids.key or api.id_key to pasted text and selected files.",
         "Attachment folder (optional)",
         "Clear folder selection",
-        "Verify attachment file SHA-256",
-        "Reads only files with a recorded file: hash. Up to 16 MiB per file. Directory hashes are unchecked.",
+        "Verify attachment SHA-256",
+        "Verifies recorded file: and dir: hashes. Up to 16 MiB per file and 2,000 files or 200 MiB per directory.",
         "Checks file: and dir: paths from the selected folder, treating each input document or pasted text as being at its root. Empty folders cannot be verified.",
     ),
 }

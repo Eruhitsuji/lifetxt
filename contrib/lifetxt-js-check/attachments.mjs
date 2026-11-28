@@ -3,15 +3,7 @@ import { constants } from 'node:fs';
 import { open, opendir, stat } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { MAX_DIAGNOSTICS, splitAttachmentValue } from './parser.mjs';
-
-// Match the Python checker's default attachment settings.
-const DIRECTORY_IGNORES = new Set([
-    '.git', '.hg', '.svn', '.venv', 'venv', '__pycache__', 'node_modules',
-    '.mypy_cache', '.pytest_cache', '.DS_Store', 'Thumbs.db',
-]);
-const MAX_DIRECTORY_FILES = 2000;
-const MAX_DIRECTORY_BYTES = 200 * 1024 * 1024;
+import { DIRECTORY_IGNORES, MAX_DIAGNOSTICS, MAX_DIRECTORY_BYTES, MAX_DIRECTORY_FILES, splitAttachmentValue } from './parser.mjs';
 
 class DirectoryHashLimit extends Error {}
 
@@ -47,7 +39,7 @@ async function hashDirectory(root) {
         const { full, relative } = pending.pop();
         const directory = await opendir(full);
         for await (const entry of directory) {
-            if (DIRECTORY_IGNORES.has(entry.name)) continue;
+            if (DIRECTORY_IGNORES.includes(entry.name)) continue;
             const child = join(full, entry.name);
             const name = relative ? `${relative}/${entry.name}` : entry.name;
             if (entry.isDirectory()) {

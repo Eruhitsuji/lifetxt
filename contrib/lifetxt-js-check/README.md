@@ -26,8 +26,8 @@ An explicit `--config PATH` reads a UTF-8 JSON object (up to 16 KiB). The
 checker uses the first nonempty ID key from `ids.key` and `api.id_key`, or
 defaults to `id`. For example, `{"ids":{"key":"uid"}}` makes `uid:` the
 identity for hierarchy inference, references, duplicate detection, and history
-parent lookup. The option applies only this setting and does not discover
-configuration files automatically. In the browser, select the JSON under
+parent lookup. The option also accepts the Node attachment settings below. It does not
+discover configuration files automatically. In the browser, select the JSON under
 Checker settings to apply the same ID key to pasted text or selected life.txt
 files. Clear that selection to use `id:` again.
 
@@ -41,9 +41,16 @@ user. Hash fragments are checked for hexadecimal syntax. Use
 `file:report.pdf#sha256=0123456789abcdef`, with the file's content. Only
 regular files are read. The same option verifies recorded `dir:` hashes
 by hashing the relative paths and content hashes of the files in the tree.
-It uses Core's default ignore list and caps each directory at 2,000 files
-and 200 MiB. It skips directory symlinks inside the tree. Use the Python
-checker for custom attachment traversal settings and portability warnings.
+By default it uses Core's ignore list and caps each directory at 2,000
+files and 200 MiB. To override these settings, pass a `--config` JSON such
+as `{"attachments":{"ignore":[".git","cache"],"max_files":500,"max_bytes":104857600}}`.
+An ignore list replaces the defaults and accepts exact file or directory
+names, as a list or a comma-separated string. The limits accept positive safe
+integers. It skips directory symlinks inside the tree.
+
+Both options warn about paths with backslashes, absolute paths, drive
+letters, UNC paths, non-NFC names, and trailing spaces or periods. They
+also warn when a path resolves with different casing in its last component.
 Attachment paths are accessed only when one of the two options is passed.
 
 In the browser, choose an attachment folder under Checker settings. Pasted

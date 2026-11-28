@@ -1066,6 +1066,73 @@ class CoreComparisonTests(unittest.TestCase):
             self.assertIn("Line 3: warning attachment-directory-limit (dir: More than 209715200 bytes)", lines[1])
             self.assertIn("Line 4: warning attachment-directory-limit (dir: More than 2000 files)", lines[2])
 
+    def test_cli_attachment_settings_and_portability_against_core(self):
+        checker = Path("contrib/lifetxt-js-check/check.mjs").resolve()
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            config = root / "config.json"
+            tree = root / "assets"
+            tree.mkdir()
+            (tree / "readme.txt").write_bytes(b"a")
+            (tree / "ignore.tmp").write_bytes(b"ignored")
+            (tree / "ignore2.tmp").write_bytes(b"ignored")
+            (root / "large").mkdir()
+            (root / "large/blob").write_bytes(b"ab")
+            (root / "many").mkdir()
+            (root / "many/a").touch()
+            (root / "many/b").touch()
+            digest = hash_directory(tree, ignores=["ignore.tmp", "ignore2.tmp"])
+            source = root / "inbox.txt"
+            backslash = json.dumps(r"assets\readme.txt")
+            absolute = json.dumps((tree / "readme.txt").as_posix())
+            source.write_text(
+                f"[ ] T Match dir:assets#sha256={digest}\n"
+                "[ ] T Over-bytes dir:large#sha256=0000\n"
+                "[ ] T Over-count dir:many#sha256=0000\n"
+                f"[ ] T Separators file:{backslash}\n"
+                f"[ ] T Absolute file:{absolute}\n"
+                '[ ] T Missing file:"décomposed."\n'
+                "[ ] T Case file:assets/README.txt\n",
+                encoding="utf-8",
+            )
+            for ignore in ("ignore.tmp, ignore2.tmp", ["ignore.tmp", "ignore2.tmp"]):
+                with self.subTest(ignore=ignore):
+                    config.write_text(json.dumps({
+                        "attachments": {"ignore": ignore, "max_files": "1", "max_bytes": 1},
+                    }), encoding="utf-8")
+                    options = ["--config", str(config)]
+                    core = subprocess.run(
+                        [sys.executable, "-m", "lifetxt", *options, "check",
+                         "--verify-files", "--format", "json", str(source)],
+                        check=True, cwd=root,
+                        env={**os.environ, "PYTHONPATH": str(checker.parents[2])},
+                        capture_output=True, encoding="utf-8",
+                    )
+                    rows = json.loads(core.stdout)
+                    code_map = {
+                        "W401": "attachment-missing",
+                        "W404": "attachment-nonportable",
+                        "W405": "attachment-case-mismatch",
+                        "W407": "attachment-directory-limit",
+                    }
+                    self.assertEqual(
+                        [(d["line"], d["code"]) for d in rows],
+                        [(2, "W407"), (3, "W407"), (4, "W404"), (5, "W404"),
+                         (6, "W401"), (6, "W404"), (6, "W404"),
+                         (7, "W405" if (tree / "README.txt").exists() else "W401")],
+                    )
+                    js = subprocess.run(
+                        ["node", checker, "--verify-files", *options, str(source)],
+                        check=True, capture_output=True, encoding="utf-8",
+                    )
+                    lines = js.stdout.splitlines()
+                    self.assertEqual(len(lines), len(rows) + 1)
+                    for actual, expected in zip(lines, rows):
+                        prefix = f"Line {expected['line']}: {expected['severity']} {code_map[expected['code']]} "
+                        self.assertTrue(actual.startswith(prefix), actual)
+                    self.assertIn("More than 1 bytes", lines[0])
+                    self.assertIn("More than 1 files", lines[1])
+
     def test_event_ranges_use_core_local_wall_clock(self):
         # The same input has different ordering in UTC and during the New York
         # fall-back hour. Scope the timezone change to these fixtures.

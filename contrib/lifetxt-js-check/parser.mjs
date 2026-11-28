@@ -1247,20 +1247,25 @@ export function parseDocuments(documents, { idKey = 'id' } = {}) {
     return result;
 }
 
-/** Read the ID key setting supported by both checker interfaces. */
+/** Read supported checker settings. The browser only uses the ID key. */
 export function parseCheckerConfig(text) {
     const config = JSON.parse(text);
     if (!config || typeof config !== 'object' || Array.isArray(config)) {
         throw new Error('Expected a JSON object');
+    }
+    const options = {};
+    if (config.attachments && typeof config.attachments === 'object' && !Array.isArray(config.attachments)) {
+        options.attachments = config.attachments;
     }
     for (const value of [config.ids?.key, config.api?.id_key]) {
         if (value === undefined || value === null || value === '') continue;
         if (typeof value !== 'string' || /[\s:"]/.test(value)) {
             throw new Error('Expected ids.key or api.id_key to be a detail key');
         }
-        return { idKey: value };
+        options.idKey = value;
+        break;
     }
-    return {};
+    return options;
 }
 
 const HASH_MARKER = '#sha256=';
@@ -1269,12 +1274,13 @@ const HASH_MARKER = '#sha256=';
 export function splitAttachmentValue(value) {
     const text = value.trim();
     const separator = text.lastIndexOf(HASH_MARKER);
-    const path = (separator < 0 ? text : text.slice(0, separator)).trim().replaceAll('\\', '/');
+    const rawPath = separator < 0 ? text : text.slice(0, separator);
+    const path = rawPath.trim().replaceAll('\\', '/');
     const digest = separator < 0 ? '' : text.slice(separator + HASH_MARKER.length).trim();
     if (!path || path.includes('\0') || !/^[0-9a-f]*$/i.test(digest)) {
         return null;
     }
-    return { path, digest: digest.toLowerCase() };
+    return { path, rawPath, digest: digest.toLowerCase() };
 }
 
 export function attachmentPath(value) {

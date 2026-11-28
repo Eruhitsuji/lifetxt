@@ -80,7 +80,7 @@ async function checkFiles(paths, configPath, { checkFilesOption, verifyFiles }) 
         const result = documents.length === 1
             ? parse(documents[0].text, options)
             : parseDocuments(documents, options);
-        if (checkFilesOption) await checkAttachments(result, paths[0], verifyFiles);
+        if (checkFilesOption) await checkAttachments(result, paths[0], verifyFiles, options.attachments);
         for (const { severity, code, line, key, part, firstLine, source, firstSource, value, path, childCount } of result.diagnostics) {
             const field = key ? ` (${escapeConsole(key)}:${part ? ` ${escapeConsole(part)}` : ''})` : '';
             let target = '';

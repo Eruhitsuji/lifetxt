@@ -2,6 +2,18 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-palette-navigation
+      capability_id: cap-web-help-command-reference
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1809
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1810
+      changed_files_or_scope: [Exact-ID reopening of Web command-palette history]
+      tests_or_evidence:
+        - tests.test_web_commands (legacy history, filtered list, numeric ID, moved or deleted record)
+        - tests.test_web_assets, tests.test_web_deep_link_js, tests.test_web_deep_link_url_retention
+        - python -m lifetxt check examples/minimal_life.txt
+      status: in_review
+
     - requirement_id: req-official-website-v1
       capability_id: cap-official-website
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1350

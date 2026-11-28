@@ -154,12 +154,13 @@ try {
     }))`);
     const cue = lang === 'ja' ? 'きっかけ：' : 'Cue: ';
     const minimum = lang === 'ja' ? '最小版：' : 'Minimum version: ';
+    const open = lang === 'ja' ? '未記録' : 'Not recorded';
     assert.deepEqual(habitCards.map(card => card.paragraphs), [
-      ['[ ]', cue + habitCue, minimum + habitMinimum],
-      ['[ ]', cue + 'After breakfast'],
-      ['[ ]', minimum + 'One word'],
-      ['[ ]'],
-      ['✓', minimum + 'One word'],
+      [open, cue + habitCue, minimum + habitMinimum],
+      [open, cue + 'After breakfast'],
+      [open, minimum + 'One word'],
+      [open],
+      [lang === 'ja' ? '✓ 完了' : '✓ Done', minimum + 'One word'],
       [lang === 'ja' ? '休みを記録済み' : 'Rest day recorded'],
     ]);
     assert.ok(habitCards.every(card => card.contentFits && !card.injected));
@@ -183,7 +184,7 @@ try {
   }
   for (const [date, status] of [
     ['2031-02-02', 'Minimum version recorded'],
-    ['2031-02-04', '[ ]'],
+    ['2031-02-04', 'Not recorded'],
   ]) {
     await command('Page.navigate', {url: `http://127.0.0.1:${port}/planner?lang=en&date=${date}`});
     for (let attempt = 0; attempt < 100; attempt += 1) {
@@ -192,7 +193,7 @@ try {
     }
     assert.equal(await evaluate(`document.querySelector('#habits .card:first-child p').textContent`), status);
     assert.equal(await evaluate(`document.querySelector('#habits .card:nth-child(4) p').textContent`),
-      date === '2031-02-02' ? 'Rest day recorded' : '[ ]');
+      date === '2031-02-02' ? 'Rest day recorded' : 'Not recorded');
     assert.deepEqual(await evaluate(`[...document.querySelectorAll('#habits .card:nth-child(4) button')].map(button => button.textContent)`), ['Details']);
     assert.deepEqual(await evaluate(`[...document.querySelectorAll('#habits .card:first-child button')].map(button => button.textContent)`), ['Details']);
   }

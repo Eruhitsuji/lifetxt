@@ -2,6 +2,18 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-planner-display-polish
+      capability_id: cap-web-mobile-planner
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1791
+      pull_request: null
+      changed_files_or_scope: [lifetxt/web_planner.js, lifetxt/web_planner.css, tests/browser_planner_actions_probe.mjs]
+      tests_or_evidence:
+        - tests.test_web_planner, tests.test_web_planner_revisions, tests.test_web_planner_browser, tests.test_web_planner_actions_browser
+        - tests.test_web_assets, tests.test_web_i18n, tests.test_web_design_tokens, tests.test_release_policy
+        - Edge headless before/after check of phone Day, desktop Week/Month, past review and Customize in EN/JA
+      status: in_review
+
     - requirement_id: req-browser-local-check-v1
       capability_id: cap-official-website
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1731

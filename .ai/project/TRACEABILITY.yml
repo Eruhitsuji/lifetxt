@@ -2,6 +2,18 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-graph-relation-list
+      capability_id: cap-graph-link-foundation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1815
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1816
+      changed_files_or_scope: [Portable UTF-8 transport for Graph JavaScript regression tests]
+      tests_or_evidence:
+        - tests.test_web_graph_relations passed under Linux C locale with Python UTF-8 mode and locale coercion disabled
+        - tests.test_web_graph_relations, tests.test_web_assets, tests.test_web_commands, tests.test_web_i18n
+        - python -m lifetxt check examples/minimal_life.txt
+      status: in_review
+
     - requirement_id: req-relative-time-js-date-based-semantics
       capability_id: cap-relative-time-display
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1386

@@ -2,6 +2,18 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-official-website-v1
+      capability_id: cap-official-website
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1350
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1803
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1807
+      changed_files_or_scope: [Bilingual static introduction layout and onboarding links]
+      tests_or_evidence:
+        - tests.test_website, tests.test_website_pages_workflow, tests.test_js_checker_site (18 passed, including Chromium)
+        - Both website artifacts passed static link and metadata validation
+        - Chromium checked all 13 introduction routes at five viewport widths, sample text integrity, skip link and language switch
+      status: in_review
+
     - requirement_id: req-browser-local-check-v1
       capability_id: cap-official-website
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1731

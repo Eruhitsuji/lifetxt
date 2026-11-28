@@ -4,7 +4,8 @@ import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
 
 const [base, scriptPath] = process.argv.slice(2);
-const source = await readFile(scriptPath, 'utf8');
+const layoutCodec = await readFile(new URL('../lifetxt/web_layout_url.js', import.meta.url), 'utf8');
+const source = layoutCodec + await readFile(scriptPath, 'utf8');
 class Element {
   constructor(tag='div') {
     this.tagName=tag; this.children=[]; this.dataset={}; this.value='';

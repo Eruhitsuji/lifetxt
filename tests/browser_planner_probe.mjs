@@ -32,7 +32,7 @@ if(mode==='bad-schema')data.schema='future-v2';
 if(['auth','error','invalid'].includes(mode))return new Response('{}',{status:mode==='auth'?401:mode==='invalid'?400:500});
 if(mode==='delay')return new Promise(resolve=>window.__flowQueue.push(()=>resolve(new Response(JSON.stringify(data)))));
 return new Response(JSON.stringify(data));};`;
-const html = (await readFile(file, "utf8")).replace("<script>(() =>", `<script>${mock}${flowMock}</script><script>(() =>`);
+const html = (await readFile(file, "utf8")).replace("<script>", `<script>${mock}${flowMock}</script><script>`);
 const server = http.createServer((req, res) => {
   res.writeHead(200, {"Content-Type": "text/html"});
   res.end(html);

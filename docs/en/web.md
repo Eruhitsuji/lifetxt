@@ -1420,6 +1420,11 @@ order, plus Comfortable or Compact density. Workspace defaults are exposed in
 `/api/config`; a versioned browser-local override may take precedence and can be
 reset to workspace defaults. These preferences never filter records, alter
 temporal eligibility, or change mutation/history semantics.
+To share the applied Day layout, use **Customize → Put applied layout in URL**
+and copy the address. A valid `layout` parameter takes precedence over the
+browser's saved order, visibility, and density. Changes made while using that
+URL update the link's layout. Automatic time bands stay browser-local.
+Use `/planner` without `layout` to return to your saved layout.
 Planner scope is bookmarkable with `area` or `saved_view` URL parameters. The
 same authoritative scope is applied before Agenda, Command Center, ordinary
 Notes, and Past Review aggregation; the browser does not filter returned rows.
@@ -1816,6 +1821,8 @@ The **Clock** button changes how the clock block is shown: digital, large digita
 
 Your current Status (state, activity, start time, and elapsed time) is shown under the clock. Tap it to change it (including a custom state) or end it. The change is saved against the revision that was displayed; a conflict is never retried automatically.
 
-The **Layout** button arranges the screen. Show or hide the clock, Status, next event, calendar, tasks, and quick add; move each block up, down, or to the other column; swap the columns; and choose the column width (balanced, wider left, wider right) and text size (small, medium, large). Presets: Standard, Clock, Tasks, and Calendar. Settings are saved in the current browser only; an unreadable saved value falls back to Standard, and **Reset to standard** restores it. `/desk?preset=standard|clock|tasks|calendar` opens a preset without overwriting the saved arrangement until you change a setting. On narrow screens the two columns are stacked.
+The **Layout** button arranges the screen. Show or hide blocks, move them within or between columns, swap the columns, and choose the column width and text size. Presets are Standard, Clock, Tasks, and Calendar. The browser saves your regular layout and **Reset to standard** restores the default.
+
+Choose **Layout → Put layout in URL**, then copy the address to share the block order, visibility, sizes, and text sizes. A valid `layout` parameter takes precedence over `preset` and the saved browser layout. An invalid or unsupported `layout` falls back to the selected preset or the saved layout. Use `/desk?preset=standard|clock|tasks|calendar` for a preset. Changes made while using either kind of layout link update the URL, and opening `/desk` without either parameter returns to the browser's saved layout. The theme and clock display settings stay browser-local. On narrow screens, the columns stack.
 
 Sizes can be changed directly: drag the boundary between the columns to set their widths (25–75%), or the boundary below a block to set its height (touch works too). Boundaries are keyboard focusable: arrow keys adjust them, and double-click or Enter returns to automatic. The Layout dialog also sets a text size per block (default, small, medium, large, extra large). **Reset sizes** returns widths and heights to automatic, and choosing a column width clears a dragged width. Sizes are saved in the same browser. Narrow screens have no drag boundaries but keep the saved heights.

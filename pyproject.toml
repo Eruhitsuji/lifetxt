@@ -63,6 +63,7 @@ lifetxt = [
   "desk_app_manifest.json",
   "web_tokens.css",
   "web_tokens_auto.css",
+  "web_layout_url.js",
   "web_desk.html",
   "web_desk.css",
   "web_desk.js",

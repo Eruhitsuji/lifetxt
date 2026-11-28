@@ -276,6 +276,37 @@ class OrdinaryNotesSurfaceTests(unittest.TestCase):
             self.assertEqual("n11", response["items"][0]["id"])
 
     @unittest.skipIf(TestClient is None, "Web extras unavailable")
+    def test_web_multiple_item_kinds_and_native_export(self):
+        with self.path.open("a", encoding="utf-8") as records:
+            records.write(
+                '[ ] T "Fixture task" id:task\n'
+                '[ ] E "Fixture event" id:event on:2026-11-28\n'
+            )
+        with TestClient(webapp.create_app(paths=[str(self.path)])) as client:
+            for query_key in ("kind", "type"):
+                with self.subTest(query_key=query_key):
+                    params = {query_key: "T,E,ordinary-notes"}
+                    response = client.get("/api/items", params=params)
+                    self.assertEqual(200, response.status_code, response.text)
+                    results = [item["id"] for item in response.json()["items"]]
+                    self.assertCountEqual(results, [*self.expected, "task", "event"])
+                    export = client.get("/api/items/export", params=params)
+                    self.assertEqual(200, export.status_code, export.text)
+                    items, diagnostics = parse_text(export.text)
+                    self.assertFalse(diagnostics)
+                    self.assertEqual(results, ids(items))
+                    self.assertEqual(str(len(results)), export.headers["X-Lifetxt-Count"])
+            notes = client.get("/api/items", params={"ordinary_notes": True})
+            self.assertCountEqual(
+                self.expected, [item["id"] for item in notes.json()["items"]]
+            )
+            broad_notes = client.get("/api/items", params={"kind": "T,N,ordinary-notes"})
+            self.assertEqual(200, broad_notes.status_code, broad_notes.text)
+            broad_ids = [item["id"] for item in broad_notes.json()["items"]]
+            self.assertIn("ticket-event", broad_ids)
+            self.assertEqual(len(broad_ids), len(set(broad_ids)))
+
+    @unittest.skipIf(TestClient is None, "Web extras unavailable")
     def test_web_bounded_pages_empty_and_normal_note_creation(self):
         with TestClient(
             webapp.create_app(paths=[str(self.path)], writable_path=str(self.path))

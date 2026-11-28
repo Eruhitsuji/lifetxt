@@ -7,10 +7,13 @@ capabilities:
     status: implemented
     owner: Eruhitsuji
     source_requirements:
+      - req-web-desk-presence-and-refresh
       - req-web-desk-v1
       - req-web-desk-layout-url
       - req-web-desk-loading-and-stale-save
     implementation_locations:
+      - lifetxt/web_presence.css
+      - lifetxt/web_presence.js
       - lifetxt/web_desk.html
       - lifetxt/web_desk.css
       - lifetxt/web_desk.js
@@ -23,6 +26,7 @@ capabilities:
     tests_or_evidence:
       - tests/test_web_desk.py
     related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/1825
       - https://github.com/Eruhitsuji/lifetxt/issues/1670
       - https://github.com/Eruhitsuji/lifetxt/issues/1779
       - https://github.com/Eruhitsuji/lifetxt/issues/1780
@@ -32,6 +36,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/1806
       - https://github.com/Eruhitsuji/lifetxt/issues/1821
     related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/1826
       - https://github.com/Eruhitsuji/lifetxt/pull/1824
     reuse_policy: Reuse command-center, agenda, items and capture APIs and the Planner revision contract; no new API or mutation path.
     notes: Today/7-day/month calendar, detail editing, completion time, Quick/todo.txt capture and theme toggle. Status uses the existing /api/status contract. The normal layout is stored in browser localStorage. A versioned layout in the URL overrides presentation without updating the saved layout. Resizing, optional information blocks and clock settings reuse existing read APIs. Clock settings stay browser-local. No service worker or offline queue.
@@ -824,6 +829,7 @@ capabilities:
     status: active
     owner: Eruhitsuji
     source_requirements:
+      - req-web-planner-top-navigation
       - req-web-planner-flow-form-spacing
       - req-web-planner-card-actions
       - req-planner-web-revision-contract
@@ -879,6 +885,7 @@ capabilities:
       - tests.test_web_assets
       - tests.test_web_i18n
     related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/1825
       - https://github.com/Eruhitsuji/lifetxt/issues/1727
       - https://github.com/Eruhitsuji/lifetxt/issues/1162
       - https://github.com/Eruhitsuji/lifetxt/issues/1149
@@ -896,6 +903,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/1006
       - https://github.com/Eruhitsuji/lifetxt/issues/1018
     related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/1826
       - https://github.com/Eruhitsuji/lifetxt/pull/1728
       - https://github.com/Eruhitsuji/lifetxt/pull/1155
       - https://github.com/Eruhitsuji/lifetxt/pull/999
@@ -12008,6 +12016,7 @@ capabilities:
     status: active
     owner: Eruhitsuji
     source_requirements:
+      - req-web-items-multi-kind-layout-and-navigation
       - req-web-today-dashboard-record-touch-target
       - req-web-today-mobile-actions-header
       - req-web-guidance-link-theme
@@ -12035,6 +12044,7 @@ capabilities:
       - req-web-main-accessible-controls-navigation
       - req-web-diagnostics-location-navigation-summary
     implementation_locations:
+      - lifetxt/agenda.py
       - lifetxt/web_assets_js_17.js
       - lifetxt/web_assets.html
       - lifetxt/web_assets_css_01.css
@@ -12092,6 +12102,7 @@ capabilities:
       - MPLBACKEND=Agg python -m unittest discover -> Ran 4523 tests, OK (skipped=210), after merging origin/main at 1eb56eb
       - tests/test_web_diagnostics_js.py (15 tests) covers diagnostic location labels, filter-hidden marking, source+line record matching, escaping, summary counts/open state, and Open record fallback/toasts (#1073)
     related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/1825
       - https://github.com/Eruhitsuji/lifetxt/issues/1526
       - https://github.com/Eruhitsuji/lifetxt/issues/1524
       - https://github.com/Eruhitsuji/lifetxt/issues/1522
@@ -12113,6 +12124,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/1072
       - https://github.com/Eruhitsuji/lifetxt/issues/1073
     related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/1826
       - https://github.com/Eruhitsuji/lifetxt/pull/1474
       - https://github.com/Eruhitsuji/lifetxt/pull/1472
       - https://github.com/Eruhitsuji/lifetxt/pull/1470

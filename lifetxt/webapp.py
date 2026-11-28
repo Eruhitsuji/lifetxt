@@ -1344,12 +1344,14 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         range_start, range_end = parse_optional_time_range(after, before)
         open_only_flag = _bool_query(open_only)
         blocked_flag = _bool_query(blocked)
+        kinds, include_ordinary_notes = _web_item_kind_filters(kind or type_value)
         filtered = filter_items(
             items,
             ordinary_notes=_bool_query(ordinary_notes),
+            include_ordinary_notes=include_ordinary_notes,
             open_only=open_only_flag or blocked_flag,
             statuses=_csv_values(status),
-            kinds=_csv_values(kind or type_value),
+            kinds=kinds,
             projects=_csv_values(project),
             tags=_csv_values(tag),
             tag_all=_csv_values(tag_all),
@@ -1742,13 +1744,17 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         range_start, range_end = parse_optional_time_range(
             params.get("after"), params.get("before")
         )
+        kinds, include_ordinary_notes = _web_item_kind_filters(
+            params.get("kind") or params.get("type")
+        )
         filtered = filter_items(
             items,
             text=params.get("text") or params.get("q"),
+            include_ordinary_notes=include_ordinary_notes,
             ordinary_notes=_bool_query(params.get("ordinary_notes")),
             open_only=_bool_query(params.get("open_only")),
             statuses=_csv_values(params.get("status")),
-            kinds=_csv_values(params.get("kind") or params.get("type")),
+            kinds=kinds,
             projects=_csv_values(params.get("project")),
             tags=_csv_values(params.get("tag")),
             tag_all=_csv_values(params.get("tag_all")),
@@ -4634,6 +4640,11 @@ def _elapsed_to_minutes(value):
         return int(text)
     except (ValueError, TypeError):
         return None
+
+
+def _web_item_kind_filters(value):
+    kinds = _csv_values(value) or []
+    return [kind for kind in kinds if kind != "ordinary-notes"], "ordinary-notes" in kinds
 
 
 def _csv_values(value):

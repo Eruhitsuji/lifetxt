@@ -3,8 +3,8 @@
 import vm from 'node:vm';
 import {readFile} from 'node:fs/promises';
 import assert from 'node:assert/strict';
-const [htmlPath, scriptPath] = process.argv.slice(2);
-const html = await readFile(htmlPath, 'utf8'), script = await readFile(scriptPath, 'utf8');
+const [htmlPath, scriptPath, presencePath] = process.argv.slice(2);
+const html = await readFile(htmlPath, 'utf8'), script = await readFile(presencePath, 'utf8') + await readFile(scriptPath, 'utf8');
 let checks = 0;
 function expect(actual, expected, message) { assert.deepEqual(actual, expected, message); checks++; }
 async function create({lang='en', query='', readonly=false, target='life.txt', initial=null, latest=null, failure=0, zone='UTC', clock='2031-02-03T10:00:00Z', overrides={}}={}) {

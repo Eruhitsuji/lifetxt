@@ -72,6 +72,8 @@ lifetxt = [
   "web_planner.css",
   "web_planner.js",
   "web_state.html",
+  "web_presence.css",
+  "web_presence.js",
   "web_state.css",
   "web_state.js",
   "procedure_web.html",

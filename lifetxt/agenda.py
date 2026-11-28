@@ -202,7 +202,11 @@ def filter_items(
     tag_aliases=None,
     fuzzy=False,
     ordinary_notes=False,
+    include_ordinary_notes=False,
 ):
+    if include_ordinary_notes:
+        from .ordinary_notes import is_ordinary_note
+
     if ordinary_notes:
         from .ordinary_notes import select_ordinary_notes
 
@@ -236,8 +240,9 @@ def filter_items(
             continue
         if statuses and item.status not in statuses:
             continue
-        if kinds and item.kind not in kinds:
-            continue
+        if (kinds or include_ordinary_notes) and item.kind not in kinds:
+            if not include_ordinary_notes or not is_ordinary_note(item):
+                continue
         if projects and not _item_has_any_detail(item, "project", projects):
             continue
         if tags and not _item_has_any_detail(item, "tag", tags):

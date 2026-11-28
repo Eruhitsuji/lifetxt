@@ -2,6 +2,42 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-desk-presence-and-refresh
+      capability_id: cap-web-desk
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1825
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1826
+      changed_files_or_scope: ["Use State's shared palette and allow manual and browser-local periodic refresh on Desk."]
+      tests_or_evidence:
+        - tests/test_web_desk_pending.py
+        - tests/test_web_state_ui.py
+        - Chromium comparison of Desk and State colors in light and dark themes, override, manual refresh and stored Off selection
+      status: in_review
+
+    - requirement_id: req-web-planner-top-navigation
+      capability_id: cap-web-mobile-planner
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1825
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1826
+      changed_files_or_scope: ["Planner provides a single explicit link to the main Web UI and carries the current display language."]
+      tests_or_evidence:
+        - tests/test_web_planner_browser.py
+        - Chromium activation of the Japanese and English Planner back links at 390px
+      status: in_review
+
+    - requirement_id: req-web-items-multi-kind-layout-and-navigation
+      capability_id: cap-web-beginner-first-ux
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1825
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1826
+      changed_files_or_scope: ["Items exposes List and Kanban, highlights cards on hover and focus, supports multiple type choices, and adds spacing to More."]
+      tests_or_evidence:
+        - tests/browser_items_board_probe.mjs
+        - tests/browser_items_filters_probe.mjs
+        - tests/test_ordinary_notes.py
+        - Chromium measured the More group and item spacing at 390px
+      status: in_review
+
     - requirement_id: req-web-desk-layout-url
       capability_id: cap-web-desk
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1386

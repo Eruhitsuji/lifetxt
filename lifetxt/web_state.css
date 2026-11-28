@@ -66,7 +66,4 @@ textarea { resize: vertical; }
 footer { display: flex; flex-wrap: wrap; gap: .5rem; justify-content: space-between; margin-top: 2rem; font-size: .75rem; color: var(--muted); }
 footer a { display: inline-flex; align-items: center; min-height: 44px; }
 footer span { align-self: center; }
-.p-available { --state-color: var(--ok); } .p-busy { --state-color: var(--danger); }
-.p-focus { --state-color: var(--violet); } .p-away { --state-color: var(--warn); }
-.p-off { --state-color: var(--muted); } .p-unknown { --state-color: var(--info); }
 @media (forced-colors: active) { .tile[aria-pressed="true"] { outline: 3px solid Highlight; } .current-card { border-left-color: Highlight; } .state-icon, .tile .symbol { color: CanvasText; } button:disabled { color: GrayText; } }

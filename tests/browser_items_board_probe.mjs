@@ -26,6 +26,58 @@ async function click(expression) {
 }
 
 try {
+  await browser.command("Emulation.setDeviceMetricsOverride", {
+    width: 390, height: 844, deviceScaleFactor: 1, mobile: true,
+  });
+  await browser.command("Page.navigate", {url: `${baseUrl}/?view=items&lang=ja&text=Board`});
+  await browser.wait('!!document.querySelector("#items .item .title")', "filtered list");
+  await browser.evaluate('document.getElementById("items-filter-disclosure").open = false');
+  const layoutSelector = mode => `#items-layout-${mode}`;
+  const activeLayout = mode => `document.querySelector('${layoutSelector(mode)}').getAttribute('aria-pressed') === 'true'`;
+  for (const [mode, label] of [["list", "一覧"], ["board", "カンバン"]]) {
+    assert(await browser.evaluate(`(() => {
+      const button = document.querySelector('${layoutSelector(mode)}');
+      return button.textContent.trim() === '${label}' && button.getBoundingClientRect().width > 0;
+    })()`));
+  }
+  await click('document.querySelector("#items-layout-board")');
+  await browser.wait(`!!(${fixtureCard}) && (${activeLayout("board")})`, "visible Kanban with filter");
+  await click('document.querySelector("#items-layout-list")');
+  await browser.wait(`!!document.querySelector("#items .item") && (${activeLayout("list")})`, "return to list");
+  assert.equal(await browser.evaluate('new URL(location.href).searchParams.get("text")'), "Board");
+  await browser.evaluate("history.back()");
+  await browser.wait(`!!(${fixtureCard}) && (${activeLayout("board")})`, "Back restores Kanban");
+  await browser.evaluate("history.forward()");
+  await browser.wait(`!!document.querySelector("#items .item") && (${activeLayout("list")})`, "Forward restores list");
+  await browser.command("Emulation.clearDeviceMetricsOverride");
+  for (const theme of ["light", "dark"]) {
+    await browser.command("Page.navigate", {url: `${baseUrl}/?view=items&text=Board&theme=${theme}`});
+    await browser.wait('!!document.querySelector("#items .item .title")', "item to hover");
+    const position = await browser.evaluate(`(() => {
+      const node = document.querySelector("#items .item");
+      node.scrollIntoView({block: "center"});
+      const rect = node.getBoundingClientRect();
+      return {x: rect.x + rect.width / 2, y: rect.y + rect.height / 2};
+    })()`);
+    await browser.command("Input.dispatchMouseEvent", {type: "mouseMoved", x: 0, y: 0});
+    const colors = `(() => {
+      const node = document.querySelector("#items .item");
+      const style = getComputedStyle(node);
+      return {text: getComputedStyle(node.querySelector(".title")).color, background: style.backgroundColor,
+        opacity: getComputedStyle(node.querySelector(".item-check")).opacity};
+    })()`;
+    const before = await browser.evaluate(colors);
+    await browser.command("Input.dispatchMouseEvent", {type: "mouseMoved", ...position});
+    await browser.wait(`document.querySelector("#items .item").matches(":hover") &&
+      ${colors}.opacity === "1" && ${colors}.background !== ${JSON.stringify(before.background)}`, "mouse hover highlights item");
+    const after = await browser.evaluate(colors);
+    assert.equal(after.text, before.text);
+    assert.notEqual(after.background, before.background);
+    await browser.command("Input.dispatchMouseEvent", {type: "mouseMoved", x: 0, y: 0});
+    await browser.evaluate('document.querySelector("#items .item .item-check").focus()');
+    await browser.wait(`document.querySelector("#items .item").matches(":focus-within") &&
+      ${colors}.opacity === "1" && ${colors}.background !== ${JSON.stringify(before.background)}`, "keyboard focus highlights item");
+  }
   await browser.command("Page.navigate", {url: `${baseUrl}/?view=items&items_layout=board`});
   await browser.wait(`!!(${fixtureCard})`, "board card");
 
@@ -52,7 +104,7 @@ try {
     assert(await browser.evaluate(focused(`${drawer} .drawer-close-btn`)));
 
     await pressKey("Escape", 27);
-    await browser.wait(filteredOut ? focused("#items-layout") : `document.activeElement === (${fixtureCard})`, "focus after detail closes");
+    await browser.wait(filteredOut ? focused("#items-layout-board") : `document.activeElement === (${fixtureCard})`, "focus after detail closes");
   }
   await browser.command("Emulation.setDeviceMetricsOverride", {
     width: 390, height: 844, deviceScaleFactor: 1, mobile: true,
@@ -174,7 +226,7 @@ try {
     button.focus();
   })()`);
   await pressKey("Enter", 13, "\r");
-  await browser.wait(focused("#items-layout"), "focus after a completed card leaves the filtered board");
+  await browser.wait(focused("#items-layout-board"), "focus after a completed card leaves the filtered board");
   assert.equal(await browser.evaluate("document.querySelectorAll('.items-board-card').length"), 0);
   assert(await browser.evaluate("document.getElementById('toast-container').textContent.includes('Task moved. The card is outside the current board results.')"));
   assert.equal(writes().length, 3);

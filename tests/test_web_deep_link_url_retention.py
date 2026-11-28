@@ -21,7 +21,9 @@ let currentItems = [], selectedItem = null;
 const controls = {
   kind: {value: ""}, search: {value: ""}, limit: {value: ""},
   sort: {value: "line"}, order: {value: "desc"},
-  "open-only": {checked: false}, "group-by": {value: ""}, "items-layout": {value: "list"},
+  "open-only": {checked: false}, "group-by": {value: ""}, "items-layout-control": {},
+  "items-layout-list": {setAttribute(name, value) {this[name] = value;}},
+  "items-layout-board": {setAttribute(name, value) {this[name] = value;}},
 };
 global.document = {getElementById: id => controls[id] || null};
 global.location = {pathname: "/", href: ""};
@@ -70,15 +72,13 @@ async function scenario(url, expectedTarget) {
   const assert = require("node:assert/strict");
   location.href = "https://example.invalid/?view=items&project=demo&id=task-001";
   const initialUrl = location.href;
-  syncItemsLayoutFromUrl(query());
+  syncItemsLayoutFromUrl();
   assert.equal(itemsBoardActive(), false);
-  controls["items-layout"].value = "board";
   changeItemsLayout("board");
   const boardUrl = location.href;
   assert.equal(query().get("items_layout"), "board");
   assert.equal(query().get("project"), "demo");
   assert.equal(query().get("id"), "task-001");
-  controls["items-layout"].value = "list";
   changeItemsLayout("list");
   assert.equal(query().has("items_layout"), false);
   for (const [url, active] of [[initialUrl, false], [boardUrl, true],
@@ -86,8 +86,9 @@ async function scenario(url, expectedTarget) {
       [boardUrl.replace("view=items", "view=messages"), false],
       [boardUrl.replace("items_layout=board", "items_layout=future"), false]]) {
     location.href = url;
-    syncItemsLayoutFromUrl(query());
+    syncItemsLayoutFromUrl();
     assert.equal(itemsBoardActive(), active);
+    assert.equal(controls["items-layout-board"]["aria-pressed"], String(active));
   }
   console.log(JSON.stringify(results));
 })().catch(e => {console.error(e); process.exitCode = 1});

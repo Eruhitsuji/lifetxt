@@ -3,6 +3,7 @@
   const copy = {
     en: {layout: "Layout", layoutTitle: "Screen layout", layoutPreset: "Preset", layoutCustom: "Custom", presetNames: {standard: "Standard", clock: "Clock", tasks: "Tasks", calendar: "Calendar"}, blockNames: {clock: "Clock", status: "Status", next: "Next event", calendar: "Calendar", tasks: "Tasks", capture: "Quick add", habits: "Habits", messages: "Messages and notes", deadlines: "Upcoming deadlines", summary: "Summary"}, habitsTitle: "Habits", messagesTitle: "Messages and notes", deadlinesTitle: "Upcoming deadlines", summaryTitle: "Summary", habitDone: "Done today", habitOpen: "Not yet", habitCount: "{done} / {total} done", noHabits: "No habits.", messagesHeading: "Messages", notesHeading: "Recent notes", noMessages: "No messages or notes.", noDeadlines: "No deadlines in the next 14 days.", daysToday: "Today", daysLeft: "{n} d left", doneToday: "Done today", openTasks: "Open tasks", noProject: "No project", projectsHeading: "Projects", projectCounts: "{open} open · {overdue} overdue · {done} done today", layoutColumns: ["Left column", "Right column"], layoutUp: "Move up", layoutDown: "Move down", layoutRight: "Move to right column", layoutLeft: "Move to left column", layoutSwap: "Swap columns", layoutReset: "Reset to standard", layoutRatio: "Column width", ratioNames: {balanced: "Balanced", left: "Wider left", right: "Wider right"}, layoutFont: "Text size", fontNames: {s: "Small", m: "Medium", l: "Large"}, layoutShow: "Checked items are shown. Settings are saved in this browser.", layoutBlockFont: "Text size", fontXl: "Extra large", fontDefault: "Default", layoutAuto: "Reset sizes", splitColumns: "Column width (drag or arrow keys, double-click to reset)", splitBlock: "Height of {name} (drag or arrow keys, double-click for automatic)",
       fullscreenOn: "Full screen", fullscreenOff: "Exit full screen", fullscreenFailed: "Could not change full screen mode.", statusNow: "Status", statusNone: "No status", statusChange: "Change status", statusEnd: "End current status", statusActivity: "Activity (optional)", statusCustom: "Custom status", statusSet: "Set custom status", statusForce: "Restart even if this status is already current", statusSame: "This status is already current; its start and title were kept.", statusRequired: "Enter a custom status.", since: "since {at} · {span}", spanMin: "{m} min", spanHour: "{h} h {m} min",
+      refresh: "Refresh", refreshLabel: "Auto-refresh", refreshOff: "Auto-refresh off", refresh15: "Every 15 seconds", refresh30: "Every 30 seconds", refresh60: "Every minute", refresh300: "Every 5 minutes", refreshed: "Screen refreshed.", refreshFailed: "Could not refresh the screen. Try Refresh again.",
       stateNames: ["Available", "Busy", "Focus", "Meeting", "Away", "Offline", "Commuting", "Working", "Sleeping"],
       skip: "Skip to tasks", title: "Desk", reasonToday: "due today", reasonOverdue: "{n} overdue (days)", top: "Top", calendar: "Calendar", planner: "Planner", tasks: "Tasks", captureLabel: "Quick add", capturePlaceholder: "Quick add: title @project !high ^tomorrow", add: "Add", preview: "Preview", confirmCapture: "Confirm capture", editBtn: "Edit", detailsLabel: "Details (key:value per line)", themeAuto: "Theme: auto", themeDark: "Theme: dark", themeLight: "Theme: light", reviewFirst: "Review the mapped fields, then confirm.",
       overdue: "Overdue", dueToday: "Due today", next: "Next actions", allDay: "All day", noEvents: "No events today.", noTasks: "Nothing to do right now.", start: "Start", stop: "Stop",
@@ -11,6 +12,7 @@
       modeDay: "Today", modeWeek: "7 days", modeMonth: "Month", save: "Save", evTitle: "Title", evDate: "Date", evStart: "Start", evEnd: "End", badRange: "End must be after start.", requiredFields: "Enter a title, date, and time.", requiredTitle: "Enter a title.", requiredDate: "Choose a date.", dueDate: "Due date", changeDue: "Change due", openInPlanner: "Open in Planner", details: "Details", close: "Close", type: "Type", statusLabel: "Status", when: "When", openDetails: "Show details: "},
     ja: {layout: "画面構成", layoutTitle: "画面構成", layoutPreset: "プリセット", layoutCustom: "カスタム", presetNames: {standard: "標準", clock: "時計中心", tasks: "タスク中心", calendar: "カレンダー中心"}, blockNames: {clock: "時計", status: "状態", next: "次の予定", calendar: "カレンダー", tasks: "タスク", capture: "クイック追加", habits: "習慣", messages: "メッセージ・メモ", deadlines: "今後の締切", summary: "集計"}, habitsTitle: "習慣", messagesTitle: "メッセージ・メモ", deadlinesTitle: "今後の締切", summaryTitle: "集計", habitDone: "今日は完了", habitOpen: "未完了", habitCount: "{done} / {total} 完了", noHabits: "習慣はありません。", messagesHeading: "メッセージ", notesHeading: "最近のメモ", noMessages: "メッセージやメモはありません。", noDeadlines: "14日以内の締切はありません。", daysToday: "今日", daysLeft: "あと{n}日", doneToday: "今日の完了", openTasks: "未完了タスク", noProject: "プロジェクトなし", projectsHeading: "プロジェクト", projectCounts: "未完了 {open} · 期限超過 {overdue} · 今日完了 {done}", layoutColumns: ["左の列", "右の列"], layoutUp: "上へ", layoutDown: "下へ", layoutRight: "右の列へ", layoutLeft: "左の列へ", layoutSwap: "左右を入れ替える", layoutReset: "標準に戻す", layoutRatio: "列の幅", ratioNames: {balanced: "均等", left: "左を広く", right: "右を広く"}, layoutFont: "文字サイズ", fontNames: {s: "小", m: "中", l: "大"}, layoutShow: "チェックした項目を表示します。設定はこのブラウザに保存されます。", layoutBlockFont: "文字サイズ", fontXl: "特大", fontDefault: "全体と同じ", layoutAuto: "大きさを戻す", splitColumns: "列の幅（ドラッグまたは矢印キー、ダブルクリックで戻す）", splitBlock: "{name}の高さ（ドラッグまたは矢印キー、ダブルクリックで自動）",
       fullscreenOn: "全画面", fullscreenOff: "全画面を終了", fullscreenFailed: "全画面表示を切り替えられませんでした。", statusNow: "状態", statusNone: "現在設定なし", statusChange: "状態を切り替える", statusEnd: "現在の状態を終了", statusActivity: "活動名（任意）", statusCustom: "カスタム状態", statusSet: "カスタム状態を設定", statusForce: "同じ状態でも再開始する", statusSame: "すでに同じ状態です。開始時刻とタイトルは維持しました。", statusRequired: "カスタム状態を入力してください。", since: "{at} から · {span}", spanMin: "{m}分", spanHour: "{h}時間{m}分",
+      refresh: "更新", refreshLabel: "自動更新", refreshOff: "自動更新オフ", refresh15: "15秒ごと", refresh30: "30秒ごと", refresh60: "1分ごと", refresh300: "5分ごと", refreshed: "画面を更新しました。", refreshFailed: "画面を更新できませんでした。もう一度お試しください。",
       stateNames: ["対応可能", "取り込み中", "集中", "会議中", "離席中", "オフライン", "移動中", "作業中", "睡眠中"],
       skip: "タスクへ移動", title: "Desk", reasonToday: "今日が期限", reasonOverdue: "{n}日超過", top: "トップ", calendar: "カレンダー", planner: "Planner", tasks: "タスク", captureLabel: "クイック追加", capturePlaceholder: "クイック追加: タイトル @project !高 ^明日", add: "追加", preview: "プレビュー", confirmCapture: "追加を確定", editBtn: "編集", detailsLabel: "詳細 (1行に key:value)", themeAuto: "テーマ: 自動", themeDark: "テーマ: ダーク", themeLight: "テーマ: ライト", reviewFirst: "変換結果を確認して確定してください。",
       overdue: "期限超過", dueToday: "今日", next: "次の一手", allDay: "終日", noEvents: "今日の予定はありません。", noTasks: "今やることはありません。", start: "開始", stop: "停止",
@@ -31,8 +33,9 @@
   const recordRevisions = new WeakMap();
   // loaded: calendar data arrived; shownMode: the range the calendar holds.
   let loaded = false, shownMode = "", nextFailed = false, tasksLoaded = false, latestLoad = null;
-  const REFRESH_MS = 60000;
-  let tickTimer = null, refreshTimer = null;
+  const DEFAULT_REFRESH_MS = 60000;
+  let refreshMs = DEFAULT_REFRESH_MS, presence = {};
+  let tickTimer = null, refreshTimer = null, refreshing = null, nextDateCheck = 0;
 
   function translate() {
     document.documentElement.lang = lang;
@@ -287,7 +290,10 @@
     const instant = clock ? clock.epoch + performance.now() - clock.received : Date.now();
     clockView?.render(d, instant, clock ? clock.offset : -new Date().getTimezoneOffset());
     nowIso = isoDay(d) + "T" + hhmm(d);
-    if (today && isoDay(d) !== today) syncConfig().then(load);
+    if (refreshMs && today && isoDay(d) !== today && Date.now() >= nextDateCheck) {
+      nextDateCheck = Date.now() + refreshMs;
+      refreshDesk();
+    }
     updateNext(d);
     renderElapsed(d);
     const n = $("now-line");
@@ -539,7 +545,7 @@
     box.scrollTop = keep;
   }
   // ---- Status: the current person's presence ----
-  const STATES = ["available", "busy", "focus", "meeting", "away", "offline", "commuting", "working", "sleeping"];
+  const STATES = WebPresence.states;
   const stateLabel = s => t.stateNames[STATES.indexOf(s)] || String(s || "");
   let currentStatus = null, statusRevision = null, statusLoaded = false;
   function renderStatus(data) {
@@ -547,7 +553,7 @@
     statusRevision = recordRevisions.get(data) || null;
     currentStatus = (data.records || []).find(r => r.active && !r.to) || null;
     $("status-state").textContent = currentStatus ? stateLabel(currentStatus.state) : t.statusNone;
-    $("status-state").className = "pill " + (currentStatus ? "pill-ok" : "pill-info");
+    $("status-state").className = "pill presence-pill " + WebPresence.tone(currentStatus?.state, presence);
     $("status-title").textContent = currentStatus?.title || "";
     $("status-card").disabled = !writable;
     renderElapsed(wallNow());
@@ -593,6 +599,7 @@
     tiles.className = "state-tiles";
     for (const state of STATES) {
       const b = button(stateLabel(state), () => choose(state));
+      b.classList.add(WebPresence.tone(state, presence));
       b.setAttribute("aria-pressed", String(current?.state === state));
       tiles.append(b);
     }
@@ -750,7 +757,10 @@
   }
   async function syncConfig() {
     const started = performance.now();
-    try { const c = await api("/api/config"); today = c.today; acceptClock(c, started); } catch (_) {}
+    const config = await api("/api/config");
+    today = config.today;
+    presence = config.web?.presence;
+    acceptClock(config, started);
   }
   let binding = null, previewTimer = null, previewGeneration = 0;
   const syntax = () => $("capture-syntax").value;
@@ -815,11 +825,57 @@
       if (!needsPreview || isCurrent) say(fresh ? e.message : e.message + " " + t.staleView, !fresh);
     } finally { pending = false; }
   }
-  function stopTimers() { clearInterval(tickTimer); clearInterval(refreshTimer); tickTimer = refreshTimer = null; }
-  function startTimers() {
-    stopTimers();
-    tick(); tickTimer = setInterval(tick, 1000);
-    refreshTimer = setInterval(() => { syncConfig().then(load); }, REFRESH_MS);
+  async function refreshDesk(manual = false) {
+    if (pending) { if (manual) busy(); return; }
+    if (!refreshing) {
+      const control = $("desk-refresh");
+      control.setAttribute("aria-busy", "true");
+      refreshing = (async () => {
+        let configFailure = null;
+        try { await syncConfig(); } catch (error) { configFailure = error; }
+        // A write may have started while the configuration request was in flight.
+        if (pending) return null;
+        const fresh = await load();
+        if (configFailure && !pending) say(t.error + configFailure.message);
+        return fresh && !configFailure;
+      })().finally(() => {
+        refreshing = null;
+        control.removeAttribute("aria-busy");
+      });
+    }
+    if (!manual) return;
+    say(t.loading, true);
+    const fresh = await refreshing;
+    if (!pending && fresh !== null) say(fresh ? t.refreshed : t.refreshFailed, !fresh);
+  }
+  function scheduleRefresh() {
+    clearInterval(refreshTimer);
+    refreshTimer = refreshMs && document.visibilityState === "visible"
+      ? setInterval(refreshDesk, refreshMs) : null;
+  }
+  function initRefresh() {
+    const interval = $("desk-refresh-interval"), button = $("desk-refresh");
+    interval.setAttribute("aria-label", t.refreshLabel);
+    let saved;
+    try { saved = localStorage.getItem("desk-refresh-interval"); } catch (_) {}
+    if ([...interval.options].some(option => option.value === saved)) refreshMs = Number(saved);
+    interval.value = String(refreshMs);
+    interval.disabled = button.disabled = false;
+    interval.onchange = () => {
+      refreshMs = Number(interval.value);
+      nextDateCheck = 0;
+      try { localStorage.setItem("desk-refresh-interval", interval.value); } catch (_) {}
+      scheduleRefresh();
+    };
+    button.onclick = () => refreshDesk(true);
+  }
+  function syncTimers() {
+    clearInterval(tickTimer);
+    if (document.visibilityState === "visible") {
+      tick();
+      tickTimer = setInterval(tick, 1000);
+    }
+    scheduleRefresh();
   }
   // ---- Layout: per-browser arrangement of the screen blocks ----
   const EXTRAS = ["habits", "messages", "deadlines", "summary"];
@@ -1083,7 +1139,7 @@
     translate(); say(t.loading);
     const started = performance.now();
     const [config, health] = await Promise.all([api("/api/config"), api("/api/health")]);
-    today = config.today; acceptClock(config, started);
+    today = config.today; presence = config.web?.presence; acceptClock(config, started);
     writable = !health.read_only && (health.can_write ?? Boolean(health.writable_path));
     $("capture-text").disabled = !writable; $("capture-form").querySelector("button").disabled = !writable;
     $("detail-close").onclick = () => $("detail-dialog").close();
@@ -1099,9 +1155,11 @@
     $("mode-month").onclick = () => setMode("month");
     renderTimeline(); note("tasks", t.loading); $("status-state").textContent = t.loading;
     tick(); if (await load() || !writable) say(writable ? "" : t.readonly);
-    startTimers();
+    initRefresh();
+    syncTimers();
     document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible") { syncConfig().then(load); startTimers(); } else stopTimers();
+      if (refreshMs && document.visibilityState === "visible") refreshDesk();
+      syncTimers();
     });
   }
   boot().catch(e => {

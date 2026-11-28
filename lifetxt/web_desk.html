@@ -7,6 +7,14 @@
 <a class="skip" href="#tasks-zone" data-i18n="skip">Skip to tasks</a>
 <div id="desk" class="desk">
 <header class="toolbar"><h1 id="clock-heading" data-i18n="title">Desk</h1><span class="spacer"></span>
+<button type="button" class="go" id="desk-refresh" data-i18n="refresh" disabled>Refresh</button>
+<select class="go" id="desk-refresh-interval" aria-label="Auto-refresh" disabled>
+<option value="0" data-i18n="refreshOff">Auto-refresh off</option>
+<option value="15000" data-i18n="refresh15">Every 15 seconds</option>
+<option value="30000" data-i18n="refresh30">Every 30 seconds</option>
+<option value="60000" data-i18n="refresh60" selected>Every minute</option>
+<option value="300000" data-i18n="refresh300">Every 5 minutes</option>
+</select>
 <button type="button" class="go" id="layout-open" aria-haspopup="dialog" data-i18n="layout">Layout</button><button type="button" class="go" id="clock-open" aria-haspopup="dialog">Clock</button><button type="button" class="go" id="theme-toggle"></button><button type="button" class="go" id="fullscreen-toggle" aria-pressed="false" hidden></button><a class="go" id="open-top" href="/" data-i18n="top">Top</a><a class="go" id="open-planner" href="/planner" data-i18n="planner">Planner</a></header>
 <div id="cols" class="cols">
 <div id="col-0" class="col">
@@ -17,7 +25,7 @@
 <div class="clock-extra"><p id="clock-countdown" class="clock-until" hidden></p><p id="clock-next" class="clock-until" hidden></p><ul id="clock-zones" class="clock-zones" hidden></ul><ul id="clock-bars" class="clock-bars" hidden></ul></div>
 </section>
 <div id="status-zone" class="zone">
-<button type="button" id="status-card" class="status-card" aria-haspopup="dialog" disabled><span class="status-label" data-i18n="statusNow">Status</span><span id="status-state" class="pill pill-ok"></span><span id="status-title" class="status-title"></span><span id="status-since" class="muted status-since"></span></button>
+<button type="button" id="status-card" class="status-card" aria-haspopup="dialog" disabled><span class="status-label" data-i18n="statusNow">Status</span><span id="status-state" class="pill presence-pill p-unknown"></span><span id="status-title" class="status-title"></span><span id="status-since" class="muted status-since"></span></button>
 </div>
 <div id="next-zone" class="zone">
 <div class="next-row"><span id="next-eta" class="next-eta"></span><span id="next-title" class="next-title"></span></div>

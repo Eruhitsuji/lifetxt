@@ -40,6 +40,7 @@ const document = {activeElement: {}, body: {}, getElementById(id) {
 const isKioskMode = () => false;
 const isDisplayMode = () => false;
 const currentView = () => "items";
+const query = () => new URLSearchParams("items_layout=board");
 const t = text => text;
 const showToast = title => calls.push(title);
 const showActionableError = title => calls.push(title);

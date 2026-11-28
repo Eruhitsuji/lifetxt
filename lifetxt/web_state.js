@@ -1,9 +1,7 @@
 (() => {
   "use strict";
-  const states = ["available", "busy", "focus", "meeting", "away", "offline", "commuting", "working", "sleeping"];
+  const states = WebPresence.states;
   const icons = ["○", "−", "◈", "◉", "↗", "◌", "⇄", "▣", "☾"];
-  const classes = ["p-available", "p-busy", "p-focus", "p-busy", "p-away", "p-off", "p-away", "p-busy", "p-off"];
-  const allowedClasses = new Set(["p-available", "p-busy", "p-focus", "p-away", "p-off", "p-unknown"]);
   const copy = {
     en: {
       skip: "Skip to your status", language: "Language", theme: "Theme", system: "System", light: "Light", dark: "Dark",
@@ -45,13 +43,7 @@
     const index = states.indexOf(state);
     return index >= 0 ? copy[lang].names[index] : String(state || "—");
   };
-  function stateClass(state) {
-    const value = String(state || "").trim().toLowerCase();
-    const override = config.web?.presence?.[value];
-    if (allowedClasses.has(override)) return override;
-    const index = states.indexOf(value);
-    return index >= 0 ? classes[index] : "p-unknown";
-  }
+  const stateClass = state => WebPresence.tone(state, config.web?.presence);
   function errorKey(error) {
     if (error.status === 401) return "auth";
     if (error.status === 403) return "forbidden";
@@ -90,7 +82,7 @@
   function buildChoices() {
     states.forEach((state, index) => {
       const button = document.createElement("button");
-      button.type = "button"; button.className = "tile " + classes[index]; button.dataset.state = state;
+      button.type = "button"; button.className = "tile " + stateClass(state); button.dataset.state = state;
       button.setAttribute("aria-pressed", "false"); button.disabled = true;
       const symbol = document.createElement("span"); symbol.className = "symbol"; symbol.textContent = icons[index]; symbol.setAttribute("aria-hidden", "true");
       const text = document.createElement("span"); text.className = "tile-label"; text.textContent = label(state);

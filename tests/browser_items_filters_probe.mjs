@@ -81,9 +81,9 @@ try {
   };
   const state = () => evaluate(`(() => {
     const d = document.getElementById("items-filter-disclosure");
-    const ids = ["kind", "sort", "order", "group-by", "limit", "saved-view-select", "area-select", "export-select"];
+    const ids = ["items-kind-summary", "sort", "order", "group-by", "limit", "saved-view-select", "area-select", "export-select"];
     return {open: d.open, visible: ids.filter(id => document.getElementById(id).checkVisibility()),
-      values: ids.map(id => document.getElementById(id).value), url: location.search,
+      values: [document.getElementById("kind").value, ...ids.slice(1).map(id => document.getElementById(id).value)], url: location.search,
       summaryVisible: d.firstElementChild.checkVisibility()};
   })()`);
   const results = [];
@@ -118,18 +118,22 @@ try {
     // Verify the native Tab order, rather than programmatically focusing hidden controls.
     await evaluate('document.getElementById("items-export-life").focus()');
     if (width <= 680) await key("Tab"); // summary precedes the controls on mobile
-    for (const id of ["kind", "sort", "order", "group-by", "limit", "saved-view-select", "area-select", "export-select"]) {
+    for (const id of ["items-kind-summary", "sort", "order", "group-by", "limit", "saved-view-select", "area-select", "export-select"]) {
       await key("Tab");
       assert.equal(await evaluate("document.activeElement.id"), id, `Tab target at ${width}`);
     }
     // Existing change handlers must still forward selected values to URL and list API.
     const before = requests.length;
-    await evaluate('document.getElementById("kind").value="E"; document.getElementById("sort").value="time"; document.getElementById("order").value="asc"; document.getElementById("sort").dispatchEvent(new Event("change", {bubbles:true}))');
+    await evaluate(`document.getElementById("sort").value="time";
+      document.getElementById("order").value="asc";
+      document.getElementById("items-kind-summary").click();
+      document.querySelector('.items-kind-options [value="E"]').click();
+      document.getElementById("items-kind-summary").click();`);
     for (let i = 0; i < 100 && !requests.slice(before).some(r => r.url.startsWith("/api/items?")); i++) await delay(25);
     const list = requests.slice(before).find(r => r.url.startsWith("/api/items?"));
     assert.ok(list, "filter change sends list request");
     for (const query of [new URL(list.url, "http://fixture").searchParams, new URLSearchParams((await state()).url)]) {
-      assert.equal(query.get("kind"), "E"); assert.equal(query.get("sort"), "time"); assert.equal(query.get("order"), "asc");
+      assert.equal(query.get("kind"), "T,E"); assert.equal(query.get("sort"), "time"); assert.equal(query.get("order"), "asc");
     }
     const saved = await state();
     await resize(width <= 680 ? 1280 : 390);

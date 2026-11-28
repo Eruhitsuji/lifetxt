@@ -5,6 +5,17 @@
         notificationTimer = setInterval(loadNotifications, seconds * 1000);
       }
     }
+    function itemKindOptions() {
+      return [...document.querySelectorAll(".items-kind-options input[type=checkbox]")];
+    }
+    function setItemsKinds(value) {
+      const selected = new Set(value.split(",").map(kind => kind.trim()).filter(Boolean));
+      document.getElementById("kind").value = [...selected].join(",");
+      itemKindOptions().forEach(option => { option.checked = selected.has(option.value); });
+      document.getElementById("items-kind-all").hidden = selected.size > 0;
+      document.getElementById("items-kind-active").hidden = selected.size === 0;
+      document.getElementById("items-kind-count").textContent = "(" + selected.size + ")";
+    }
     function itemQueryParams() {
       const params = query();
       const result = new URLSearchParams();
@@ -61,10 +72,12 @@
       history.replaceState(history.state, "", `${location.pathname}?${next.toString()}`);
     }
     let itemsLoadGeneration = 0;
+    let itemsLoading = false;
     let itemsEmptyKind = "unknown";
     let itemsReadOnly = null;
     async function loadItems() {
       const generation = ++itemsLoadGeneration;
+      itemsLoading = true;
       updateUrlFromControls();
       const params = itemQueryParams();
       if (!currentItems.length) {
@@ -78,12 +91,14 @@
         data = await api(`/api/items?${params}`);
       } catch (error) {
         if (generation !== itemsLoadGeneration) return;
+        itemsLoading = false;
         itemsEmptyKind = "error";
         renderSummary(null);
         renderActionableError(document.getElementById("items"), "Could not load items from the lifetxt server.", error, () => loadItems());
         return;
       }
       if (generation !== itemsLoadGeneration) return;
+      itemsLoading = false;
       const hasFilters = [...params.keys()].some(key => key !== "sort" && key !== "order");
       itemsEmptyKind = hasFilters ? "filtered" : data.diagnostics?.length ? "unknown" : "unfiltered";
       currentItems = data.items;
@@ -116,6 +131,19 @@
         loadItems();
       });
       controls.forEach(control => control.addEventListener("change", () => loadItems()));
+      const changeKinds = value => {
+        setItemsKinds(value);
+        // Saved views and Areas replace the row set. A manual kind filter returns to Items.
+        document.getElementById("saved-view-select").value = "";
+        document.getElementById("area-select").value = "";
+        loadItems();
+      };
+      const kindFilter = document.getElementById("items-kind-filter");
+      kindFilter?.addEventListener("change", event => {
+        if (event.target.type !== "checkbox") return;
+        changeKinds(itemKindOptions().filter(option => option.checked).map(option => option.value).join(","));
+      });
+      document.getElementById("items-kind-reset")?.addEventListener("click", () => changeKinds(""));
       limit?.addEventListener("change", () => loadItems());
       limit?.addEventListener("keydown", event => {
         if (event.key !== "Enter") return;
@@ -416,7 +444,11 @@
       const params = query();
       params.delete(key);
       if (key === "open_only") document.getElementById("open-only").checked = false;
-      if (key === "kind" || key === "type") document.getElementById("kind").value = "";
+      if (key === "kind" || key === "type") {
+        params.delete("kind");
+        params.delete("type");
+        setItemsKinds("");
+      }
       history.replaceState(null, "", `${location.pathname}?${params.toString()}`);
       loadItems();
     }
@@ -546,21 +578,26 @@
     function itemsLayoutAvailable() {
       return !isKioskMode() && !isDisplayMode() && currentView() !== "messages";
     }
-    function syncItemsLayoutFromUrl(params) {
-      const select = document.getElementById("items-layout");
-      if (select) select.value = params.get("items_layout") === "board" ? "board" : "list";
+    function syncItemsLayoutFromUrl() {
+      const board = itemsBoardActive();
+      document.getElementById("items-layout-control").hidden = !itemsLayoutAvailable();
+      document.getElementById("items-layout-list").setAttribute("aria-pressed", String(!board));
+      document.getElementById("items-layout-board").setAttribute("aria-pressed", String(board));
     }
     function changeItemsLayout(layout) {
-      if (!itemsLayoutAvailable()) return;
+      if (!itemsLayoutAvailable() || (layout === "board") === itemsBoardActive()) return;
       const params = query();
       if (layout === "board") params.set("items_layout", "board");
       else params.delete("items_layout");
       const search = params.toString();
       history.pushState(history.state, "", location.pathname + (search ? "?" + search : "") + location.hash);
+      syncItemsLayoutFromUrl();
+      // A request already in flight will render the new layout with fresh data.
+      if (itemsLoading || itemsEmptyKind === "error") return;
       renderItems(currentItems);
     }
     function itemsBoardActive() {
-      return itemsLayoutAvailable() && document.getElementById("items-layout")?.value === "board";
+      return itemsLayoutAvailable() && query().get("items_layout") === "board";
     }
     function addBoardTask(status) {
       if (itemsReadOnly !== false || boardMovePending) return;
@@ -612,7 +649,7 @@
           if (restoreFocus) {
             ((control?.matches(".items-board-move-confirm") && card?.querySelector(".items-board-move")) ||
               card?.querySelector(".items-board-title") ||
-              document.getElementById("items-layout")).focus();
+              document.getElementById("items-layout-board")).focus();
           }
         }
       }
@@ -789,17 +826,16 @@
       }
       // Retarget modal focus restoration without focusing the inert board now.
       if (openerCard || openerAddStatus) {
-        _lastFocusedBeforeModal = replacementOpener || document.getElementById("items-layout");
+        _lastFocusedBeforeModal = replacementOpener || document.getElementById("items-layout-board");
       }
       if (root.contains(document.activeElement) || !activeCard) return;
-      document.getElementById("items-layout").focus();
+      document.getElementById("items-layout-board").focus();
     }
     function renderItems(items) {
       boardDraggedCard = null;
       setBoardDropTarget();
       const root = document.getElementById("items");
       const board = itemsBoardActive();
-      document.getElementById("items-layout-control").hidden = !itemsLayoutAvailable();
       document.getElementById("group-by").hidden = board;
       _updateBulkToolbar();
       if (itemsEmptyKind === "error" && (board || !items.length)) return;

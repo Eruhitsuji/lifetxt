@@ -1,0 +1,3 @@
+.p-available { --state-color: var(--ok); } .p-busy { --state-color: var(--danger); }
+.p-focus { --state-color: var(--violet); } .p-away { --state-color: var(--warn); }
+.p-off { --state-color: var(--muted); } .p-unknown { --state-color: var(--info); }

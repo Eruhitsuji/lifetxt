@@ -58,6 +58,7 @@
     // data-no-i18n and the walker skips those subtrees entirely.
     const UI_STRINGS = {
       ja: {
+        "Types": "種類",
         "Items layout": "アイテムの表示形式",
         "Records in list: {count}": "一覧のレコード：{count}件",
         "Tasks on board: {count}": "ボードのタスク：{count}件",
@@ -65,6 +66,7 @@
         "Layout": "表示形式",
         "List": "一覧",
         "Board": "ボード",
+        "Kanban": "カンバン",
         "Jump to a board column": "ボードの列へ移動",
         "Not started": "未着手",
         "Move": "移動",

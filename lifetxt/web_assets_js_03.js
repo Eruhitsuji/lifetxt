@@ -415,12 +415,12 @@
       document.getElementById("search").value = firstParam(params, ["text", "q"], "");
       const fallbackKind = currentView() === "messages" ? "M" : "";
       const fallbackSort = currentView() === "messages" ? "time" : (appConfig?.web?.default_sort || "line");
-      document.getElementById("kind").value = firstParam(params, ["kind", "type"], fallbackKind);
+      setItemsKinds(firstParam(params, ["kind", "type"], fallbackKind));
       document.getElementById("sort").value = firstParam(params, ["sort"], fallbackSort);
       document.getElementById("order").value = firstParam(params, ["order"], appConfig?.web?.default_order || "desc");
       document.getElementById("open-only").checked = boolParam(params, ["open", "open_only"]) || params.get("blocked") === "true";
       document.getElementById("limit").value = firstParam(params, ["limit"], appConfig?.web?.default_limit || "");
-      syncItemsLayoutFromUrl(params);
+      syncItemsLayoutFromUrl();
       const groupSel = document.getElementById("group-by");
       if (groupSel) groupSel.value = firstParam(params, ["group_by"], "");
       syncTimelineRange(firstParam(params, ["range", "timeline_range"], timelineRange));

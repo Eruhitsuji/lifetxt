@@ -132,10 +132,12 @@ def _assemble_desk_html() -> str:
     template = template.replace(
         "__DESK_CSS__", _read_resource("web_tokens.css")
         + _read_resource("web_tokens_auto.css")
+        + _read_resource("web_presence.css")
         + _read_resource("web_desk.css")
     )
     script = (
         _read_resource("web_layout_url.js")
+        + _read_resource("web_presence.js")
         + _read_resource("web_desk_clock.js")
         + _read_resource("web_desk.js")
     )
@@ -155,9 +157,10 @@ def _assemble_state_html() -> str:
     template = template.replace(
         "__STATE_CSS__", _read_resource("web_tokens.css")
         + _read_resource("web_tokens_auto.css")
+        + _read_resource("web_presence.css")
         + _read_resource("web_state.css")
     )
-    script = _read_resource("web_state.js")
+    script = _read_resource("web_presence.js") + _read_resource("web_state.js")
     return template.replace(
         "<script>__STATE_JS__</script>",
         "<script>" + script + "</script>",

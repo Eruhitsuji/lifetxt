@@ -231,7 +231,7 @@
     // ── Clear every list filter (search, kind, status, blocked) ──
     function clearAllFilters() {
       document.getElementById("search").value = "";
-      document.getElementById("kind").value = "";
+      setItemsKinds("");
       document.getElementById("open-only").checked = false;
       document.getElementById("limit").value = "";
       const groupSel = document.getElementById("group-by");

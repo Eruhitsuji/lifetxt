@@ -194,7 +194,13 @@ button,input{font:inherit;color:var(--ink)}button:focus-visible,a:focus-visible,
 
 .status-card{display:flex;flex:none;align-items:center;gap:12px;width:100%;min-height:48px;padding:8px 28px;border:0;background:transparent;text-align:left;cursor:pointer}.status-card:hover:not(:disabled){background:var(--raise)}.status-card:disabled{cursor:default}
 .status-label{font-size:12px;font-weight:700;color:var(--muted)}.status-card .pill{font-size:15px;padding:5px 14px}.status-title{flex:1;min-width:0;font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.status-since{white-space:nowrap}
-.state-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:8px;margin:12px 0}.state-tiles .go{min-height:44px}.state-tiles .go[aria-pressed=true]{border-color:var(--accent);background:var(--accent-bg);color:var(--ink)}
+#desk-refresh-interval{padding-inline-end:8px}
+#desk-refresh[aria-busy=true]{cursor:progress}
+.presence-pill{background:var(--soft);color:var(--state-color)}
+.state-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:8px;margin:12px 0}
+.state-tiles .go{min-height:44px}
+.state-tiles .go::before{content:"";width:8px;height:8px;flex:none;margin-inline-end:6px;border-radius:50%;background:var(--state-color)}
+.state-tiles .go[aria-pressed=true]{border-color:var(--state-color);background:var(--soft);color:var(--ink)}
 .detail-body .fld.check{flex-direction:row-reverse;justify-content:flex-end;align-items:center;margin-top:12px}.detail-body .fld.check input{width:auto;min-height:0}
 .layout-col{margin:12px 0 0;border:1px solid var(--line);border-radius:10px;padding:4px 12px 8px}.layout-col legend{font-size:12px;font-weight:700;color:var(--muted)}
 .layout-row{display:flex;align-items:center;gap:6px;min-height:40px}.layout-row label{flex:1;display:flex;align-items:center;gap:10px;font-size:14px;min-width:0}.layout-row input{width:18px;height:18px}.layout-row .go{min-width:36px;min-height:32px}

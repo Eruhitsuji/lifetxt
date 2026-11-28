@@ -52,9 +52,9 @@ try {
     await cmd('Emulation.setUserAgentOverride',{userAgent:'Chromium ordinary-notes test',acceptLanguage:lang==='ja'?'ja-JP,ja':'en-US,en'});
     await cmd('Page.navigate',{url:`http://127.0.0.1:${server.address().port}/?lang=${lang}`});
     for(let i=0;i<100;i++){if(await evaljs("document.readyState==='complete'&&typeof itemQueryParams==='function'"))break;await wait(30)}
-    await evaljs("document.querySelector('#kind').value='ordinary-notes';loadItems()");
-    const ordinary=await evaljs("({url:window.__itemCalls.at(-1),count:currentItems.length,label:document.querySelector('#kind').selectedOptions[0].textContent})");
-    await evaljs("document.querySelector('#kind').value='N';loadItems()");
+    await evaljs("setItemsKinds('ordinary-notes');loadItems()");
+    const ordinary=await evaljs("({url:window.__itemCalls.at(-1),count:currentItems.length,label:document.querySelector('.items-kind-options input:checked + span').textContent})");
+    await evaljs("setItemsKinds('N');loadItems()");
     const raw=await evaljs("({url:window.__itemCalls.at(-1),count:currentItems.length})");
     await cmd('Page.navigate',{url:`http://127.0.0.1:${server.address().port}/remote`});
     for(let i=0;i<100;i++){if(await evaljs("document.readyState==='complete'&&!document.querySelector('#session').classList.contains('hidden')"))break;await wait(30)}

@@ -28,6 +28,7 @@ class StateInteractionTests(unittest.TestCase):
                 str(ROOT / "tests/state_ui_probe.mjs"),
                 str(ROOT / "lifetxt/web_state.html"),
                 str(ROOT / "lifetxt/web_state.js"),
+                str(ROOT / "lifetxt/web_presence.js"),
             ],
             capture_output=True,
             text=True,

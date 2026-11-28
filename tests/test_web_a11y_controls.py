@@ -56,7 +56,6 @@ class AccessibleNameTests(unittest.TestCase):
     def test_items_filter_controls_have_programmatic_labels(self):
         for control_id in (
             "search",
-            "kind",
             "sort",
             "order",
             "group-by",
@@ -68,6 +67,28 @@ class AccessibleNameTests(unittest.TestCase):
             tag = re.search(r'<(?:input|select) id="%s"[^>]*>' % control_id, HTML_PAGE)
             self.assertIsNotNone(tag, control_id)
             self.assertRegex(tag.group(0), r'aria-label="[^"]+"', control_id)
+
+    def test_item_kind_disclosure_and_checkboxes_have_programmatic_labels(self):
+        disclosure = re.search(
+            r'<details id="items-kind-filter">(.*?)</details>', HTML_PAGE, re.S
+        )
+        self.assertIsNotNone(disclosure)
+        markup = disclosure.group(1)
+        self.assertRegex(
+            markup,
+            r'<summary[^>]*id="items-kind-summary"[^>]*>\s*'
+            r'<span id="items-kind-all">All types</span>',
+        )
+        self.assertIn('role="group" aria-label="Filter by type"', markup)
+
+        checkbox_count = markup.count('<input type="checkbox"')
+        labels = re.findall(
+            r'<label>\s*<input type="checkbox" value="[^"]+">\s*'
+            r'<span>\s*([^<\s][^<]*)</span>\s*</label>',
+            markup,
+        )
+        self.assertGreater(checkbox_count, 1)
+        self.assertEqual(checkbox_count, len(labels))
 
     def test_new_label_strings_are_localized(self):
         self.assertIn('"Search items": "アイテムを検索"', HTML_PAGE)

@@ -3,11 +3,27 @@
 import json
 import shutil
 import subprocess
+import tempfile
 import unittest
+from pathlib import Path
 
 from tests.test_web_drawer_edit_js import _extract_function
 from tests.test_web_i18n import _ja_dictionary
 from tests.test_web_native_timeline_visual import _extract_script
+
+
+def _run_node(script, *, stdin=None):
+    # Keep JavaScript out of OS command lines and locale-dependent text pipes.
+    with tempfile.TemporaryDirectory() as directory:
+        path = Path(directory) / "graph-test.cjs"
+        path.write_text(script, encoding="utf-8")
+        return subprocess.run(
+            ["node", str(path)],
+            input=stdin,
+            capture_output=True,
+            encoding="utf-8",
+            timeout=10,
+        )
 
 
 @unittest.skipUnless(shutil.which("node"), "Node.js unavailable")
@@ -25,9 +41,8 @@ class GraphRelationsTests(unittest.TestCase):
                 "renderGraphSvg",
             )
         )
-        run = subprocess.run(
-            ["node"],
-            input=functions
+        run = _run_node(
+            functions
             + r"""
 const assert = require("node:assert/strict");
 const positions = {
@@ -66,9 +81,6 @@ for (const layout of ["ring", "lr", "tb", "force"]) {
   assert.equal(labelY(svg, "clipped"), compact ? "27" : "33");
 }
 """,
-            capture_output=True,
-            text=True,
-            timeout=10,
         )
         self.assertEqual(run.returncode, 0, run.stderr)
 
@@ -86,12 +98,9 @@ for (const layout of ["ring", "lr", "tb", "force"]) {
             "    // ── Native Timeline visual explorer", graph_start
         )
         functions += "\n" + source[graph_start:graph_end]
-        run = subprocess.run(
-            [
-                "node",
-                "-e",
-                functions
-                + r"""
+        run = _run_node(
+            functions
+            + r"""
 let lang = "ja", graphLoaded;
 const assert = require("node:assert/strict");
 const dictionary = JSON.parse(require("node:fs").readFileSync(0, "utf8"));
@@ -182,11 +191,7 @@ const renderGraphSvg = (n, e, options) =>
   console.log(JSON.stringify({ja, en, limited, requested:requests[0].url, empty:renderGraphRelations(nodes, [])}));
 })().catch(error => { console.error(error); process.exitCode = 1; });
 """,
-            ],
-            input=json.dumps(_ja_dictionary()),
-            capture_output=True,
-            text=True,
-            timeout=10,
+            stdin=json.dumps(_ja_dictionary()),
         )
         self.assertEqual(run.returncode, 0, run.stderr)
         result = json.loads(run.stdout)

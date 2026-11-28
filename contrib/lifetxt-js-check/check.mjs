@@ -11,7 +11,7 @@ function escapeConsole(text) {
 function quoteId(value) {
     return escapeConsole(JSON.stringify(value));
 }
-const usage = 'Usage: node check.mjs [--config PATH] [--check-files] FILE [FILE ...]';
+const usage = 'Usage: node check.mjs [--config PATH] [--check-files | --verify-files] FILE [FILE ...]';
 
 async function readInput(path) {
     const file = await open(path, constants.O_RDONLY | (constants.O_NONBLOCK ?? 0));
@@ -45,11 +45,14 @@ if (args.length === 1 && args[0] === '--help') {
 } else {
     let configPath;
     let checkFilesOption = false;
-    while (args[0] === '--config' || args[0] === '--check-files') {
-        if (args.shift() === '--config') {
+    let verifyFiles = false;
+    while (['--config', '--check-files', '--verify-files'].includes(args[0])) {
+        const option = args.shift();
+        if (option === '--config') {
             configPath = args.shift();
         } else {
             checkFilesOption = true;
+            verifyFiles ||= option === '--verify-files';
         }
     }
     if (args[0] === '--') args.shift();
@@ -58,11 +61,11 @@ if (args.length === 1 && args[0] === '--help') {
         if (args.length > MAX_FILES) console.error(`Pass at most ${MAX_FILES} files.`);
         process.exitCode = 2;
     } else {
-        await checkFiles(args, configPath, checkFilesOption);
+        await checkFiles(args, configPath, { checkFilesOption, verifyFiles });
     }
 }
 
-async function checkFiles(paths, configPath, checkFilesOption) {
+async function checkFiles(paths, configPath, { checkFilesOption, verifyFiles }) {
     try {
         const options = configPath === undefined ? {} : await readConfig(configPath);
         const documents = [];
@@ -77,7 +80,7 @@ async function checkFiles(paths, configPath, checkFilesOption) {
         const result = documents.length === 1
             ? parse(documents[0].text, options)
             : parseDocuments(documents, options);
-        if (checkFilesOption) await checkAttachments(result, paths[0]);
+        if (checkFilesOption) await checkAttachments(result, paths[0], verifyFiles);
         for (const { severity, code, line, key, part, firstLine, source, firstSource, value, path, childCount } of result.diagnostics) {
             const field = key ? ` (${escapeConsole(key)}:${part ? ` ${escapeConsole(part)}` : ''})` : '';
             let target = '';

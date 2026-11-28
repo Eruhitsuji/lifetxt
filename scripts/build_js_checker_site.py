@@ -53,7 +53,9 @@ COPY = {
         "UTF-8のJSONを1ファイル（16 KiBまで）。貼り付け本文と選択ファイルの検査に、ids.key または api.id_key を適用します。",
         "添付フォルダー（任意）",
         "フォルダー選択を解除",
-        "選んだフォルダーの直下に入力文書があるものとして、file: と dir: を検査します。貼り付けた本文にも同じ基準を使います。空のフォルダーとハッシュは確認できません。",
+        "添付ファイルのSHA-256を照合",
+        "file: にハッシュがあるファイルだけを読み取ります。1ファイル16 MiBまで。ディレクトリのハッシュは対象外です。",
+        "選んだフォルダーの直下に入力文書があるものとして、file: と dir: を検査します。貼り付けた本文にも同じ基準を使います。空のフォルダーは確認できません。",
     ),
     "en": (
         "Syntax check",
@@ -87,7 +89,9 @@ COPY = {
         "Choose one UTF-8 JSON file up to 16 KiB. Applies ids.key or api.id_key to pasted text and selected files.",
         "Attachment folder (optional)",
         "Clear folder selection",
-        "Checks file: and dir: paths from the selected folder, treating each input document or pasted text as being at its root. Empty folders and hashes cannot be verified.",
+        "Verify attachment file SHA-256",
+        "Reads only files with a recorded file: hash. Up to 16 MiB per file. Directory hashes are unchecked.",
+        "Checks file: and dir: paths from the selected folder, treating each input document or pasted text as being at its root. Empty folders cannot be verified.",
     ),
 }
 
@@ -97,7 +101,7 @@ def render(lang: str, base: str) -> str:
         title, home, scope, excluded, limits, label, button, load, hint, guide, noscript,
         lesson, exercise, state_help, type_help, title_help, due_help, coverage, reference,
         files_label, clear_files, files_hint, settings, config_label, clear_config, config_hint,
-        folder_label, clear_folder, folder_hint,
+        folder_label, clear_folder, verify_hashes, hash_hint, folder_hint,
     ) = map(escape, COPY[lang])
     example = (ROOT / "website/example.txt").read_text(encoding="utf-8")
     sample = escape(example)
@@ -150,6 +154,8 @@ def render(lang: str, base: str) -> str:
 <input id="attachment-folder" type="file" webkitdirectory disabled aria-describedby="folder-hint"></p>
 <button class="button" id="clear-folder" type="button" disabled>{clear_folder}</button>
 <p id="folder-hint">{folder_hint}</p>
+<label for="verify-attachment-hashes"><input id="verify-attachment-hashes" type="checkbox" disabled aria-describedby="hash-hint"> {verify_hashes}</label>
+<p id="hash-hint">{hash_hint}</p>
 </details>
 <p id="status" role="status"></p>
 <pre id="output" tabindex="0" aria-label="{title}"></pre>

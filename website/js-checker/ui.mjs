@@ -1,7 +1,12 @@
-import { MAX_BYTES, MAX_DIAGNOSTICS, MAX_FILES, attachmentPath, parse, parseCheckerConfig, parseDocuments } from './parser.mjs';
+import { MAX_BYTES, MAX_DIAGNOSTICS, MAX_FILES, parse, parseCheckerConfig, parseDocuments, splitAttachmentValue } from './parser.mjs';
 
 const messages = {
     ja: {
+        'attachment-hash-changed': value => `${JSON.stringify(value)} のSHA-256が記録と一致しません。`,
+        'attachment-hash-too-large': value => `${JSON.stringify(value)} は16 MiBを超えるため照合できません。`,
+        'attachment-hash-unavailable': value => `${JSON.stringify(value)} のSHA-256照合にはWeb Cryptoが利用できるブラウザー環境が必要です。`,
+        'attachment-unreadable': value => `${JSON.stringify(value)} の内容を読み込めませんでした。`,
+        'attachment-directory-hash-unsupported': value => `${JSON.stringify(value)} のディレクトリハッシュは照合対象外です。`,
         'attachment-invalid-value': value => `${JSON.stringify(value)} のパスまたはハッシュの形式が無効です。`,
         'attachment-folder-unavailable': value => `${JSON.stringify(value)} を確認するには添付フォルダーを選択してください。`,
         'attachment-outside-folder': value => `${JSON.stringify(value)} は選択フォルダー内の相対パスとして確認できません。`,
@@ -129,6 +134,11 @@ const messages = {
         },
     },
     en: {
+        'attachment-hash-changed': value => `The SHA-256 for ${JSON.stringify(value)} differs from the recorded value.`,
+        'attachment-hash-too-large': value => `${JSON.stringify(value)} exceeds the 16 MiB verification limit.`,
+        'attachment-hash-unavailable': value => `Verifying ${JSON.stringify(value)} requires Web Crypto in your browser.`,
+        'attachment-unreadable': value => `Could not read the content of ${JSON.stringify(value)}.`,
+        'attachment-directory-hash-unsupported': value => `Directory hashes such as ${JSON.stringify(value)} are not checked.`,
         'attachment-invalid-value': value => `${JSON.stringify(value)} has an invalid path or hash fragment.`,
         'attachment-folder-unavailable': value => `Select an attachment folder to check ${JSON.stringify(value)}.`,
         'attachment-outside-folder': value => `${JSON.stringify(value)} cannot be checked as a relative path inside the selected folder.`,
@@ -268,6 +278,7 @@ const config = document.getElementById('checker-config');
 const clearConfig = document.getElementById('clear-config');
 const folder = document.getElementById('attachment-folder');
 const clearFolder = document.getElementById('clear-folder');
+const verifyHashes = document.getElementById('verify-attachment-hashes');
 const status = document.getElementById('status');
 const output = document.getElementById('output');
 
@@ -308,6 +319,7 @@ clearConfig.addEventListener('click', () => {
     config.focus();
 });
 folder.addEventListener('change', resetCheck);
+verifyHashes.addEventListener('change', resetCheck);
 clearFolder.addEventListener('click', () => {
     folder.value = '';
     resetCheck();
@@ -325,6 +337,7 @@ window.addEventListener('pagehide', () => {
     files.value = '';
     config.value = '';
     folder.value = '';
+    verifyHashes.checked = false;
     resetCheck();
 });
 
@@ -343,13 +356,37 @@ function relativeAttachmentPath(path) {
     return parts.join('/');
 }
 
-function checkFolderAttachments(result) {
-    const selectedFiles = new Set();
+const MAX_HASH_BYTES = 16 * 1024 * 1024;
+
+async function verifyFileHash(file, digest, hashes, revision) {
+    if (file.size > MAX_HASH_BYTES) {
+        return { code: 'attachment-hash-too-large', severity: 'unsupported' };
+    }
+    if (!globalThis.crypto?.subtle) {
+        return { code: 'attachment-hash-unavailable', severity: 'unsupported' };
+    }
+    try {
+        if (!hashes.has(file)) {
+            const bytes = await file.arrayBuffer();
+            if (revision !== selectionRevision) return;
+            const hash = await crypto.subtle.digest('SHA-256', bytes);
+            hashes.set(file, Array.from(new Uint8Array(hash), byte => byte.toString(16).padStart(2, '0')).join(''));
+        }
+        const actual = hashes.get(file).slice(0, digest.length);
+        if (actual !== digest) return { code: 'attachment-hash-changed', part: `SHA-256 ${actual}` };
+    } catch {
+        return { code: 'attachment-unreadable' };
+    }
+}
+
+async function checkFolderAttachments(result, revision) {
+    const selectedFiles = new Map();
+    const hashes = new Map();
     const directories = new Set();
     for (const file of folder.files) {
         const parts = file.webkitRelativePath.split('/').slice(1);
         if (!parts.length) continue;
-        selectedFiles.add(parts.join('/'));
+        selectedFiles.set(parts.join('/'), file);
         parts.pop();
         while (parts.length) {
             const directory = parts.join('/');
@@ -365,11 +402,12 @@ function checkFolderAttachments(result) {
             if (key !== 'file' && key !== 'dir') continue;
             for (const value of values) {
                 if (typeof value !== 'string') continue;
-                const path = attachmentPath(value);
-                const relative = path === null ? null : relativeAttachmentPath(path);
+                const parsed = splitAttachmentValue(value);
+                const relative = parsed === null ? null : relativeAttachmentPath(parsed.path);
                 let severity = 'warning';
                 let code;
-                if (path === null) code = 'attachment-invalid-value';
+                let part;
+                if (parsed === null) code = 'attachment-invalid-value';
                 else if (!selectedFiles.size) {
                     code = 'attachment-folder-unavailable';
                     severity = 'unsupported';
@@ -383,12 +421,21 @@ function checkFolderAttachments(result) {
                 } else if (key === 'dir' && !directories.has(relative)) {
                     code = 'attachment-directory-unobserved';
                     severity = 'unsupported';
+                } else if (verifyHashes.checked && parsed.digest) {
+                    if (key === 'dir') {
+                        code = 'attachment-directory-hash-unsupported';
+                        severity = 'unsupported';
+                    } else {
+                        const problem = await verifyFileHash(selectedFiles.get(relative), parsed.digest, hashes, revision);
+                        if (revision !== selectionRevision) return;
+                        if (problem) ({ code, severity = 'warning', part } = problem);
+                    }
                 }
                 if (code === undefined) continue;
                 result.incomplete ||= severity === 'unsupported';
                 result.diagnosticCount++;
                 if (result.diagnostics.length < MAX_DIAGNOSTICS) {
-                    result.diagnostics.push({ severity, code, source, line, key, value });
+                    result.diagnostics.push({ severity, code, source, line, key, value, part });
                 }
             }
         }
@@ -396,7 +443,6 @@ function checkFolderAttachments(result) {
 }
 
 function displayResult(result) {
-    checkFolderAttachments(result);
     const summaries = [];
     if (result.hasErrors) summaries.push(copy.errors);
     if (result.incomplete) summaries.push(copy.incomplete);
@@ -435,11 +481,6 @@ async function readSelection(file, decoder, revision) {
 
 button.addEventListener('click', async () => {
     const settingsFile = config.files[0];
-    if (!files.files.length && !settingsFile) {
-        displayResult(parse(input.value));
-        return;
-    }
-
     clearResult();
     const selected = Array.from(files.files);
     if (selected.length > MAX_FILES) {
@@ -469,7 +510,9 @@ button.addEventListener('click', async () => {
             if (text === undefined || revision !== selectionRevision) return;
             documents.push({ source: file.name, text });
         }
-        displayResult(documents.length ? parseDocuments(documents, options) : parse(input.value, options));
+        const result = documents.length ? parseDocuments(documents, options) : parse(input.value, options);
+        await checkFolderAttachments(result, revision);
+        if (revision === selectionRevision) displayResult(result);
     } finally {
         if (revision === selectionRevision) button.disabled = false;
     }
@@ -477,5 +520,6 @@ button.addEventListener('click', async () => {
 button.disabled = false;
 files.disabled = false;
 config.disabled = false;
+verifyHashes.disabled = false;
 folder.disabled = !('webkitdirectory' in folder);
 syncInputs();

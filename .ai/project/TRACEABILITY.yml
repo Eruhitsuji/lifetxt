@@ -17,6 +17,18 @@ traceability:
     - requirement_id: req-browser-local-check-v1
       capability_id: cap-official-website
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1731
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1793
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1794
+      changed_files_or_scope: [Browser checker attachment file SHA-256 verification]
+      tests_or_evidence:
+        - tests.test_js_checker_site
+        - contrib/lifetxt-js-check/check_core.py
+        - contrib/lifetxt-js-check/parser.test.mjs
+      status: in_review
+
+    - requirement_id: req-browser-local-check-v1
+      capability_id: cap-official-website
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1731
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1789
       pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1790
       changed_files_or_scope: [JavaScript checker Node attachment file SHA-256 verification]

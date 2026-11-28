@@ -49,8 +49,11 @@ text and selected life.txt inputs use the folder root as their base directory.
 The checker uses file paths exposed by the browser and infers directories
 from their files. It marks out-of-folder paths, unobserved directories
 (including empty ones), and references without a selected folder as
-unchecked. It checks the syntax of hash fragments without reading attachment
-contents.
+unchecked. With Verify attachment file SHA-256 enabled, the browser compares
+a recorded `file:` SHA-256 prefix against the selected file's contents.
+Verification uses Web Crypto and reads at most 16 MiB per file. Directory
+hashes are unchecked. With the checkbox off, the browser checks hash
+fragment syntax using path metadata only.
 
 The checker reads item headers, titles, details, backslash line joins, and
 `|` body lines. It preserves unknown and repeated detail keys. Unsupported

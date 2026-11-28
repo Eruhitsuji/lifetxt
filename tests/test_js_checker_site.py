@@ -1,6 +1,7 @@
 """Local JS checker candidate, including opt-in real Chromium acceptance."""
 
 from functools import partial
+from hashlib import sha256
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 import os
 from pathlib import Path
@@ -107,6 +108,7 @@ class JSCheckerSiteTests(unittest.TestCase):
                     expect(page.locator("#files")).to_be_disabled()
                     expect(page.locator("#checker-config")).to_be_disabled()
                     expect(page.locator("#attachment-folder")).to_be_disabled()
+                    expect(page.locator("#verify-attachment-hashes")).to_be_disabled()
                     context.close()
                     browser.close()
             finally:
@@ -412,6 +414,8 @@ class JSCheckerSiteTests(unittest.TestCase):
             clear_config.click()
             folder = page.locator("#attachment-folder")
             clear_folder = page.locator("#clear-folder")
+            verify_hashes = page.locator("#verify-attachment-hashes")
+            expect(verify_hashes).not_to_be_checked()
             text.fill("[ ] T Docs file:docs/report.bin#sha256=ABCD dir:docs")
             button.click()
             expect(output).to_contain_text("attachment-folder-unavailable")
@@ -444,11 +448,55 @@ class JSCheckerSiteTests(unittest.TestCase):
                 expect(output).to_contain_text("attachment-missing")
                 expect(output).to_contain_text('"inbox.txt"')
                 self.assertEqual(len(output.inner_text().splitlines()), 1)
-                clear_folder.click()
+                clear_files.click()
+                with (root / "docs/large.bin").open("wb") as large:
+                    large.truncate(16 * 1024 * 1024 + 1)
+                folder.set_input_files(root)
+                page.evaluate("""() => {
+                    window.readAttachments = [];
+                    window.originalArrayBuffer = File.prototype.arrayBuffer;
+                    File.prototype.arrayBuffer = function () {
+                        window.readAttachments.push(this.name);
+                        return window.originalArrayBuffer.call(this);
+                    };
+                }""")
+                digest = sha256(b"\xff").hexdigest()
+                text.fill(
+                    f"[ ] T Verify file:docs/report.bin#sha256={digest[:16].upper()} "
+                    f"file:docs/report.bin#sha256={digest} file:docs/report.bin#sha256=ABCD "
+                    "file:docs/large.bin#sha256=abcd dir:docs#sha256=abcd"
+                )
+                button.click()
                 expect(output).to_be_empty()
+                self.assertEqual(page.evaluate("window.readAttachments"), [])
+                verify_hashes.check()
+                button.click()
+                expect(output).to_contain_text("attachment-hash-changed")
+                expect(output).to_contain_text("attachment-hash-too-large")
+                expect(output).to_contain_text("attachment-directory-hash-unsupported")
+                expect(status).to_contain_text("検査対象外" if lang == "ja" else "not checked")
+                self.assertEqual(len(output.inner_text().splitlines()), 3)
+                self.assertEqual(page.evaluate("window.readAttachments"), ["report.bin"])
+
+                page.evaluate("""() => {
+                    File.prototype.arrayBuffer = function () {
+                        return new Promise(resolve => {
+                            window.finishAttachmentRead = () => window.originalArrayBuffer.call(this).then(resolve);
+                        });
+                    };
+                }""")
+                text.fill("[ ] T Stale file:docs/report.bin#sha256=abcd")
+                button.click()
+                expect(button).to_be_disabled()
+                clear_folder.click()
+                page.evaluate("window.finishAttachmentRead()")
+                expect(output).to_be_empty()
+                expect(status).to_be_empty()
+                expect(button).to_be_enabled()
+                page.evaluate("() => { File.prototype.arrayBuffer = window.originalArrayBuffer; }")
+                verify_hashes.uncheck()
                 button.click()
                 expect(output).to_contain_text("attachment-folder-unavailable")
-                clear_files.click()
             text.fill("[ ] T Paste-survives")
 
             # Hold a file read open until the selection is cleared.

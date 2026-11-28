@@ -6,16 +6,16 @@
       stateNames: ["Available", "Busy", "Focus", "Meeting", "Away", "Offline", "Commuting", "Working", "Sleeping"],
       skip: "Skip to tasks", title: "Desk", reasonToday: "due today", reasonOverdue: "{n} overdue (days)", top: "Top", calendar: "Calendar", planner: "Planner", tasks: "Tasks", captureLabel: "Quick add", capturePlaceholder: "Quick add: title @project !high ^tomorrow", add: "Add", preview: "Preview", confirmCapture: "Confirm capture", editBtn: "Edit", detailsLabel: "Details (key:value per line)", themeAuto: "Theme: auto", themeDark: "Theme: dark", themeLight: "Theme: light", reviewFirst: "Review the mapped fields, then confirm.",
       overdue: "Overdue", dueToday: "Due today", next: "Next actions", allDay: "All day", noEvents: "No events today.", noTasks: "Nothing to do right now.", start: "Start", stop: "Stop",
-      markDone: "Mark as done", doneAt: "Completion date and time", completeNow: "Complete now", completeAt: "Complete at selected time", etaMin: "in {n} min", etaHour: "in {h} h {m} min", noNext: "No more events today", loading: "Loading…",
-      captured: "Added.", saved: "Updated.", readonly: "Read-only: changes are disabled.", error: "Could not load: ", conflict: "Data changed. Reload and try again.", noRevision: "Could not obtain a write revision. Reload and try again.", requestFailed: "Request failed", due: "due {d}",
+      markDone: "Mark as done", doneAt: "Completion date and time", completeNow: "Complete now", completeAt: "Complete at selected time", etaMin: "in {n} min", etaHour: "in {h} h {m} min", noNext: "No more events today", loading: "Loading…", loadFailed: "Could not load.", saving: "Saving and refreshing…", busy: "Still saving or refreshing the previous change. Wait, then try again.", staleView: "The screen could not be refreshed; reload the page.", source_resolution_required: "The write file must be one of the files being read. Fix the server configuration and restart the server.", source_membership_changed: "The files being read do not match the configuration. Restart the server with the current configuration.", manifest_unavailable: "The files being read do not match the configuration. Restart the server with the current configuration.", source_unavailable: "A source file cannot be read. Check the files, then preview again.", contextUnavailable: "Could not review the workspace. Check the sources and preview again.",
+      captured: "Added.", saved: "Updated.", readonly: "Read-only: changes are disabled.", error: "Could not load: ", conflict: "Data changed, so this was not saved. Check the latest content and try again.", noRevision: "Could not obtain a write revision. Reload and try again.", requestFailed: "Request failed", due: "due {d}",
       modeDay: "Today", modeWeek: "7 days", modeMonth: "Month", save: "Save", evTitle: "Title", evDate: "Date", evStart: "Start", evEnd: "End", badRange: "End must be after start.", requiredFields: "Enter a title, date, and time.", requiredTitle: "Enter a title.", requiredDate: "Choose a date.", dueDate: "Due date", changeDue: "Change due", openInPlanner: "Open in Planner", details: "Details", close: "Close", type: "Type", statusLabel: "Status", when: "When", openDetails: "Show details: "},
     ja: {layout: "画面構成", layoutTitle: "画面構成", layoutPreset: "プリセット", layoutCustom: "カスタム", presetNames: {standard: "標準", clock: "時計中心", tasks: "タスク中心", calendar: "カレンダー中心"}, blockNames: {clock: "時計", status: "状態", next: "次の予定", calendar: "カレンダー", tasks: "タスク", capture: "クイック追加", habits: "習慣", messages: "メッセージ・メモ", deadlines: "今後の締切", summary: "集計"}, habitsTitle: "習慣", messagesTitle: "メッセージ・メモ", deadlinesTitle: "今後の締切", summaryTitle: "集計", habitDone: "今日は完了", habitOpen: "未完了", habitCount: "{done} / {total} 完了", noHabits: "習慣はありません。", messagesHeading: "メッセージ", notesHeading: "最近のメモ", noMessages: "メッセージやメモはありません。", noDeadlines: "14日以内の締切はありません。", daysToday: "今日", daysLeft: "あと{n}日", doneToday: "今日の完了", openTasks: "未完了タスク", noProject: "プロジェクトなし", projectsHeading: "プロジェクト", projectCounts: "未完了 {open} · 期限超過 {overdue} · 今日完了 {done}", layoutColumns: ["左の列", "右の列"], layoutUp: "上へ", layoutDown: "下へ", layoutRight: "右の列へ", layoutLeft: "左の列へ", layoutSwap: "左右を入れ替える", layoutReset: "標準に戻す", layoutRatio: "列の幅", ratioNames: {balanced: "均等", left: "左を広く", right: "右を広く"}, layoutFont: "文字サイズ", fontNames: {s: "小", m: "中", l: "大"}, layoutShow: "チェックした項目を表示します。設定はこのブラウザに保存されます。", layoutBlockFont: "文字サイズ", fontXl: "特大", fontDefault: "全体と同じ", layoutAuto: "大きさを戻す", splitColumns: "列の幅（ドラッグまたは矢印キー、ダブルクリックで戻す）", splitBlock: "{name}の高さ（ドラッグまたは矢印キー、ダブルクリックで自動）",
       fullscreenOn: "全画面", fullscreenOff: "全画面を終了", fullscreenFailed: "全画面表示を切り替えられませんでした。", statusNow: "状態", statusNone: "現在設定なし", statusChange: "状態を切り替える", statusEnd: "現在の状態を終了", statusActivity: "活動名（任意）", statusCustom: "カスタム状態", statusSet: "カスタム状態を設定", statusForce: "同じ状態でも再開始する", statusSame: "すでに同じ状態です。開始時刻とタイトルは維持しました。", statusRequired: "カスタム状態を入力してください。", since: "{at} から · {span}", spanMin: "{m}分", spanHour: "{h}時間{m}分",
       stateNames: ["対応可能", "取り込み中", "集中", "会議中", "離席中", "オフライン", "移動中", "作業中", "睡眠中"],
       skip: "タスクへ移動", title: "Desk", reasonToday: "今日が期限", reasonOverdue: "{n}日超過", top: "トップ", calendar: "カレンダー", planner: "Planner", tasks: "タスク", captureLabel: "クイック追加", capturePlaceholder: "クイック追加: タイトル @project !高 ^明日", add: "追加", preview: "プレビュー", confirmCapture: "追加を確定", editBtn: "編集", detailsLabel: "詳細 (1行に key:value)", themeAuto: "テーマ: 自動", themeDark: "テーマ: ダーク", themeLight: "テーマ: ライト", reviewFirst: "変換結果を確認して確定してください。",
       overdue: "期限超過", dueToday: "今日", next: "次の一手", allDay: "終日", noEvents: "今日の予定はありません。", noTasks: "今やることはありません。", start: "開始", stop: "停止",
-      markDone: "完了にする", doneAt: "完了日時", completeNow: "今すぐ完了", completeAt: "指定した日時で完了", etaMin: "あと {n}分", etaHour: "あと {h}時間{m}分", noNext: "今日の予定はもうありません", loading: "読み込み中…",
-      captured: "追加しました。", saved: "更新しました。", readonly: "読み取り専用のため変更できません。", error: "読み込めませんでした: ", conflict: "データが更新されています。再読み込みしてやり直してください。", noRevision: "更新用リビジョンを取得できません。再読み込みしてください。", requestFailed: "リクエストに失敗しました", due: "期限 {d}",
+      markDone: "完了にする", doneAt: "完了日時", completeNow: "今すぐ完了", completeAt: "指定した日時で完了", etaMin: "あと {n}分", etaHour: "あと {h}時間{m}分", noNext: "今日の予定はもうありません", loading: "読み込み中…", loadFailed: "読み込めませんでした。", saving: "保存して最新の内容を読み込み中…", busy: "前の変更を保存・反映中です。完了してからもう一度操作してください。", staleView: "画面を更新できませんでした。ページを再読み込みしてください。", source_resolution_required: "書き込み先が読み込み対象のファイルに含まれていません。サーバーの設定を直して再起動してください。", source_membership_changed: "読み込み中のファイル構成が設定と一致しません。現在の設定でサーバーを再起動してください。", manifest_unavailable: "読み込み中のファイル構成が設定と一致しません。現在の設定でサーバーを再起動してください。", source_unavailable: "参照元のファイルを読み取れません。ファイルを確認して、再度プレビューしてください。", contextUnavailable: "ワークスペースを確認できません。参照元を確認して、再度プレビューしてください。",
+      captured: "追加しました。", saved: "更新しました。", readonly: "読み取り専用のため変更できません。", error: "読み込めませんでした: ", conflict: "データが更新されていたため保存しませんでした。最新の内容を確認して、もう一度操作してください。", noRevision: "更新用リビジョンを取得できません。再読み込みしてください。", requestFailed: "リクエストに失敗しました", due: "期限 {d}",
       modeDay: "今日", modeWeek: "7日間", modeMonth: "月", save: "保存", evTitle: "タイトル", evDate: "日付", evStart: "開始", evEnd: "終了", badRange: "終了は開始より後にしてください。", requiredFields: "タイトル、日付、時刻を入力してください。", requiredTitle: "タイトルを入力してください。", requiredDate: "日付を選択してください。", dueDate: "期限日", changeDue: "期限を変更", openInPlanner: "Plannerで開く", details: "詳細", close: "閉じる", type: "種類", statusLabel: "状態", when: "日時", openDetails: "詳細を表示: "}
   };
   const $ = id => document.getElementById(id);
@@ -29,6 +29,8 @@
   const fmt = (s, v) => s.replace(/\{(\w+)\}/g, (_, k) => v[k]);
   let eventItems = [], mode = "day", pickedDay = "",  weekEvents = [], today = "", clock = null, writable = false, pending = false, generation = 0, revision = null, items = [], nowIso = "", events = [];
   const recordRevisions = new WeakMap();
+  // loaded: calendar data arrived; shownMode: the range the calendar holds.
+  let loaded = false, shownMode = "", nextFailed = false, tasksLoaded = false, latestLoad = null;
   const REFRESH_MS = 60000;
   let tickTimer = null, refreshTimer = null;
 
@@ -45,7 +47,9 @@
     return m ? fmt(t.reasonOverdue, {n: m[1]}) : r;
   }
   let sayTimer = null;
-  function say(text) { $("feedback").textContent = text || ""; clearTimeout(sayTimer); if (text) sayTimer = setTimeout(() => { $("feedback").textContent = ""; }, 3000); }
+  function say(text, sticky) { $("feedback").textContent = text || ""; clearTimeout(sayTimer); if (text && !sticky) sayTimer = setTimeout(() => { $("feedback").textContent = ""; }, 3000); }
+  // One write at a time: it stays pending until the screen shows its result.
+  function busy() { if (pending) say(t.busy, true); return pending; }
 
   function responseRevision(response) {
     const token = response.headers.get("X-Lifetxt-Revision");
@@ -67,7 +71,12 @@
     let data = {};
     try { data = raw ? JSON.parse(raw) : {}; } catch (_) {}
     if (!response.ok) {
-      const error = Error(response.status === 409 ? t.conflict : response.status === 428 ? t.noRevision : data.message || data.detail || t.requestFailed);
+      // Other 409 responses (unsupported format, invalid file) keep their own message.
+      const detail = data.detail && typeof data.detail === "object" ? data.detail : data;
+      const stale = response.status === 409 && !/^(UNSUPPORTED_|VALIDATION_)/.test(detail.error || "");
+      const message = detail.error === "CONTEXT_UNAVAILABLE" ? t[detail.reason] || t.contextUnavailable
+        : detail.message || (typeof data.detail === "string" ? data.detail : "");
+      const error = Error(stale ? t.conflict : response.status === 428 ? t.noRevision : message || t.requestFailed);
       error.status = response.status;
       throw error;
     }
@@ -80,6 +89,8 @@
   const pathFor = i => i.id ? "/api/items/id/" + encodeURIComponent(i.id) : i.line && i.editable ? "/api/items/" + encodeURIComponent(i.line) : null;
 
   // ---- Details dialog ----
+  // Keeps an open dialog (and what was typed) when a write cannot start yet.
+  function dialogBlocked() { if (pending) showDetailError(t.busy); return pending; }
   function showDetailError(message) {
     const error = $("detail-error");
     error.textContent = message;
@@ -147,6 +158,7 @@
     btn.onclick = () => {
       if (!ti.value.trim()) { showDetailError(t.requiredTitle); return; }
       const det = parseDetailsText(de.value);
+      if (dialogBlocked()) return;
       $("detail-dialog").close();
       mutate(() => api(pathFor(item), {expectedRevision: recordRevisions.get(item) || null, method: "PUT",
         headers: {"Content-Type": "application/json"}, body: JSON.stringify({status: st.value, type: ty.value.trim() || item.type, title: ti.value.trim(), details: det})}));
@@ -175,6 +187,7 @@
       btn.onclick = () => {
         if (!input.value) { showDetailError(t.requiredDate); return; }
         const next = input.value + (old.includes("T") ? old.slice(10) : "");
+        if (dialogBlocked()) return;
         $("detail-dialog").close();
         mutate(() => api(pathFor(item), {expectedRevision: recordRevisions.get(item) || null, method: "PUT",
           headers: {"Content-Type": "application/json"},
@@ -194,6 +207,7 @@
         btn.type = "button"; btn.className = "go go-primary"; btn.textContent = t.save;
         btn.onclick = () => {
           if (!ti.value.trim() || !di.value || !si.value) { showDetailError(t.requiredFields); return; }
+          if (dialogBlocked()) return;
           $("detail-dialog").close();
           const det = Object.assign({}, item.details || {}, {at: di.value + "T" + si.value + at.slice(16)});
           mutate(() => api(pathFor(item), {expectedRevision: recordRevisions.get(item) || null, method: "PUT",
@@ -212,6 +226,7 @@
           const sameDay = tt.slice(0, 10) === f.slice(0, 10);
           if (!ti.value.trim() || !di.value || !si.value || !ei.value) { showDetailError(t.requiredFields); return; }
           if (sameDay && ei.value <= si.value) { showDetailError(t.badRange); return; }
+          if (dialogBlocked()) return;
           $("detail-dialog").close();
           const span = Math.round((Date.parse(tt.slice(0, 10)) - Date.parse(f.slice(0, 10))) / 86400000);
           const det = Object.assign({}, item.details || {}, {from: di.value + "T" + si.value + f.slice(16), to: addDays(di.value, span) + "T" + ei.value + tt.slice(16)});
@@ -368,9 +383,15 @@
     $("mode-month").setAttribute("aria-pressed", String(m === "month"));
     $("mode-day").setAttribute("aria-pressed", String(m === "day"));
     $("mode-week").setAttribute("aria-pressed", String(m === "week"));
+    renderTimeline();
     load();
   }
+  function note(name, text) {
+    const p = document.createElement("p"); p.className = "empty"; p.textContent = text; $(name).replaceChildren(p);
+  }
   function renderTimeline() {
+    // Never present an unfetched range as an empty one.
+    if (shownMode !== mode) { note("timeline", t.loading); return; }
     if (mode === "week") { renderWeek(); return; }
     if (mode === "month") { renderMonth(); return; }
     const box = $("timeline");
@@ -394,6 +415,7 @@
     box.scrollTop = Math.max(0, n.offsetTop - box.offsetTop - box.clientHeight / 3);
   }
   function updateNext(d) {
+    if (!loaded) { $("next-eta").textContent = ""; $("next-title").textContent = nextFailed ? t.loadFailed : t.loading; return; }
     const nowTime = hhmm(d);
     const nxt = events.find(e => e.time && e.time > nowTime);
     if (!nxt) { $("next-eta").textContent = ""; $("next-title").textContent = t.noNext; return; }
@@ -406,9 +428,17 @@
   // ---- Tasks ----
   const findItem = ref => items.find(i => (ref.id && ref.id === i.id) || (ref.source === i.source && ref.line === i.line)) || items.find(i => i.title === ref.title);
   async function mutate(action) {
-    if (pending) return;
+    if (busy()) return;
     pending = true;
-    try { const message = await action(); say(typeof message === "string" ? message : t.saved); pending = false; await load(); } catch (e) { say(e.message); } finally { pending = false; }
+    say(t.saving, true);
+    try {
+      let result;
+      try { const message = await action(); result = typeof message === "string" ? message : t.saved; }
+      catch (e) { result = e.message; }
+      // Reload after failures too (the saved state may differ); writes are never retried.
+      const fresh = await load();
+      say(fresh ? result : result + " " + t.staleView, !fresh);
+    } finally { pending = false; }
   }
   const putBody = (i, status) => JSON.stringify({status, type: i.type, title: i.title, details: i.details || {}});
   const nowStamp = () => {
@@ -428,7 +458,7 @@
   }
 
   function showCompletion(item) {
-    if (pending) return;
+    if (busy()) return;
     const dialog = $("detail-dialog");
     const form = document.createElement("form");
     form.id = "desk-completion";
@@ -437,7 +467,7 @@
     input.step = "1";
     form.append(detailField(t.doneAt, input));
     const finish = stamp => {
-      if (pending) return;
+      if (dialogBlocked()) return;
       dialog.close();
       complete(item, stamp);
     };
@@ -511,8 +541,9 @@
   // ---- Status: the current person's presence ----
   const STATES = ["available", "busy", "focus", "meeting", "away", "offline", "commuting", "working", "sleeping"];
   const stateLabel = s => t.stateNames[STATES.indexOf(s)] || String(s || "");
-  let currentStatus = null, statusRevision = null;
+  let currentStatus = null, statusRevision = null, statusLoaded = false;
   function renderStatus(data) {
+    statusLoaded = true;
     statusRevision = recordRevisions.get(data) || null;
     currentStatus = (data.records || []).find(r => r.active && !r.to) || null;
     $("status-state").textContent = currentStatus ? stateLabel(currentStatus.state) : t.statusNone;
@@ -534,7 +565,8 @@
     $("status-since").textContent = fmt(t.since, {at, span});
   }
   function showStatusDialog() {
-    if (pending || !writable) return;
+    if (!writable || busy()) return;
+    if (!statusLoaded) { say(t.loading); return; }
     // The revision of the status shown when the dialog opened; never upgraded.
     const expected = statusRevision, current = currentStatus;
     const activity = detailInput("detail-activity", "text", current?.title || "");
@@ -543,14 +575,12 @@
     const forceRow = detailField(t.statusForce, force);
     forceRow.classList.add("check");
     const send = body => {
-      if (pending) return;
+      if (dialogBlocked()) return;
       $("detail-dialog").close();
       mutate(async () => {
-        try {
-          const result = await api("/api/status", {expectedRevision: expected, method: "POST",
-            headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
-          return result.unchanged ? t.statusSame : t.saved;
-        } catch (e) { load(); throw e; }
+        const result = await api("/api/status", {expectedRevision: expected, method: "POST",
+          headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
+        return result.unchanged ? t.statusSame : t.saved;
       });
     };
     const choose = state => send(Object.assign({state, title: activity.value.trim()}, force.checked ? {force: true} : {}));
@@ -685,23 +715,38 @@
     d.setUTCDate(d.getUTCDate() + n);
     return d.toISOString().slice(0, 10);
   }
-  async function load() {
-    const mine = ++generation;
-    try {
-      const [day, agenda, list, elist, status] = await Promise.all([
-        api("/api/command-center?date=" + today), api("/api/agenda?from=" + (mode === "month" ? monthRange().from : today) + "&to=" + (mode === "week" ? addDays(today, 6) : mode === "month" ? monthRange().to : today)),
-        api("/api/items?type=T&open_only=true"), api("/api/items?type=E"),
-        api("/api/status?person=self&active=true")]);
-      if (mine !== generation) return;
-      items = list.items || [];
-      eventItems = elist.items || [];
-      events = buildEvents(agenda.records || []);
-      weekEvents = mode !== "day" ? buildWeek(agenda.records || []) : [];
-      loaded = true; renderStatus(status); renderTimeline(); renderTasks(day); updateNext(wallNow());
-      $("open-top").href = "/" + (lang === "ja" ? "?lang=ja" : "");
-      $("open-planner").href = "/planner?date=" + today + (lang === "ja" ? "&lang=ja" : "");
-      loadExtras(mine);
-    } catch (e) { if (mine === generation) say(t.error + e.message); }
+  function load() { return latestLoad = runLoad(); }
+  // Each block renders as soon as its own requests finish. Resolves to false if
+  // any failed; a superseded run resolves with the newer one.
+  async function runLoad() {
+    const mine = ++generation, wanted = mode, failures = [];
+    const block = (paths, render, failed) => Promise.all(paths.map(p => api(p)))
+      .then(data => { if (mine === generation) render(...data); })
+      .catch(e => { if (mine === generation) { failures.push(e.message); failed(); } });
+    const from = wanted === "month" ? monthRange().from : today;
+    const to = wanted === "week" ? addDays(today, 6) : wanted === "month" ? monthRange().to : today;
+    $("open-top").href = "/" + (lang === "ja" ? "?lang=ja" : "");
+    $("open-planner").href = "/planner?date=" + today + (lang === "ja" ? "&lang=ja" : "");
+    await Promise.all([
+      block(["/api/status?person=self&active=true"], renderStatus,
+        () => { if (!statusLoaded) $("status-state").textContent = t.loadFailed; }),
+      block(["/api/command-center?date=" + today, "/api/items?type=T&open_only=true"], (day, list) => {
+        items = list.items || []; tasksLoaded = true; renderTasks(day);
+      }, () => { if (!tasksLoaded) note("tasks", t.loadFailed); }),
+      block(["/api/agenda?from=" + from + "&to=" + to, "/api/items?type=E"], (agenda, elist) => {
+        eventItems = elist.items || [];
+        events = buildEvents(agenda.records || []);
+        weekEvents = wanted !== "day" ? buildWeek(agenda.records || []) : [];
+        loaded = true; nextFailed = false; shownMode = wanted; renderTimeline(); updateNext(wallNow());
+      }, () => {
+        if (!loaded) { nextFailed = true; updateNext(wallNow()); }
+        if (shownMode !== wanted) note("timeline", t.loadFailed);
+      })
+    ]);
+    if (mine !== generation) return latestLoad;
+    loadExtras(mine);
+    if (failures.length) say(t.error + failures[0]);
+    return !failures.length;
   }
   async function syncConfig() {
     const started = performance.now();
@@ -736,7 +781,7 @@
   async function capture(event) {
     event.preventDefault();
     const input = $("capture-text"), text = input.value.trim();
-    if (!text || pending || !writable) return;
+    if (!text || !writable || busy()) return;
     pending = true;
     const requestGeneration = previewGeneration;
     const needsPreview = syntax() === "todo" && binding?.text !== text;
@@ -750,6 +795,7 @@
         $("capture-form").querySelector("button").textContent = t.confirmCapture;
         return;
       }
+      say(t.saving, true);
       if (syntax() === "todo") {
         await api("/api/items/capture", {method: "POST", headers: {"Content-Type": "application/json", "If-Match": binding.rev},
           body: JSON.stringify({text, syntax: "todo", context_token: binding.token, expected_source_revision: binding.rev})});
@@ -759,12 +805,14 @@
           body: JSON.stringify({text, expected_source_revision: (snap || "").replace(/^"|"$/g, "")})});
       }
       if (requestGeneration === previewGeneration) { input.value = ""; resetPreview(); }
-      say(t.captured);
-      pending = false; await load();
+      const fresh = await load();
+      say(fresh ? t.captured : t.captured + " " + t.staleView, !fresh);
     } catch (e) {
       const isCurrent = requestGeneration === previewGeneration;
       if (isCurrent) resetPreview();
-      if (!needsPreview || isCurrent) say(e.message);
+      // A failed write reloads the latest data; the typed text stays.
+      const fresh = needsPreview || await load();
+      if (!needsPreview || isCurrent) say(fresh ? e.message : e.message + " " + t.staleView, !fresh);
     } finally { pending = false; }
   }
   function stopTimers() { clearInterval(tickTimer); clearInterval(refreshTimer); tickTimer = refreshTimer = null; }
@@ -810,7 +858,7 @@
       heights: entries(v.heights, n => number(n, MIN_HEIGHT, MAX_HEIGHT)),
       fonts: entries(v.fonts, f => BLOCK_FONTS.includes(f) ? f : null)});
   }
-  let layout = copyLayout(PRESETS.standard), loaded = false, layoutInUrl = false;
+  let layout = copyLayout(PRESETS.standard), layoutInUrl = false;
   const zoomOf = name => ZOOM[layout.fonts[name] || layout.font];
   function saveLayout() {
     if (layoutInUrl) layoutUrl.write(layout);
@@ -1044,16 +1092,20 @@
     initTheme();
     initFullscreen();
     initLayout();
-    clockView = DeskClock.create({lang, field: detailField, nextEvent: now => events.find(e => e.time && e.time > now)});
+    clockView = DeskClock.create({lang, field: detailField, nextEvent: now => loaded ? events.find(e => e.time && e.time > now) : null});
     $("status-card").onclick = showStatusDialog;
     $("mode-day").onclick = () => setMode("day");
     $("mode-week").onclick = () => setMode("week");
     $("mode-month").onclick = () => setMode("month");
-    tick(); await load(); say(writable ? "" : t.readonly);
+    renderTimeline(); note("tasks", t.loading); $("status-state").textContent = t.loading;
+    tick(); if (await load() || !writable) say(writable ? "" : t.readonly);
     startTimers();
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "visible") { syncConfig().then(load); startTimers(); } else stopTimers();
     });
   }
-  boot().catch(e => say(t.error + e.message));
+  boot().catch(e => {
+    say(t.error + e.message, true);
+    if (!loaded) { note("timeline", t.loadFailed); note("tasks", t.loadFailed); $("next-title").textContent = $("status-state").textContent = t.loadFailed; }
+  });
 })();

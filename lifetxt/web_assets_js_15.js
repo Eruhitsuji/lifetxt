@@ -133,8 +133,10 @@
     }
 
     function bulkContextRecovery(reason, noSave = true) {
-      const message = ["source_membership_changed", "source_resolution_required", "manifest_unavailable"].includes(reason) ?
-        t("Workspace sources changed or could not be resolved. Reload the server, then preview and review again.") :
+      const message = reason === "source_resolution_required" ?
+        t("The write file must be one of the files being read. Fix the server configuration, restart the server, then preview and review again.") :
+        ["source_membership_changed", "manifest_unavailable"].includes(reason) ?
+        t("The files being read do not match the configuration. Restart the server with the current configuration, then preview and review again.") :
         reason === "source_unavailable" ?
         t("A workspace source is unavailable. Check the sources, then preview and review again.") :
         reason === "snapshot_unstable" ?

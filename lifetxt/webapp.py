@@ -1473,7 +1473,7 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
 
     @app.post("/api/items/preview")
     def preview_items_batch(payload=Body(...)):
-        from .batch_preview import PreviewInputError, preview_batch
+        from .batch_preview import PreviewInputError, context_message, preview_batch
         from .workspace_context_snapshot import WorkspaceContextUnavailable
 
         if not isinstance(payload, dict):
@@ -1497,7 +1497,7 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
                 detail={
                     "error": "CONTEXT_UNAVAILABLE",
                     "reason": exc.reason,
-                    "message": "Workspace review unavailable. Check sources and reload the server before reviewing again.",
+                    "message": context_message(exc.reason),
                 },
             ) from None
         except (RecursionError, UnicodeError):
@@ -3061,7 +3061,7 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
     @app.post("/api/quick/resolve")
     def preview_quick(payload=Body(...)):
         """Non-writing preview of the same Quick contract used by capture."""
-        from .batch_preview import PreviewInputError, review_batch
+        from .batch_preview import PreviewInputError, context_message, review_batch
         from .quick_input import resolve_quick_input
         from .workspace_context_snapshot import WorkspaceContextUnavailable
 
@@ -3106,7 +3106,7 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
                 detail={
                     "error": "CONTEXT_UNAVAILABLE",
                     "reason": exc.reason,
-                    "message": "Workspace review unavailable. Check sources and preview again.",
+                    "message": context_message(exc.reason),
                 },
             ) from None
         if not review["ok"]:

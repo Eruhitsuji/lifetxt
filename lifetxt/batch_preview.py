@@ -9,7 +9,7 @@ from .ids import duplicate_id_diagnostics, id_key_from_config
 from .links import reference_diagnostics
 from .model import Diagnostic
 from .parser import parse_text
-from .workspace import config_base_dir
+from .workspace import config_base_dir, resolve_workspace
 from .workspace_context_snapshot import (
     WorkspaceContextUnavailable,
     read_workspace_context,
@@ -21,6 +21,36 @@ class PreviewInputError(ValueError):
         self.status = status
         self.code = code
         super().__init__(code)
+
+
+def context_message(reason):
+    """Explain an unavailable review without exposing source paths."""
+    if reason == "source_resolution_required":
+        fix = (
+            "The write file must be one of the files being read. "
+            "Fix the server configuration and restart the server."
+        )
+    elif reason in ("source_membership_changed", "manifest_unavailable"):
+        fix = (
+            "The files being read do not match the configuration. "
+            "Restart the server with the current configuration."
+        )
+    elif reason == "source_unavailable":
+        fix = "A source file cannot be read. Check the files, then preview again."
+    else:
+        fix = "Check the sources and preview again."
+    return "Workspace review unavailable. " + fix
+
+
+def _optional_sources(config):
+    """Workspace sources not marked required may be absent."""
+    if not config.get("workspaces"):
+        return ()
+    try:
+        resolved = resolve_workspace(config, name=config.get("_active_workspace"))
+    except (OSError, ValueError, TypeError):
+        return ()  # The manifest check reports the reason.
+    return [row["resolved_path"] for row in resolved["sources"] if not row["required"]]
 
 
 def review_batch(text, paths, writable_path, config, read_only, serialize_item):
@@ -60,6 +90,7 @@ def review_batch(text, paths, writable_path, config, read_only, serialize_item):
         writable_path,
         config,
         check_manifest=bool(config.get("workspaces")) or dynamic_legacy,
+        optional_paths=_optional_sources(config),
     )
     existing = []
     for index, path in enumerate(paths, 1):

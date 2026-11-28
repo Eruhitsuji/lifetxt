@@ -39,7 +39,10 @@ def _canonical(path):
 def _digest(value):
     try:
         encoded = json.dumps(
-            value, sort_keys=True, ensure_ascii=True, separators=(",", ":"),
+            value,
+            sort_keys=True,
+            ensure_ascii=True,
+            separators=(",", ":"),
             allow_nan=False,
         ).encode("utf-8")
     except (TypeError, ValueError, OverflowError):
@@ -89,11 +92,15 @@ def _checked_paths(paths, config, check_manifest):
     if len(set(actual)) != len(actual):
         raise WorkspaceContextUnavailable("duplicate_source")
     # Callers supply the same expanded paths that downstream Core uses.
-    if any(any(char in os.fspath(p) for char in "*?[") or os.path.isdir(p) for p in paths):
+    if any(
+        any(char in os.fspath(p) for char in "*?[") or os.path.isdir(p) for p in paths
+    ):
         raise WorkspaceContextUnavailable("source_resolution_required")
     if check_manifest:
         try:
-            resolved = resolve_workspace(config, name=config.get("_active_workspace") or None)
+            resolved = resolve_workspace(
+                config, name=config.get("_active_workspace") or None
+            )
         except (OSError, ValueError, TypeError):
             raise WorkspaceContextUnavailable("manifest_unavailable") from None
         if not resolved["ok"]:
@@ -102,7 +109,9 @@ def _checked_paths(paths, config, check_manifest):
             expected = tuple(_canonical(p) for p in resolved["input_paths"])
         except (OSError, ValueError, TypeError):
             raise WorkspaceContextUnavailable("manifest_unavailable") from None
-        if expected != actual:
+        # Membership, not order: resolution sorts sources while a server keeps
+        # the declared order. Order and config stay part of the fingerprint.
+        if sorted(expected) != sorted(actual):
             raise WorkspaceContextUnavailable("source_membership_changed")
     return actual
 
@@ -140,23 +149,45 @@ def _scan(paths, writable, config, check_manifest, optional, max_bytes):
         entries.append((identity, shot.exists, shot.content_hash))
         texts.append((identity, shot.text))
     write_shot = found[writable]
-    name = str(config.get("_active_workspace") or config.get("default_workspace") or "default")
+    name = str(
+        config.get("_active_workspace") or config.get("default_workspace") or "default"
+    )
     scope = "checked_manifest" if check_manifest else "fixed_paths"
     config_revision = _digest(config)
     write_id = _path_id(writable)
-    fingerprint = _digest((
-        "workspace-context-v1", name, scope, config_revision, entries,
-        write_id, write_shot.exists, write_shot.content_hash,
-    ))
+    fingerprint = _digest(
+        (
+            "workspace-context-v1",
+            name,
+            scope,
+            config_revision,
+            entries,
+            write_id,
+            write_shot.exists,
+            write_shot.content_hash,
+        )
+    )
     return WorkspaceContext(
-        fingerprint, name, scope, tuple(entries), write_id,
-        write_shot.content_hash, config_revision, tuple(texts),
+        fingerprint,
+        name,
+        scope,
+        tuple(entries),
+        write_id,
+        write_shot.content_hash,
+        config_revision,
+        tuple(texts),
     )
 
 
 def read_workspace_context(
-    paths, writable_path, config=None, *, check_manifest=False,
-    optional_paths=(), attempts=2, max_bytes=DEFAULT_MAX_TOTAL_SOURCE_BYTES,
+    paths,
+    writable_path,
+    config=None,
+    *,
+    check_manifest=False,
+    optional_paths=(),
+    attempts=2,
+    max_bytes=DEFAULT_MAX_TOTAL_SOURCE_BYTES,
 ):
     """Capture exact-byte revisions with bounded repeated reads.
 

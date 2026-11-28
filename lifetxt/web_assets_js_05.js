@@ -447,6 +447,7 @@
       if (!project) return;
       newItemWithContext({ project: project });
     }
+    let relatedCreateContext = null;
     function drawerCreateRelated() {
       if (!drawerItem) { showToast("No record selected.", "error"); return; }
       const idKey = (typeof appConfig !== "undefined" && appConfig?.ids?.key) || "id";
@@ -455,20 +456,22 @@
         showToast("This record has no id: value, so a relation cannot be created. Add an id first.", "error");
         return;
       }
-      const choice = prompt(
-        `Relation to "${drawerItem.title}" (${RELATED_FIELD_CHOICES.join("/")}):`,
-        "related"
-      );
-      if (choice === null) return; // user cancelled -- no stale/implicit relation
-      const requestedField = choice.trim().toLowerCase() || "related";
-      const field = requestedField === "relation_title" ? "related" : requestedField;
-      if (!RELATED_FIELD_CHOICES.includes(field)) {
-        showToast(`Unknown relation "${field}". Use one of: ${RELATED_FIELD_CHOICES.join(", ")}.`, "error");
-        return;
-      }
-      const project = drawerItem.details?.project?.[0];
+      relatedCreateContext = { relationTarget: targetId, project: drawerItem.details?.project?.[0] };
+      document.getElementById("related-target").textContent = drawerItem.title;
+      document.getElementById("related-choice-related").checked = true;
+      openManagedModal(document.getElementById("related-modal"), "input:checked");
+    }
+    function closeRelatedChoice() {
+      relatedCreateContext = null;
+      closeManagedModal(document.getElementById("related-modal"));
+    }
+    function confirmRelatedChoice() {
+      const context = relatedCreateContext;
+      const field = RELATED_FIELD_CHOICES.find(name => document.getElementById("related-choice-" + name).checked);
+      if (!context || !field) return;
+      closeRelatedChoice();
       closeDrawer();
-      newItemWithContext({ relationField: field, relationTarget: targetId, project: project });
+      newItemWithContext({ relationField: field, ...context });
     }
     // ── Beginner authoring mode (#634) ──────────────────────────────
     // Progressive disclosure over the Beginner / Minimal Profile (#558):

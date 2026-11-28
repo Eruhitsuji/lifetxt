@@ -134,7 +134,7 @@ async function main() {
   context.api = async () => {throw Object.assign(Error("private path must not appear"), {detail:{reason:"source_membership_changed"}});};
   await context.previewBulkInput();
   assert.equal(add.disabled, true, "failed review cannot enable Add all");
-  assert.ok(preview.textContent.includes("Reload the server"));
+  assert.ok(preview.textContent.includes("Restart the server"));
   assert.ok(!preview.textContent.includes("private path"));
   assert.equal(input.disabled, false, "review failure leaves correction/retry usable");
   context.api = oldApi;
@@ -144,7 +144,7 @@ async function main() {
   await context.previewBulkInput();
   assert.equal(add.disabled, true, "text-only parse response is not a contextual review");
   const errors = [
-    [409, "CONTEXT_CHANGED", "source_membership_changed", "Reload the server"],
+    [409, "CONTEXT_CHANGED", "source_membership_changed", "Restart the server"],
     [409, "CONTEXT_CHANGED", "source_unavailable", "Check the sources"],
     [409, "CONTEXT_CHANGED", "snapshot_unstable", "Wait for edits"],
     [409, "CONTEXT_CHANGED", "context_or_input_changed", "Workspace or input changed"],

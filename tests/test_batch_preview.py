@@ -229,6 +229,58 @@ class BatchPreviewTests(unittest.TestCase):
             self.assertEqual(response.status_code, 503, response.text)
             self.assertEqual(response.json()["reason"], "source_membership_changed")
 
+    def workspace_client(self, sources, writable):
+        client = TestClient(
+            webapp.create_app(
+                paths=[source["path"] for source in sources],
+                writable_path=writable,
+                config={
+                    "workspaces": {
+                        "default": {"sources": sources, "write_file": writable}
+                    }
+                },
+            )
+        )
+        self.addCleanup(client.close)
+        return client
+
+    def test_declared_source_order_does_not_block_review(self):
+        sources = [{"path": self.other}, {"path": self.main}]
+        client = self.workspace_client(sources, self.main)
+        self.assertTrue(self.preview("[ ] T A ref:other\n", client)["ok"])
+
+    def test_missing_optional_source_reviews_and_binds_its_creation(self):
+        os.remove(self.other)
+        sources = [{"path": self.main}, {"path": self.other}]
+        client = self.workspace_client(sources, self.main)
+        first = self.preview("[ ] T A\n", client)
+        self.assertTrue(first["ok"])
+        self.write(self.other, "[ ] T Created id:created\n")
+        second = self.preview("[ ] T A\n", client)
+        self.assertNotEqual(first["context_token"], second["context_token"])
+
+    def test_missing_required_source_stays_unavailable(self):
+        os.remove(self.other)
+        sources = [{"path": self.main}, {"path": self.other, "required": True}]
+        client = self.workspace_client(sources, self.main)
+        response = client.post("/api/items/preview", json={"text": "[ ] T A\n"})
+        self.assertEqual(response.status_code, 503, response.text)
+        self.assertNotIn(self.temp.name, response.text)
+
+    def test_unavailable_review_explains_the_reason_for_both_previews(self):
+        client = TestClient(
+            webapp.create_app(paths=[self.other], writable_path=self.main)
+        )
+        self.addCleanup(client.close)
+        for url, body in [
+            ("/api/items/preview", {"text": "[ ] T A\n"}),
+            ("/api/quick/resolve", {"text": "A", "syntax": "todo"}),
+        ]:
+            response = client.post(url, json=body)
+            self.assertEqual(response.status_code, 503, response.text)
+            self.assertIn("write file", response.json()["message"])
+            self.assertNotIn(self.temp.name, response.text)
+
     def test_existing_bearer_auth_and_readonly_clock_exemption(self):
         config = {
             "api": {"token": "synthetic-test-token"},

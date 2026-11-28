@@ -209,7 +209,7 @@ const DeskClock = (() => {
       let next = "";
       if (settings.nextEvent) {
         const found = nextEvent(pad(h) + ":" + pad(m));
-        if (!found) next = t.noNext;
+        if (!found) next = found === null ? "" : t.noNext; // null: not loaded yet
         else {
           const [eh, em] = found.time.split(":").map(Number);
           next = fmt(t.untilNext, {name: found.title}) + ": " + fmt(t.left, {span: span(((eh - h) * 60 + em - m) * 60000)});

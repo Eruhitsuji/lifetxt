@@ -1,11 +1,8 @@
-          key,
-          line: item.line,
-          source: item.source || "",
+          id,
           title: item.title || "",
           type: item.type || "",
-          opened_at: Date.now(),
         };
-        const next = [row, ...loadRecentItems().filter(r => r.key !== key)].slice(0, 8);
+        const next = [row, ...loadRecentItems().filter(r => r.id !== id)].slice(0, 8);
         localStorage.setItem(RECENT_ITEMS_STORAGE_KEY, JSON.stringify(next));
       } catch(_) {}
     }

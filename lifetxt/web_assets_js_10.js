@@ -24,16 +24,15 @@
             fuzzyMatch(String(i?.details?.[idKey]?.[0] || i?.id || ""), q)
           ).slice(0, 8)
         : [];
-      const recent = q ? [] : loadRecentItems()
-        .map(r => (currentItems || []).find(i => recentItemKey(i) === r.key) || r)
-        .filter(Boolean)
-        .slice(0, 6);
+      const recent = q ? [] : loadRecentItems().slice(0, 6);
       _cmdkEntries = [
-        ...recent.map(i => ({kind: i.type || "recent", label: i.title || "(untitled)", hint: i?.details?.[idKey]?.[0] || (i.line ? `line ${i.line}` : "recent"), section: "Recently Opened", run: () => {
-          const live = (currentItems || []).find(x => recentItemKey(x) === (i.key || recentItemKey(i)));
-          if (live) { selectItem(live); openDrawer(live); }
-          else if (i.line) openItemByLine(Number(i.line));
-        }})),
+        ...recent.map(i => ({
+          kind: i.type || "recent",
+          label: i.title || "(untitled)",
+          hint: i.id,
+          section: "Recently Opened",
+          run: () => openItemById(i.id),
+        })),
         ...items.map(i => ({kind: i.type || "item", label: i.title, hint: i?.details?.[idKey]?.[0] || `line ${i.line}`, section: "Items", run: () => { selectItem(i); openDrawer(i); }})),
         ...actions.map(a => ({kind: "action", label: t(a.label), hint: "", section: "Actions", run: a.run})),
       ];

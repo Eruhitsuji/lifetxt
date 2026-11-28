@@ -117,7 +117,7 @@ def _assemble_planner_html() -> str:
         + _read_resource("web_tokens_auto.css")
         + _read_resource("web_planner.css")
     )
-    script = _read_resource("web_planner.js")
+    script = _read_resource("web_layout_url.js") + _read_resource("web_planner.js")
     return template.replace(
         "<script>__PLANNER_JS__</script>",
         "<script>" + script + "</script>",
@@ -134,7 +134,11 @@ def _assemble_desk_html() -> str:
         + _read_resource("web_tokens_auto.css")
         + _read_resource("web_desk.css")
     )
-    script = _read_resource("web_desk_clock.js") + _read_resource("web_desk.js")
+    script = (
+        _read_resource("web_layout_url.js")
+        + _read_resource("web_desk_clock.js")
+        + _read_resource("web_desk.js")
+    )
     return template.replace(
         "<script>__DESK_JS__</script>",
         "<script>" + script + "</script>",

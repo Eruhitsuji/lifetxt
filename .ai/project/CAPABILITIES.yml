@@ -8,14 +8,16 @@ capabilities:
     owner: Eruhitsuji
     source_requirements:
       - req-web-desk-v1
+      - req-web-desk-layout-url
     implementation_locations:
       - lifetxt/web_desk.html
       - lifetxt/web_desk.css
       - lifetxt/web_desk.js
       - lifetxt/web_desk_clock.js
+      - lifetxt/web_layout_url.js
       - lifetxt/desk_app_manifest.json
     public_interfaces:
-      - GET /desk
+      - GET /desk (optional versioned layout query parameter)
       - GET /desk.webmanifest
     tests_or_evidence:
       - tests/test_web_desk.py
@@ -28,7 +30,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/1805
       - https://github.com/Eruhitsuji/lifetxt/issues/1806
     reuse_policy: Reuse command-center, agenda, items and capture APIs and the Planner revision contract; no new API or mutation path.
-    notes: Today/7-day/month calendar, detail editing, completion time, Quick/todo.txt capture and theme toggle. Status uses the existing /api/status contract; layout is stored only in browser localStorage (issues 1779-1781). Chromium integration verification recorded in issue 1670; physical display and non-Chromium browsers not verified. Resizing, optional habit/message/deadline/summary blocks and clock settings (issues 1804-1806) reuse existing read APIs and browser localStorage. No service worker or offline queue.
+    notes: Today/7-day/month calendar, detail editing, completion time, Quick/todo.txt capture and theme toggle. Status uses the existing /api/status contract. The normal layout is stored in browser localStorage. A versioned layout in the URL overrides presentation without updating the saved layout. Resizing, optional information blocks and clock settings reuse existing read APIs. Clock settings stay browser-local. No service worker or offline queue.
 
   - id: cap-web-bulk-done-date
     name: Explicit bulk task completion date
@@ -839,6 +841,7 @@ capabilities:
       - req-planner-temporal-day-semantics
       - req-planner-user-note-projection
       - req-planner-presentation-customization
+      - req-web-planner-layout-url
       - req-planner-record-detail-view
       - req-planner-quick-capture-revision-parity
       - req-planner-form-control-style-consistency
@@ -848,6 +851,7 @@ capabilities:
       - lifetxt/web_planner.html
       - lifetxt/web_planner.css
       - lifetxt/web_planner.js
+      - lifetxt/web_layout_url.js
       - lifetxt/planner_app_manifest.json
       - tests/test_web_planner.py
       - tests/test_web_planner_browser.py
@@ -856,7 +860,7 @@ capabilities:
       - docs/ja/web.md
     public_interfaces:
       - GET /api/config (additive current_datetime workspace clock)
-      - GET /planner
+      - GET /planner (optional versioned Day layout query parameter)
       - GET /planner.webmanifest
       - GET /api/command-center?date=YYYY-MM-DD (optional)
       - GET /api/agenda?from=YYYY-MM-DD&to=YYYY-MM-DD (week and month overview)

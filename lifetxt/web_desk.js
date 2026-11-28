@@ -23,6 +23,9 @@
   const requested = params.get("lang");
   const lang = ["en", "ja"].includes(requested) ? requested : ((navigator.language || "en").slice(0, 2) === "ja" ? "ja" : "en");
   const t = copy[lang];
+  const layoutCopy = lang === "ja"
+    ? {share: "画面構成をURLに反映", linked: "画面構成をアドレスバーのURLに反映しました。", scoped: "このリンクの画面構成を編集中です。"}
+    : {share: "Put layout in URL", linked: "The address bar now includes this layout.", scoped: "You are editing the layout for this link."};
   const fmt = (s, v) => s.replace(/\{(\w+)\}/g, (_, k) => v[k]);
   let eventItems = [], mode = "day", pickedDay = "",  weekEvents = [], today = "", clock = null, writable = false, pending = false, generation = 0, revision = null, items = [], nowIso = "", events = [];
   const recordRevisions = new WeakMap();
@@ -807,9 +810,14 @@
       heights: entries(v.heights, n => number(n, MIN_HEIGHT, MAX_HEIGHT)),
       fonts: entries(v.fonts, f => BLOCK_FONTS.includes(f) ? f : null)});
   }
-  let layout = copyLayout(PRESETS.standard), loaded = false;
+  let layout = copyLayout(PRESETS.standard), loaded = false, layoutInUrl = false;
   const zoomOf = name => ZOOM[layout.fonts[name] || layout.font];
-  function saveLayout() { try { localStorage.setItem("desk-layout", JSON.stringify(layout)); } catch (_) {} }
+  function saveLayout() {
+    if (layoutInUrl) layoutUrl.write(layout);
+    else {
+      try { localStorage.setItem("desk-layout", JSON.stringify(layout)); } catch (_) {}
+    }
+  }
   function sizeZone(name) {
     const zone = $(name + "-zone"), height = layout.heights[name], zoom = zoomOf(name);
     zone.style.zoom = zoom === 1 ? "" : zoom;
@@ -933,7 +941,9 @@
     const presets = Object.keys(PRESETS).map(n => [n, t.presetNames[n]]);
     if (!current) presets.unshift(["", t.layoutCustom]);
     const note = document.createElement("p");
-    note.className = "muted"; note.textContent = t.layoutShow;
+    note.className = "muted";
+    note.setAttribute("role", "status");
+    note.textContent = layoutInUrl ? layoutCopy.scoped : t.layoutShow;
     const nodes = [detailFields(
       select("preset", t.layoutPreset, presets, current, v => { if (PRESETS[v]) changeLayout(copyLayout(PRESETS[v]), "preset"); }),
       select("ratio", t.layoutRatio, RATIOS.map(v => [v, t.ratioNames[v]]), layout.ratio, v => edit("ratio", n => { n.ratio = v; n.split = null; })),
@@ -969,6 +979,11 @@
     actions.className = "layout-actions";
     actions.append(button("swap", t.layoutSwap, t.layoutSwap, () => edit("swap", n => { n.cols.reverse(); if (n.split !== null) n.split = 100 - n.split; })),
       button("auto", t.layoutAuto, t.layoutAuto, () => edit("auto", n => { n.heights = {}; n.split = null; })),
+      button("share", layoutCopy.share, layoutCopy.share, () => {
+        layoutInUrl = true;
+        saveLayout();
+        note.textContent = layoutCopy.linked;
+      }),
       button("reset", t.layoutReset, t.layoutReset, () => changeLayout(copyLayout(PRESETS.standard), "reset")));
     nodes.push(actions);
     box.replaceChildren(...nodes);
@@ -981,11 +996,12 @@
   }
   function initLayout() {
     const wanted = params.get("preset");
+    const linked = readLayout(layoutUrl.read(params));
     let saved = null;
     try { saved = JSON.parse(localStorage.getItem("desk-layout")); } catch (_) {}
-    // A preset in the URL is shown without overwriting the saved arrangement.
-    if (Object.hasOwn(PRESETS, wanted || "")) layout = copyLayout(PRESETS[wanted]);
-    else layout = readLayout(saved) || layout;
+    const presetLayout = Object.hasOwn(PRESETS, wanted || "") ? copyLayout(PRESETS[wanted]) : null;
+    layoutInUrl = Boolean(linked || presetLayout);
+    layout = linked || presetLayout || readLayout(saved) || layout;
     initColumnSplitter();
     applyLayout();
     $("layout-open").onclick = () => { renderLayoutDialog(); $("layout-dialog").showModal(); $("layout-content").scrollTop = 0; $("layout-close").focus(); };

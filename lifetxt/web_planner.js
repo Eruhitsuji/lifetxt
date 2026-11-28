@@ -5,6 +5,10 @@
     en: {allDay:"All day", dueLabel:"Due: ", stateProgress:"In progress", stateDone:"Done", stateCanceled:"Canceled", stateDeferred:"Deferred", stateTentative:"Tentative", habitOpen:"Not recorded", habitDone:"✓ Done", reviewEvents:"Recorded changes: ", event_completed:"Completed", event_reopened:"Reopened", event_canceled:"Canceled", event_schedule_changed:"Rescheduled", event_created:"Created", event_status_changed:"Status changed"},
     ja: {allDay:"終日", dueLabel:"期限: ", stateProgress:"進行中", stateDone:"完了", stateCanceled:"中止", stateDeferred:"延期", stateTentative:"未確定", habitOpen:"未記録", habitDone:"✓ 完了", reviewEvents:"記録された変更: ", event_completed:"完了", event_reopened:"再開", event_canceled:"中止", event_schedule_changed:"日程変更", event_created:"作成", event_status_changed:"状態変更"}
   };
+  const layoutCopy = {
+    en: {layoutShare:"Put applied layout in URL", layoutLinked:"The address bar now includes this layout.", layoutScoped:"You are editing the layout for this link."},
+    ja: {layoutShare:"適用済みの画面構成をURLに反映", layoutLinked:"画面構成をアドレスバーのURLに反映しました。", layoutScoped:"このリンクの画面構成を編集中です。"}
+  };
   const NOTE_PAGE_SIZE=5;
   let notesPage=null, noteRows=[], notesBusy=false, loadGeneration=0;
   // "echo" repeats the visible headings: keep it for assistive technology only.
@@ -585,7 +589,7 @@
       }
     }
   }
-  function translate(){t=copy[lang];Object.assign(t,flowCopy[lang],focusCopy[lang],timeReviewCopy[lang],displayCopy[lang]);Object.assign(t,lang==="ja"?{emptyNotes:"通常のメモはありません。",moreNotes:"さらに表示",editNote:"編集",viewSelector:"Plannerの表示",anchorDate:"表示の基準日",month:"月",monthTitle:"月間プランナー",previousMonth:"前の月",nextMonth:"次の月",densityNone:"予定なし",densityLow:"少ない",densityMedium:"普通",densityHigh:"多い",items:"件",outsideMonth:"表示月の外",scope:"スコープ",all:"すべて",customize:"カスタマイズ",sections:"Dayセクション",density:"密度",comfortable:"標準",compact:"コンパクト",apply:"適用",reset:"workspaceの既定値に戻す",moveUp:"上へ",moveDown:"下へ",showSection:"表示"}:{emptyNotes:"No ordinary Notes.",moreNotes:"Load more",editNote:"Edit",viewSelector:"Planner view",anchorDate:"View anchor date",month:"Month",monthTitle:"Month Planner",previousMonth:"Previous month",nextMonth:"Next month",densityNone:"No dated items",densityLow:"Low density",densityMedium:"Medium density",densityHigh:"High density",items:"items",outsideMonth:"Outside selected month",scope:"Scope",all:"All",customize:"Customize",sections:"Day sections",density:"Density",comfortable:"Comfortable",compact:"Compact",apply:"Apply",reset:"Reset to workspace defaults",moveUp:"Move up",moveDown:"Move down",showSection:"Show"});document.documentElement.lang=lang;document.querySelectorAll("[data-i18n]").forEach(n=>n.textContent=t[n.dataset.i18n]||n.textContent);$('view-switch').setAttribute("aria-label",t.viewSelector);document.title=(view==="week"?t.weekTitle:view==="month"?t.monthTitle:t.title)+" · life.txt"}
+  function translate(){t=copy[lang];Object.assign(t,flowCopy[lang],focusCopy[lang],timeReviewCopy[lang],displayCopy[lang],layoutCopy[lang]);Object.assign(t,lang==="ja"?{emptyNotes:"通常のメモはありません。",moreNotes:"さらに表示",editNote:"編集",viewSelector:"Plannerの表示",anchorDate:"表示の基準日",month:"月",monthTitle:"月間プランナー",previousMonth:"前の月",nextMonth:"次の月",densityNone:"予定なし",densityLow:"少ない",densityMedium:"普通",densityHigh:"多い",items:"件",outsideMonth:"表示月の外",scope:"スコープ",all:"すべて",customize:"カスタマイズ",sections:"Dayセクション",density:"密度",comfortable:"標準",compact:"コンパクト",apply:"適用",reset:"workspaceの既定値に戻す",moveUp:"上へ",moveDown:"下へ",showSection:"表示"}:{emptyNotes:"No ordinary Notes.",moreNotes:"Load more",editNote:"Edit",viewSelector:"Planner view",anchorDate:"View anchor date",month:"Month",monthTitle:"Month Planner",previousMonth:"Previous month",nextMonth:"Next month",densityNone:"No dated items",densityLow:"Low density",densityMedium:"Medium density",densityHigh:"High density",items:"items",outsideMonth:"Outside selected month",scope:"Scope",all:"All",customize:"Customize",sections:"Day sections",density:"Density",comfortable:"Comfortable",compact:"Compact",apply:"Apply",reset:"Reset to workspace defaults",moveUp:"Move up",moveDown:"Move down",showSection:"Show"});document.documentElement.lang=lang;document.querySelectorAll("[data-i18n]").forEach(n=>n.textContent=t[n.dataset.i18n]||n.textContent);$('view-switch').setAttribute("aria-label",t.viewSelector);document.title=(view==="week"?t.weekTitle:view==="month"?t.monthTitle:t.title)+" · life.txt"}
   let revision = null, captureRevision = null;
   const recordRevisions = new WeakMap();
   function revisionError(conflict=false) {
@@ -694,7 +698,21 @@
   function fullEdit(item){const box=$('detail-content'),acts=$('detail-actions');box.replaceChildren();acts.replaceChildren();$('detail-error').textContent='';const ti=dInput('detail-title','text',item.title),st=document.createElement('select');for(const v of new Set(['[ ]','[/]','[x]','[-]','[>]','[?]','[N]',item.status])){const o=document.createElement('option');o.value=o.textContent=v;st.append(o)}st.value=item.status;const ty=dInput('detail-type','text',item.type),de=document.createElement('textarea');de.value=detailsText(item.details);de.rows=6;box.append(dField(t.detTitle,ti),dFields(dField(t.detStatus,st),dField(t.detType,ty)),dField(t.detDetails,de));const b=mk('button','go go-primary',t.detSave);b.type='button';b.onclick=()=>{if(!ti.value.trim()){detailError(t.detReqDate);return}putItem(item,{status:st.value,type:ty.value.trim()||item.type,title:ti.value.trim(),details:parseDetails(de.value)})};acts.append(b);ti.focus()}
   function showDetail(record,match=null){const box=$('detail-content'),acts=$('detail-actions');box.replaceChildren();acts.replaceChildren();$('detail-heading').textContent=record.title||t.detail;$('detail-error').textContent='';const when=match?.start||vals(record,'on')[0]||vals(record,'due')[0]||'';const sum=dList([[t.detType,record.type||record.kind],[t.detStatus,record.status],[t.detWhen,when]],'detail-summary');if(sum.childElementCount)box.append(sum);const rows=Object.entries(record.details||{}).map(([k,v])=>[k,Array.isArray(v)?v.join(', '):String(v)]);const props=dList(rows,'detail-properties');if(props.childElementCount)box.append(props);const can=writable&&record.editable&&pathFor(record);if(can&&record.type==='T'){if(record.status!=='[x]'){const d=mk('button','go go-primary',t.detMarkDone);d.type='button';d.onclick=()=>showCompletion(record);acts.append(d)}const old=String(vals(record,'due')[0]||''),input=dInput('detail-due','date',old.slice(0,10)),b=mk('button','go',t.detChangeDue);b.type='button';b.onclick=()=>{if(!input.value){detailError(t.detReqDate);return}putItem(record,{status:record.status,type:record.type,title:record.title,details:{...record.details,due:[input.value+(old.includes('T')?old.slice(10):'')]}})};acts.append(dFields(dField(t.detDue,input)),b)}if(can){const eb=mk('button','go',t.detEdit);eb.type='button';eb.onclick=()=>fullEdit(record);acts.append(eb)}$('detail-dialog').showModal();box.parentElement.scrollTop=0;$('detail-close').focus()}
   function list(target,items,render){target.replaceChildren();if(!items.length){const p=document.createElement("p");p.className="empty";p.textContent=t.empty;target.append(p);return}items.forEach(x=>render(x))}
-  function updateUrl(){const u=new URL(location.href);if(view!=="day"||date!==today)u.searchParams.set("date",date);else u.searchParams.delete("date");if(view!=="day")u.searchParams.set("view",view);else u.searchParams.delete("view");if(scopeArea)u.searchParams.set("area",scopeArea);else u.searchParams.delete("area");if(scopeView)u.searchParams.set("saved_view",scopeView);else u.searchParams.delete("saved_view");lang==="en"?u.searchParams.delete("lang"):u.searchParams.set("lang",lang);history.replaceState({},"",u.pathname+u.search)}
+  function updateUrl() {
+    const url = new URL(location.href);
+    const next = url.searchParams;
+    if (view !== "day" || date !== today) next.set("date", date);
+    else next.delete("date");
+    if (view !== "day") next.set("view", view);
+    else next.delete("view");
+    if (scopeArea) next.set("area", scopeArea);
+    else next.delete("area");
+    if (scopeView) next.set("saved_view", scopeView);
+    else next.delete("saved_view");
+    if (lang === "ja" || requestedLang === "en") next.set("lang", lang);
+    else next.delete("lang");
+    history.replaceState(history.state, "", url.pathname + url.search + url.hash);
+  }
   function scopeQuery(){const p=new URLSearchParams();if(scopeArea)p.set('area',scopeArea);if(scopeView)p.set('saved_view',scopeView);return p.toString()?("&"+p.toString()):''}
   async function syncToday() {
     updateFocus();
@@ -859,14 +877,75 @@
     }catch(e){if(generation===loadGeneration){feedback.text=t.error+' '+e.message;$('time-review-evidence').textContent=t.timeReviewUnavailable;$('time-review-count').textContent=t.timeReviewUnavailable}}}
   function shift(n){date=view==="month"?monthShift(monthStart(date),n):dayDate(date,n*(view==="week"?7:1));load()}
   const sectionIds=["schedule","tasks","habits","notes","journal","review"];
-  let plannerDefaults={sections:sectionIds,hidden_sections:[],density:"comfortable"},plannerPreference=null;
+  let plannerDefaults={sections:sectionIds,hidden_sections:[],density:"comfortable"},plannerPreference=null,layoutInUrl=false;
   function normalizePlannerPreference(value){const source=value||plannerDefaults,sections=Array.isArray(source.sections)?source.sections:sectionIds,ordered=[...new Set(sections.filter(id=>sectionIds.includes(id))),...sectionIds.filter(id=>!sections.includes(id))];return {sections:ordered,hidden_sections:[...new Set((Array.isArray(source.hidden_sections)?source.hidden_sections:[]).filter(id=>sectionIds.includes(id)))],density:["comfortable","compact"].includes(source.density)?source.density:"comfortable",time_bands:validTimeBands(source.time_bands)?{...source.time_bands}:{...defaultTimeBands}}}
-  function preference(){if(plannerPreference)return plannerPreference;try{const raw=localStorage.getItem("lifetxt_planner_prefs_v1");plannerPreference=raw?normalizePlannerPreference(JSON.parse(raw)):normalizePlannerPreference(plannerDefaults)}catch(_){plannerPreference=normalizePlannerPreference(plannerDefaults)}return plannerPreference}
+  function localPlannerPreference() {
+    try {
+      return normalizePlannerPreference(JSON.parse(localStorage.getItem("lifetxt_planner_prefs_v1")));
+    } catch (_) {
+      return normalizePlannerPreference(plannerDefaults);
+    }
+  }
+  function preference() {
+    if (plannerPreference) return plannerPreference;
+    const local = localPlannerPreference();
+    const linked = layoutUrl.read(params);
+    const validSections = ids => Array.isArray(ids) && ids.every(id => sectionIds.includes(id));
+    layoutInUrl = validSections(linked?.sections) && validSections(linked.hidden_sections)
+      && ["comfortable", "compact"].includes(linked.density);
+    plannerPreference = layoutInUrl
+      ? normalizePlannerPreference({...linked, time_bands: local.time_bands})
+      : local;
+    return plannerPreference;
+  }
   function applyPlannerPreference(){const pref=preference(),day=$('day-view');day.classList.toggle('density-compact',pref.density==='compact');for(const id of sectionIds){const node=focusTarget(id);if(node)node.hidden=pref.hidden_sections.includes(id)}for(const id of pref.sections){const node=focusTarget(id);if(node)day.append(node)} if(focusDataReady)renderReview(focusReview);$("time-review-panel").hidden=view!=="day"||date!==today||pref.hidden_sections.includes("review");updateFocus(); }
   function renderPreferenceControls(){const pref=preference(),target=$('section-preferences');target.replaceChildren();for(const id of pref.sections){const row=document.createElement('div');row.className='preference-row';row.dataset.section=id;const label=document.createElement('label'),check=document.createElement('input');check.type='checkbox';check.checked=!pref.hidden_sections.includes(id);check.dataset.section=id;const name=id==='review'?t.reviewActivity:t[id];label.append(check,' ',name);const up=document.createElement('button'),down=document.createElement('button');up.type=down.type='button';up.textContent=t.moveUp;down.textContent=t.moveDown;up.setAttribute('aria-label',t.moveUp+' '+name);down.setAttribute('aria-label',t.moveDown+' '+name);up.onclick=()=>{const before=row.previousElementSibling;if(before)target.insertBefore(row,before)};down.onclick=()=>{const after=row.nextElementSibling;if(after)target.insertBefore(after,row)};row.append(label,up,down);target.append(row)}$('density').value=pref.density;for(const k of ["morning","daytime","evening"])$("focus-"+k).value=pref.time_bands[k];$("focus-settings-error").textContent="";}
-  function savePlannerPreference(value){plannerPreference=normalizePlannerPreference(value);try{localStorage.setItem("lifetxt_planner_prefs_v1",JSON.stringify(plannerPreference))}catch(_){ }applyPlannerPreference()}
+  function writePlannerLayoutUrl() {
+    const {sections, hidden_sections, density} = preference();
+    layoutUrl.write({sections, hidden_sections, density});
+  }
+  function saveLocalPlannerPreference(value) {
+    try { localStorage.setItem("lifetxt_planner_prefs_v1", JSON.stringify(value)); } catch (_) {}
+  }
+  function savePlannerPreference(value) {
+    const previous = preference();
+    plannerPreference = normalizePlannerPreference(value);
+    if (layoutInUrl) {
+      writePlannerLayoutUrl();
+      if (JSON.stringify(previous.time_bands) !== JSON.stringify(plannerPreference.time_bands)) {
+        saveLocalPlannerPreference({...localPlannerPreference(), time_bands: plannerPreference.time_bands});
+      }
+    } else {
+      saveLocalPlannerPreference(plannerPreference);
+    }
+    applyPlannerPreference();
+  }
+  function resetPlannerPreference() {
+    if (layoutInUrl) {
+      savePlannerPreference({...plannerDefaults, time_bands: preference().time_bands});
+    } else {
+      plannerPreference = normalizePlannerPreference(plannerDefaults);
+      try { localStorage.removeItem("lifetxt_planner_prefs_v1"); } catch (_) {}
+      applyPlannerPreference();
+    }
+    renderPreferenceControls();
+  }
+  function bindLayoutUrlControls() {
+    $("customize").onclick = () => {
+      renderPreferenceControls();
+      $("layout-url-status").textContent = layoutInUrl ? t.layoutScoped : "";
+      $("customize-dialog").showModal();
+    };
+    $("layout-url-share").onclick = () => {
+      preference();
+      layoutInUrl = true;
+      writePlannerLayoutUrl();
+      $("layout-url-status").textContent = t.layoutLinked;
+    };
+    $("reset-customization").onclick = resetPlannerPreference;
+  }
   function openEditor(kind,item=null){if(!writable)return;edit={kind,item,revision:item?(recordRevisions.get(item)||null):revision};$('editor-heading').textContent=kind==='J'?t.journal:t.notes;$('editor-title').value=item?.title||(kind==='J'?'Journal '+date:'');$('editor-body').value=vals(item,'body')[0]||'';$('editor-feedback').textContent='';$('editor').showModal();$('editor-title').focus()}
-  async function boot(){translate();$("focus-mode").onchange=()=>{focusMode=$("focus-mode").value;updateFocus();};const clockStarted=performance.now();$('more-notes').onclick=moreNotes;$('customize').onclick=()=>{renderPreferenceControls();$('customize-dialog').showModal()};$('customize-form').onsubmit=e=>{e.preventDefault();const rows=[...$('section-preferences').children],hidden=rows.filter(row=>!row.querySelector('input').checked).map(row=>row.dataset.section);const bands=Object.fromEntries(["morning","daytime","evening"].map(k=>[k,$("focus-"+k).value]));if(!validTimeBands(bands)){$("focus-settings-error").textContent=t.focusInvalid;$("focus-morning").focus();return;}savePlannerPreference({time_bands:bands,sections:rows.map(row=>row.dataset.section),hidden_sections:hidden,density:$('density').value});$('customize-dialog').close()};$('reset-customization').onclick=()=>{plannerPreference=normalizePlannerPreference(plannerDefaults);try{localStorage.removeItem("lifetxt_planner_prefs_v1")}catch(_){ }applyPlannerPreference();renderPreferenceControls()};$('prev').onclick=()=>shift(-1);$('next').onclick=()=>shift(1);$('today').onclick=()=>{date=today;load()};$('prev').setAttribute('aria-label',t.previousDay);$('next').setAttribute('aria-label',t.nextDay);$('view-day').onclick=()=>setView('day');$('view-week').onclick=()=>setView('week');$('view-month').onclick=()=>setView('month');$('date').onchange=()=>{if(/^\d{4}-\d\d-\d\d$/.test($('date').value)){date=$('date').value;load()}};
+  async function boot(){translate();$("focus-mode").onchange=()=>{focusMode=$("focus-mode").value;updateFocus();};const clockStarted=performance.now();$('more-notes').onclick=moreNotes;bindLayoutUrlControls();$('customize-form').onsubmit=e=>{e.preventDefault();const rows=[...$('section-preferences').children],hidden=rows.filter(row=>!row.querySelector('input').checked).map(row=>row.dataset.section);const bands=Object.fromEntries(["morning","daytime","evening"].map(k=>[k,$("focus-"+k).value]));if(!validTimeBands(bands)){$("focus-settings-error").textContent=t.focusInvalid;$("focus-morning").focus();return;}savePlannerPreference({time_bands:bands,sections:rows.map(row=>row.dataset.section),hidden_sections:hidden,density:$('density').value});$('customize-dialog').close()};$('prev').onclick=()=>shift(-1);$('next').onclick=()=>shift(1);$('today').onclick=()=>{date=today;load()};$('prev').setAttribute('aria-label',t.previousDay);$('next').setAttribute('aria-label',t.nextDay);$('view-day').onclick=()=>setView('day');$('view-week').onclick=()=>setView('week');$('view-month').onclick=()=>setView('month');$('date').onchange=()=>{if(/^\d{4}-\d\d-\d\d$/.test($('date').value)){date=$('date').value;load()}};
     $('open-capture').onclick=()=>{if(!writable)return;captureRevision=sourceRevision?'"'+sourceRevision+'"':revision;$('capture-feedback').textContent='';$('capture-dialog').showModal()};$('capture-form').onsubmit=async e=>{e.preventDefault();if(pending||!writable)return;pending=true;const b=$('capture-form').querySelector('[type=submit]');b.disabled=true;try{await api('/api/items/capture',{expectedRevision:captureRevision,method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:$('capture-text').value,expected_source_revision:(captureRevision||'').replace(/^"|"$/g,'')})});$('capture-text').value='';$('capture-dialog').close();feedback.text=t.captured;await load()}catch(err){$('capture-feedback').textContent=t.captureError+err.message}finally{pending=false;b.disabled=false}};
     $('new-note').onclick=()=>openEditor('N');$('edit-journal').onclick=async()=>{const j=(await api('/api/items?type=J')).items||[];openEditor('J',j.find(i=>vals(i,'on').some(d=>String(d).slice(0,10)===date))||null)};
     $('editor-form').onsubmit=async e=>{e.preventDefault();if(!edit||pending)return;const {kind,item,revision:expectedRevision}=edit,body=$('editor-body').value.trim();if(kind==='J'&&!body){$('editor-feedback').textContent=t.journalRequired;return}const details={...(item?.details||{})};if(body)details.body=[body];else delete details.body;if(kind==='J'&&!details.on)details.on=[date];const payload={status:'[N]',type:kind,title:$('editor-title').value.trim(),details};pending=true;const button=$('editor-form').querySelector('[type=submit]');button.disabled=true;try{await api(item?pathFor(item):'/api/items',{expectedRevision,method:item?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});$('editor').close();feedback.text=t.saved;await load()}catch(err){$('editor-feedback').textContent=t.saveError+err.message}finally{pending=false;button.disabled=false}};

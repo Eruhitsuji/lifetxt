@@ -132,6 +132,22 @@ class DeskPageTests(unittest.TestCase):
         ):
             self.assertEqual(self.client.get(url).status_code, 200, url)
 
+    def test_clock_settings_present(self):
+        text = self.client.get("/desk").text
+        for element in (
+            "clock-open",
+            "clock-dialog",
+            "clock-content",
+            "clock-zones",
+            "clock-bars",
+            "clock-countdown",
+            "clock-next",
+        ):
+            self.assertEqual(text.count(f'id="{element}"'), 1, element)
+        self.assertEqual(text.count('id="clock-heading"'), 1)
+        self.assertIn('localStorage.getItem("desk-clock")', text)
+        self.assertLess(text.index("const DeskClock"), text.index("DeskClock.create"))
+
     def test_manifest(self):
         r = self.client.get("/desk.webmanifest")
         self.assertEqual(r.status_code, 200)

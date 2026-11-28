@@ -505,14 +505,7 @@
     // ── Agenda overdue/due-soon highlighting ───────────────────────
     function agendaDueSoonClass(record) {
       const due = record?.details?.due?.[0] || record?.due;
-      if (!due) return "";
-      const d = new Date(due); if (isNaN(d)) return "";
-      const today = new Date(); today.setHours(0,0,0,0);
-      d.setHours(0,0,0,0);
-      const diffDays = Math.floor((d - today) / 86400000);
-      if (diffDays < 0) return "overdue";
-      if (diffDays <= dueSoonDays()) return "due-soon";
-      return "";
+      return dueDayClass(workspaceCalendarDayDifference(due));
     }
 
     // ── Notification permission state display ──────────────────────

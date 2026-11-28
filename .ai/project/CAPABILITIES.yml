@@ -3,7 +3,7 @@ schema_version: 1
 capabilities:
   - id: cap-web-desk
     name: Desk always-on work screen
-    summary: Scroll-free /desk page with workspace clock, today's calendar timeline and tasks, item detail dialogs, complete/start/stop and quick add through existing revision-guarded APIs, current Status display and change, a full screen toggle and a per-browser screen layout.
+    summary: Scroll-free /desk page with workspace clock, today's calendar timeline and tasks, item detail dialogs, complete/start/stop and quick add through existing revision-guarded APIs, current Status display and change, a full screen toggle and a per-browser screen layout with resizable blocks, optional information blocks and clock display settings.
     status: implemented
     owner: Eruhitsuji
     source_requirements:
@@ -12,6 +12,7 @@ capabilities:
       - lifetxt/web_desk.html
       - lifetxt/web_desk.css
       - lifetxt/web_desk.js
+      - lifetxt/web_desk_clock.js
       - lifetxt/desk_app_manifest.json
     public_interfaces:
       - GET /desk
@@ -23,8 +24,11 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/1779
       - https://github.com/Eruhitsuji/lifetxt/issues/1780
       - https://github.com/Eruhitsuji/lifetxt/issues/1781
+      - https://github.com/Eruhitsuji/lifetxt/issues/1804
+      - https://github.com/Eruhitsuji/lifetxt/issues/1805
+      - https://github.com/Eruhitsuji/lifetxt/issues/1806
     reuse_policy: Reuse command-center, agenda, items and capture APIs and the Planner revision contract; no new API or mutation path.
-    notes: Today/7-day/month calendar, detail editing, completion time, Quick/todo.txt capture and theme toggle. Status uses the existing /api/status contract; layout is stored only in browser localStorage (issues 1779-1781). Chromium integration verification recorded in issue 1670; physical display and non-Chromium browsers not verified. No service worker or offline queue.
+    notes: Today/7-day/month calendar, detail editing, completion time, Quick/todo.txt capture and theme toggle. Status uses the existing /api/status contract; layout is stored only in browser localStorage (issues 1779-1781). Chromium integration verification recorded in issue 1670; physical display and non-Chromium browsers not verified. Resizing, optional habit/message/deadline/summary blocks and clock settings (issues 1804-1806) reuse existing read APIs and browser localStorage. No service worker or offline queue.
 
   - id: cap-web-bulk-done-date
     name: Explicit bulk task completion date

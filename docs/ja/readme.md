@@ -1,125 +1,115 @@
-# lifetxt documentation
+# lifetxt ドキュメント
 
-`life.txt` は tasks、events、deadlines、reminders、habits、status/presence records、messages、notes、journals、project work、remote-safe workflows を扱う plain-text format と toolset です。
+[English](../en/readme.md) · [文書全体の入口](../README.md) · [公式サイト](https://eruhitsuji.github.io/lifetxt/ja/)
 
-最初に読む文書:
+`life.txt` はタスク、予定、メモ、日記などをプレーンテキストで記録する形式です。
+最初のファイルは [入門ガイド](getting-started.md) を見ながら作成できます。
+実際の記述例は [examples/](../../examples/) にあります。
 
-- [getting-started.md](./getting-started.md): `life.txt` の Beginner /
-  Minimal Profile への5分間の導入（full specification の前に）
-- [philosophy.md](./philosophy.md): lifetxt がなぜ存在するのか、その背後にある原則
-- [life_txt_format_spec.md](./life_txt_format_spec.md): file format
-- [cli.md](./cli.md): command usage と compatibility
-- [quick-capture.md](./quick-capture.md): Quick captureの省略記法、優先順位、
-  edge case、surface差異の正規ガイド
-- [config.md](./config.md): configuration files と effective settings
-- [web.md](./web.md): optional FastAPI/Web UI surface
-- [ai-integration.md](./ai-integration.md): AIでの下書き、Web手動共有、MCP client usage
-- [personal-context.md](./personal-context.md): AIを使った Personal Context /
-  Personal DB の作成・維持・再利用
-- [use-cases.md](./use-cases.md): practical setups
+## はじめる
 
-通常のAIチャットを使うなら、lifetxtのinstall不要の
-[Prompt Profileの手順](./ai-integration.md#prompt-profile-を使う最短手順)から始めるか、
-起動済みWeb UIで[export → AI → Preview → 承認してAdd all](./ai-integration.md#外部aiへ手動共有する手順)
-を使えます。どちらもMCP、AI API、プラグインは不要です。対応clientをworkspaceへ
-接続するMCPは、アクセス範囲とsetup要件が別の選択肢です。
+- [5分で基本の書き方を学ぶ](getting-started.md)
+- [CLI・デスクトップアプリ・コンテナを導入する](distribution.md)
+- [lifetxt-mini を導入する](lifetxt-mini-distribution.md)
+- [テキストエディターを設定する](editor.md)
+- [テキストエディターだけで週次運用する](text-editor-only-workflow.md)
+- [用途に合う構成を選ぶ](use-cases.md)
+- [設計思想を読む](philosophy.md)
 
-## Minimal life.txt
+## 日常の操作
 
-```txt
-[ ] T Write_Report due:2026-06-12 project:university assignee:alice
-[ ] E Seminar from:2026-06-08T13:00 to:2026-06-08T14:30 loc:university attendee:alice
-[/] S Working from:2026-06-06T14:00 state:busy person:self
-[ ] M "Review slides" sender:self recipient:alice notify_at:2026-06-06T09:00 channel:teams
-[N] J "Research day" on:2026-06-23 mood:good tag:lab
-| Read papers in the morning.
-| Wrote parser tests in the afternoon.
-[N] N Research_Memo project:research
-```
+- [CLI コマンドリファレンス](cli.md)
+- [Web UI・REST API](web.md)
+- [クイック入力・todo.txt 入力](quick-capture.md)
+- [CLI の操作例](new-cli-workflows.md)
+- [今日の一覧・領域・被リンク](life-hub.md)
+- [クエリ・保存済みビュー](query.md)
+- [検索・あいまい検索](search.md)
+- [重要度・優先度マトリクス](priority-matrix.md)
+- [通常のメモ](ordinary-notes.md)
+- [レコード間のリンク](item-links.md)
+- [受信箱・提案](inbox.md)
+- [プロジェクト・ポートフォリオ](projects.md)
+- [開発チケット](tickets.md)
+- [チケット・プロジェクトの集計](ticket-projects.md)
+- [人物・グループ](people.md)
+- [メッセージ・配信状態](messaging.md)
+- [定期 Markdown レポート](reports.md)
+- [手順ガイド](procedure-guidance.md)
+- [ワークスペースのライフタイムライン](workspace-life-timeline.md)
+- [ネイティブ時系列タイムライン](native-timeline.md)
+- [時間軸を使った振り返り](temporal-review-reads.md)
+- [レコードのライフサイクル分析](lifecycle-analytics.md)
+- [将来の予定・意図のスナップショット](future-intent-snapshot.md)
 
-## Topic index
+## AI・パーソナルコンテキスト
 
-`docs/ja/` 配下の Markdown files に対応する docs index です。
+- [AI で下書き・手動共有・MCP 接続](ai-integration.md)
+- [AI 向けのレコード記述例](ai-patterns.md)
+- [パーソナルコンテキストを作る・使う](personal-context.md)
+- [パーソナルコンテキストのツール群](personal-context-toolkit.md)
 
-| Topic | Document |
-| --- | --- |
-| AI下書き・手動共有・MCP連携 | [ai-integration.md](./ai-integration.md) |
-| AIによる Personal Context / Personal DB | [personal-context.md](./personal-context.md) |
-| CLI reference | [cli.md](./cli.md) |
-| CI responsibilities | [ci-responsibilities.md](./ci-responsibilities.md) |
-| Quick capture と省略記法 | [quick-capture.md](./quick-capture.md) |
-| Configuration | [config.md](./config.md) |
-| Delegated mutations, remote attachments, recovery | [delegated-remote-attachments-and-recovery.md](./delegated-remote-attachments-and-recovery.md) |
-| Editor setup and safe edit flow | [editor.md](./editor.md) |
-| Getting started (Beginner / Minimal Profile) | [getting-started.md](./getting-started.md) |
-| Inbox workflows | [inbox.md](./inbox.md) |
-| Format specification | [life_txt_format_spec.md](./life_txt_format_spec.md) |
-| Daily hub, areas, backlinks | [life-hub.md](./life-hub.md) |
-| Messaging and notifications | [messaging.md](./messaging.md) |
-| New CLI workflows | [new-cli-workflows.md](./new-cli-workflows.md) |
-| Native semantic history design | [native-semantic-history.md](./native-semantic-history.md) |
-| Native Temporal Timeline | [native-timeline.md](./native-timeline.md) |
-| Native History / Git consistency | [native-git-history-consistency.md](./native-git-history-consistency.md) |
-| People, teams, groups | [people.md](./people.md) |
-| Philosophy and long-term vision | [philosophy.md](./philosophy.md) |
-| Process boundaries and transaction admin | [process-boundaries-attachments-and-transaction-admin.md](./process-boundaries-attachments-and-transaction-admin.md) |
-| Projects and portfolios | [projects.md](./projects.md) |
-| Public surface revisions | [public-surface-revisions.md](./public-surface-revisions.md) |
-| Query language and saved views | [query.md](./query.md) |
-| Documentation index | [readme.md](./readme.md) |
-| Release baselines | [release-baselines.md](./release-baselines.md) |
-| Release policy gates | [release-policy-gates.md](./release-policy-gates.md) |
-| Release safety foundations | [release-safety-foundations.md](./release-safety-foundations.md) |
-| Remote Safe Mode | [remote.md](./remote.md) |
-| Remote CLI write client | [remote-client-writes.md](./remote-client-writes.md) |
-| Remote compatibility | [remote-compatibility.md](./remote-compatibility.md) |
-| Remote ticket mutations | [remote-ticket-writes.md](./remote-ticket-writes.md) |
-| Round-trip and multiline body rules | [roundtrip-and-body.md](./roundtrip-and-body.md) |
-| Safe writes, attachments, work sessions | [safe-writes-attachments-and-work-sessions.md](./safe-writes-attachments-and-work-sessions.md) |
-| Search and fuzzy matching | [search.md](./search.md) |
-| Shared mutation routing | [shared-mutation-routing.md](./shared-mutation-routing.md) |
-| Ticket projects | [ticket-projects.md](./ticket-projects.md) |
-| Tickets and workflow history | [tickets.md](./tickets.md) |
-| Timezone-aware datetimes | [timezone-aware-datetimes.md](./timezone-aware-datetimes.md) |
-| Timezone, revisions, workspace safety | [timezone-revision-workspace-safety.md](./timezone-revision-workspace-safety.md) |
-| Transaction recovery and strict timers | [transaction-recovery-and-strict-timers.md](./transaction-recovery-and-strict-timers.md) |
-| Use-case guide | [use-cases.md](./use-cases.md) |
-| テキストエディタだけで使う週次運用 | [text-editor-only-workflow.md](./text-editor-only-workflow.md) |
-| VM (opt-in Turing-complete execution model) | [vm.md](./vm.md) |
-| Web API and UI | [web.md](./web.md) |
+## 形式・動作の仕様
 
-## Examples
+- [Format 1.0 仕様](life_txt_format_spec.md)
+- [往復変換・複数行本文](roundtrip-and-body.md)
+- [タイムゾーン付き日時](timezone-aware-datetimes.md)
+- [レコードの変更イベント](item-events.md)
+- [ネイティブ意味履歴](native-semantic-history.md)
+- [指定時点の履歴の意味](historical-as-of-semantics.md)
+- [ネイティブ履歴と Git 履歴の整合性](native-git-history-consistency.md)
+- [Git 履歴の証跡仕様](git-historical-evidence-contract.md)
+- [MCP からの指定時点参照](mcp-semantic-as-of.md)
+- [公開インターフェースのリビジョン仕様](public-surface-revisions.md)
+- [共通の書き込み経路](shared-mutation-routing.md)
+- [リソース参照の抽出・表示](resource-reference-projection.md)
+- [制限付きリソース参照解決のスキーマ](resource-reference-resolution.md)
+- [TUI の Unicode 表示幅](tui-unicode-width.md)
+- [明示的に有効化する仮想マシン](vm.md)
 
-sample files は [../../examples/](../../examples/) にあります。
+## 設定・運用
 
-- [minimal_life.txt](../../examples/minimal_life.txt)
-- [getting_started_life.txt](../../examples/getting_started_life.txt)
-- [tasks_life.txt](../../examples/tasks_life.txt)
-- [events_life.txt](../../examples/events_life.txt)
-- [habits_reminders_life.txt](../../examples/habits_reminders_life.txt)
-- [status_presence.txt](../../examples/status_presence.txt)
-- [team_status_life.txt](../../examples/team_status_life.txt)
-- [messages_life.txt](../../examples/messages_life.txt)
-- [diary_life.txt](../../examples/diary_life.txt)
-- [markdown_life.txt](../../examples/markdown_life.txt)
-- [linked_life.txt](../../examples/linked_life.txt)
-- [recurrence_time_life.txt](../../examples/recurrence_time_life.txt)
-- [hierarchy_life.txt](../../examples/hierarchy_life.txt)
-- [agenda_life.txt](../../examples/agenda_life.txt)
-- [json_roundtrip_life.txt](../../examples/json_roundtrip_life.txt)
-- [calendar_import.ics](../../examples/calendar_import.ics)
+- [設定・ワークスペース](config.md)
+- [リモートセーフモード](remote.md)
+- [リモート CLI・TUI からの書き込み](remote-client-writes.md)
+- [リモートのチケット更新](remote-ticket-writes.md)
+- [リモート接続の互換性](remote-compatibility.md)
+- [Web 通信のセキュリティ](web-transport-security.md)
+- [安全な書き込み・添付・作業セッション](safe-writes-attachments-and-work-sessions.md)
+- [委任書き込み・リモート添付の復旧](delegated-remote-attachments-and-recovery.md)
+- [添付の範囲を制限した読み取り](attachment-snapshot-helper.md)
+- [プロセス境界・トランザクション管理](process-boundaries-attachments-and-transaction-admin.md)
+- [トランザクション復旧・厳格タイマー](transaction-recovery-and-strict-timers.md)
+- [ワークスペースの安全性・リビジョン・タイムゾーン](timezone-revision-workspace-safety.md)
+- [ストレージ検査・保守](storage-health.md)
+- [添付・復旧データの保存時の機密性](at-rest-confidentiality.md)
+- [外部リソース取得の方針](external-resource-fetch-policy.md)
+- [制限付きリソースの検索・ダウンロード](resource-reference-runtime.md)
+- [オプション依存関係の互換性](optional-dependency-compatibility.md)
+- [Ubuntu Server 本番環境の導入手順（英語）](../deployment/ubuntu-server.md)
 
-## Verification
+## 開発・リリース
 
-install と minimal smoke check。`python -m pip install .`（`-e .`ではない）
-は、source checkoutからのrelease artifact installに近い形です。version公開後
-（[distribution.md](./distribution.md)参照）は `pip install lifetxt` が
-end-user向けの主経路になります。`-e .`はlifetxt自体のsourceを編集する開発者
-向けで、
-[readme.mdのDevelopment environmentセクション](../../readme.md#development-environment)
-を参照してください:
+- [CI の役割](ci-responsibilities.md)
+- [外部環境での検証](external-environment-verification.md)
+- [確認済みのリリース基準](release-baselines.md)
+- [リリース互換性の方針](release-compatibility-policy.md)
+- [リリース前の判定基準](release-policy-gates.md)
+- [リリースの安全性・Format 1.0](release-safety-foundations.md)
+- [リリース事前検証の証跡](release-preflight.md)
+- [承認済みリリースの公開](release-publication.md)
+- [リリース成果物の証跡](release-artifact-evidence.md)
+- [技術仕様・検証記録の索引（英語）](../development/README.md)
 
-```sh
-python -m pip install .
-python -m lifetxt check examples/minimal_life.txt
-```
+## リリースノート・設計案・調査
+
+- [v1.0.5 リリースノート](release-notes-v1.0.5.md)
+- [v1.0.4.3 リリースノート](release-notes-v1.0.4.3.md)
+- [v1.0.4.2 リリースノート](release-notes-v1.0.4.2.md)
+- [v1.0.4.1 リリースノート](release-notes-v1.0.4.1.md)
+- [v1.0.2 リリースノート](release-notes-v1.0.2.md)
+- [v1.0.0 リリースノート草案](stable-release-notes-draft.md)
+- [Daily Flow Lite の設計案](daily-flow-lite-contract.md)
+- [手順ガイドの設計案](procedure-guidance-design.md)
+- [Git 履歴の開示に関する調査](git-historical-disclosure-policy.md)
+- [ロードマップと過去のスナップショット（英語）](../roadmap/README.md)

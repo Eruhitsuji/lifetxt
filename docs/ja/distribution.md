@@ -216,14 +216,9 @@ directory（`LIFETXT_REVISION_METRICS_PATH`）へ ルーティングすること
 
 - immutable な version tag は publish 後変わりません — 無期限に pin して
   安全です。
-- `latest` および `<major>`/`<major>.<minor>` の convenience tag は、
-  一致する release があるたびに `docker-publish.yml` によって指す先が
-  更新されます。新しい version を取り込むには再 pull
-  （`docker pull` / `docker compose pull`）が必要で、稼働中の container に
-  自動で push されるわけではありません。
-- base image（`python:3.12-slim`）は lifetxt 自体の release とは独立に
-  OS level の security patch を受け取ります。lifetxt の release がなくても
-  convenience tag を定期的に rebuild/再 pull することを推奨します。
+- リリースワークフローは全受入ゲートの通過後に `latest`、`<major>`、
+  `<major>.<minor>` を更新します。新しいイメージを使うには、`docker pull`
+  または `docker compose pull` で再取得し、コンテナを作り直します。
 
 ### image が GHCR に届くまで
 

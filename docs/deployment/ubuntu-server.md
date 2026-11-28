@@ -488,7 +488,7 @@ Archive details and safety limits are normative in
 Two ways to update, from least to most automated:
 
 **Manual**, for occasional or one-off updates — `lifetxt update` (see
-[`cli.md`'s `update` section](../en/cli.md#16-init-and-doctor)) fast-forwards
+[`cli.md`'s `update` section](../en/cli.md#16-tour-init-and-doctor)) fast-forwards
 the checkout's own git working tree. It is dry-run by default, refuses on
 an unclean tree or a non-fast-forward target, and only ever runs `git fetch`
 plus `git merge --ff-only`:
@@ -546,7 +546,7 @@ short:
   (or otherwise pass `--approve <exact-target-sha>`) to apply that exact,
   already-reviewed commit. `--approve` is refused if the upstream target
   moved since the block was generated -- see
-  [`cli.md` §22.1](../en/cli.md#221-high-impact-review-gate) for the full
+  [`cli.md` §22.1](../en/cli.md#231-high-impact-review-gate) for the full
   trigger list and block format.
 - Health checking after service restart is readiness-aware. If systemd has
   started the service but the Web process is not listening yet,

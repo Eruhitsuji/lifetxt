@@ -82,7 +82,7 @@ durability 戦略の一部です:
 text であること自体は、将来にわたる完全な互換性を保証しません。`life.txt` には
 今も文書化された grammar と format semantics があり、その grammar を責任を持って
 進化させるには、[format specification](./life_txt_format_spec.md) と
-[format migration guide](./format-migration.md) に記載された migration・
+[format migration guide](../en/format-migration.md) に記載された migration・
 compatibility の rule が今も必要です。Plain text はその進化のコストを下げますが、
 その必要性自体を無くすわけではありません。
 
@@ -277,7 +277,7 @@ probabilistic / inferred    recordが persistされているかどうかとは�
 
 `epistemic:inferred` な内容を持つrecordであっても、一度acceptされれば
 他のrecordと同じ、ordinaryなauthoritative recordです -- 詳細は
-[AI提案recordのreviewとaccept](./inbox.md#acceptance-is-write-authorization-not-epistemic-reclassification)
+[AI提案recordのreviewとaccept](./inbox.md#承認は書き込みの-authorization-でありepistemic-reclassificationではない)
 を参照してください。derived read model（temporal context、native
 history、link graphなど）は、それ自体がauthoritative dataとして
 書き戻されることは決してありません。`source:`、`updated:`、

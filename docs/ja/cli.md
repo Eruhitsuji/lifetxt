@@ -189,7 +189,7 @@ python -m lifetxt vm run program.life.txt --entry s1
 | `share` | filter + review + chart をまとめた自己完結型 HTML/Markdown report を出力 |
 | `digest` | `review` のサマリーを Slack、email、または local file へ送信 |
 | `template` | 再利用可能な named item template を list / apply |
-| `workspace` | 名前付き workspace とその source manifest を検査・検証する ([config.md](config.md#named-workspaces) 参照) |
+| `workspace` | 名前付き workspace とその source manifest を検査・検証する ([config.md](config.md#名前付きワークスペース) 参照) |
 | `project` | `project:` record から構築した project を list / 検査 / 管理する ([projects.md](projects.md) 参照) |
 | `portfolio` | project を state、進捗、risk、workload で比較する ([projects.md](projects.md) 参照) |
 | `today` | 日次 command center: 現在の status、本日の event、overdue/due、next action、blocked、habit、inbox をまとめて表示。`--saved-view`/`--area` で絞り込み可能 ([life-hub.md](life-hub.md) 参照) |

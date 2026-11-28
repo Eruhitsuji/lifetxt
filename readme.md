@@ -48,84 +48,38 @@ including directly supplying the profile if needed, validation, and human review
 
 ## Documentation
 
-- [English documentation](./docs/en/readme.md)
-- [Japanese documentation](./docs/ja/readme.md)
-- [English getting-started guide (Beginner / Minimal Profile)](./docs/en/getting-started.md)
-- [Japanese getting-started guide (Beginner / Minimal Profile)](./docs/ja/getting-started.md)
-- [English philosophy and vision](./docs/en/philosophy.md)
-- [Japanese philosophy and vision](./docs/ja/philosophy.md)
-- [English CLI guide](./docs/en/cli.md)
-- [Japanese CLI guide](./docs/ja/cli.md)
-- [English Web API / GUI guide](./docs/en/web.md)
-- [Japanese Web API / GUI guide](./docs/ja/web.md)
-- [English AI / MCP integration guide](./docs/en/ai-integration.md)
-- [Japanese AI / MCP integration guide](./docs/ja/ai-integration.md)
-- [Provider-independent AI Prompt Profile](./prompts/lifetxt-assistant.md) (no install or MCP required)
-- [English editor support guide](./docs/en/editor.md)
-- [Japanese editor support guide](./docs/ja/editor.md)
-- [English format specification](./docs/en/life_txt_format_spec.md)
-- [Japanese format specification](./docs/ja/life_txt_format_spec.md)
-- [Ubuntu Server production deployment runbook](./docs/deployment/ubuntu-server.md)
+[Browse all documentation](./docs/README.md) · [English index](./docs/en/readme.md) · [日本語索引](./docs/ja/readme.md)
 
-Use the format specification for file grammar and key semantics. Use the CLI
-guide for command compatibility, filters, output formats, and conversion rules.
-
-For ordinary AI chats such as ChatGPT, start with the
-[Prompt Profile drafting workflow](./docs/en/ai-integration.md#a-copyable-prompt-profile-workflow)
-without installing lifetxt, or use the Web UI's
-[manual export → AI → Preview → approved Add all workflow](./docs/en/ai-integration.md#manual-sharing-with-an-external-ai).
-Both need no MCP, AI API, or plugin; you choose what to share and save.
-See the [Japanese guide](./docs/ja/ai-integration.md#9-without-mcp).
-Connected MCP access is a separate option for compatible clients.
+| I want to | English | 日本語 |
+| --- | --- | --- |
+| Write my first file | [Getting started](./docs/en/getting-started.md) | [入門ガイド](./docs/ja/getting-started.md) |
+| Find an installer or package | [Distribution](./docs/en/distribution.md) | [配布・インストール](./docs/ja/distribution.md) |
+| Look up a command | [CLI reference](./docs/en/cli.md) | [CLI リファレンス](./docs/ja/cli.md) |
+| Run the browser interface | [Web UI guide](./docs/en/web.md) | [Web UI ガイド](./docs/ja/web.md) |
+| Draft records with AI or connect via MCP | [AI integration](./docs/en/ai-integration.md) | [AI・MCP 連携](./docs/ja/ai-integration.md) |
+| Check the file syntax | [Format 1.0 specification](./docs/en/life_txt_format_spec.md) | [Format 1.0 仕様](./docs/ja/life_txt_format_spec.md) |
 
 ## Getting Started
 
-lifetxt supports Python 3.10 or newer.
-
-Want to see it work before installing anything of your own? `lifetxt tour`
-needs no config, no `life.txt`, and no setup:
+With Python 3.10 or newer, install lifetxt and run the sample tour.
 
 ```sh
+python -m pip install lifetxt
 python -m lifetxt tour
 ```
 
-New to lifetxt for real? Start with `init` and `doctor`:
+In a new workspace directory, create a starter file and check it.
 
 ```sh
-python -m lifetxt init                 # interactive: creates life.txt + .lifetxt.json
-python -m lifetxt init --yes           # non-interactive: accepts all defaults
-python -m lifetxt doctor               # checks your environment and files are set up correctly
-python -m lifetxt check life.txt       # validate syntax after your first edits
-python -m lifetxt summary life.txt     # see what init created
-python -m lifetxt add "Buy milk ^tomorrow"  # capture your first real record
-python -m lifetxt web                  # open the browser UI against it
+python -m lifetxt init
+python -m lifetxt check life.txt
 ```
 
-`init` writes a starter `life.txt` (with `#! self:`, `#! timezone:`, and
-optionally `#! project:` directives) and a matching `.lifetxt.json`, prompting
-for your name, timezone, and default project. Pass `--yes` to skip every
-prompt and accept the defaults (`self`, `UTC`, no project) — useful in
-scripts and CI. `doctor` then reports pass/warn/fail checks for your Python
-version, optional dependencies (`textual`, `watchdog`, `matplotlib`, `fzf`),
-and config/life.txt file health, so you know what to install next. `add` is
-the beginner-facing spelling of `quick`/`q`; `web` starts the same server as
-`serve` and opens your browser to it. See section 16 ("`tour`, `init`, and
-`doctor`") of the [CLI guide](./docs/en/cli.md) for the full flag reference.
-See the [Quick capture guide](./docs/en/quick-capture.md) for every supported
-sigil, date token, precedence rule, literal escape, and surface difference.
-
-Not sure which of lifetxt's many commands to reach for? `lifetxt help` gives
-a role-based index (Getting Started, Query, Projects, and more) plus guided
-paths for beginners, daily users, power users, AI clients, and administrators
-— `lifetxt help beginner` walks through the smallest useful loop, and
-`lifetxt help <command>` looks up any one command by name or alias. Add
-`--json` for a machine-readable capability catalog. See
-[§1.1 of the CLI guide](./docs/en/cli.md#11-command-categories-and-guided-paths).
-
-For the fastest introduction to what actually goes *inside* `life.txt`, see
-[docs/en/getting-started.md](./docs/en/getting-started.md): a five-minute
-Beginner / Minimal Profile that is a strict subset of the full format, so
-nothing you write there needs to change when you learn the rest.
+Use `python -m lifetxt help beginner` for guided CLI steps and
+`python -m lifetxt doctor` to check your environment. To open your file in a
+browser, follow the [Web installation and startup steps](./docs/en/web.md#install).
+The [beginner guide](./docs/en/getting-started.md) covers how to write tasks,
+events and notes directly in `life.txt`.
 
 ## Minimal life.txt
 

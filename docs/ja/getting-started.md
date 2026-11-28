@@ -1,31 +1,23 @@
 # Getting Started: Beginner / Minimal Profile
 
-`life.txt` には広い surface area があります: 9 個の item type、7 個の
-status、数十の detail key、hierarchy、link、recurrence、message などです。
-最初からそのすべてを覚える必要はありません。
+[English](../en/getting-started.md) · [ドキュメント索引](readme.md)
 
-このページでは **Beginner / Minimal Profile** を説明します。これは既存の
-[format specification](./life_txt_format_spec.md) の小さな named subset で
-あり、第二の format ではありません:
+**Beginner / Minimal Profile** は、タスク・予定・メモをプレーンテキストで書く
+ための基本ルールです。[Format 1.0](life_txt_format_spec.md) の一部なので、必要に
+応じて同じファイルに項目やレコードの種類を追加できます。
 
-> Beginner Profile のすべての record は、そのまま valid な Full Format
-> syntax です。ここで書いたものは、あとで format のより多くを学んだときに
-> migration、変換、書き換えを一切必要としません。
+## インストールして試す
 
-```text
-life.txt Format 1.0
-├── Beginner / Minimal Profile   <- このページの level 1
-├── Daily Use                    <- このページの level 2
-└── Full Format                  <- life_txt_format_spec.md、level 3
-```
-
-読む前に動くところを見たい場合は、`lifetxt tour` が小さな Beginner
-Profile のサンプルと、それに対する実際の derive された view を 1 つ
-表示します。config も `life.txt` もセットアップも不要です:
+CLI を使うには Python 3.10 以降が必要です。インストール後、ワークスペースを
+作る前に内蔵サンプルで動作を確認できます。
 
 ```sh
-lifetxt tour
+python -m pip install lifetxt
+python -m lifetxt tour
 ```
+
+デスクトップアプリやコンテナなどは[配布ガイド](distribution.md)を参照してください。
+ブラウザーで操作する場合は [Web UI の導入手順](web.md#install)に進んでください。
 
 ## Level 1 -- Minimum（5分）
 

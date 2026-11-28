@@ -161,6 +161,33 @@ traceability:
       tests_or_evidence: [tests.test_web_desk, "Chromium (Edge) check: layout defaults, presets, persistence, invalid values, reset and no page scroll"]
       status: in_review
 
+    - requirement_id: req-web-desk-v1
+      capability_id: cap-web-desk
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1804
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1808
+      changed_files_or_scope: [lifetxt/web_desk.html, lifetxt/web_desk.css, lifetxt/web_desk.js, tests/test_web_desk.py, docs/en/web.md, docs/ja/web.md]
+      tests_or_evidence: [tests.test_web_desk, "Chromium (Edge) check: column and block resizing by mouse, touch and keyboard, saved layouts, narrow screen and no page scroll"]
+      status: in_review
+
+    - requirement_id: req-web-desk-v1
+      capability_id: cap-web-desk
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1805
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1808
+      changed_files_or_scope: [lifetxt/web_desk.html, lifetxt/web_desk.css, lifetxt/web_desk.js, tests/test_web_desk.py, docs/en/web.md, docs/ja/web.md]
+      tests_or_evidence: [tests.test_web_desk, "Chromium (Edge) check: optional blocks hidden by default, saved layouts, one failing source, JA/EN and narrow screen"]
+      status: in_review
+
+    - requirement_id: req-web-desk-v1
+      capability_id: cap-web-desk
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1806
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1808
+      changed_files_or_scope: [lifetxt/web_desk.html, lifetxt/web_desk.css, lifetxt/web_desk.js, lifetxt/web_desk_clock.js, lifetxt/web_assets.py, pyproject.toml, tests/test_web_desk.py, docs/en/web.md, docs/ja/web.md]
+      tests_or_evidence: [tests.test_web_desk, tests.test_web_assets, "Chromium (Edge) check: clock styles and formats, time zones, progress and countdown, invalid saved values, JA/EN and narrow screen"]
+      status: in_review
+
     - requirement_id: req-browser-local-check-v1
       capability_id: cap-official-website
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1731

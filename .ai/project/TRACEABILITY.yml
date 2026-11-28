@@ -2,6 +2,18 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-items-filter-consistent-apply
+      capability_id: cap-web-beginner-first-ux
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1811
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1812
+      changed_files_or_scope: [Items result counts scoped to the selected list or task board layout]
+      tests_or_evidence:
+        - tests.test_web_items_filters, tests.test_web_items_board, tests.test_web_assets, tests.test_web_i18n
+        - Chromium with a local server and five synthetic records verified query, row limit, status, list and board counts, zero, error retry, Japanese mobile, and kiosk
+        - python -m lifetxt check examples/minimal_life.txt
+      status: in_review
+
     - requirement_id: req-web-palette-navigation
       capability_id: cap-web-help-command-reference
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1386

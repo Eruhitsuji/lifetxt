@@ -15,41 +15,26 @@
     }
 
     // ── Status quick-filter buttons (multi-select) ────────────────
-    function syncStatusFilterBtns(activeValues) {
+    function syncStatusFilterBtns() {
       const params = query();
       const isBlocked = params.get("blocked") === "true";
       const rawStatus = params.get("status") || "";
       const selected = new Set(rawStatus ? rawStatus.split(",").map(s => s.trim()).filter(Boolean) : []);
-      // Count items per status from current loaded items
-      const counts = {};
-      for (const item of (currentItems || [])) {
-        counts[item.status] = (counts[item.status] || 0) + 1;
-      }
-      const total = (currentItems || []).length;
       document.querySelectorAll("#status-filter-bar .filter-btn").forEach(btn => {
         const sv = btn.dataset.status;
-        const label = btn.dataset.label || btn.textContent.replace(/\s*\(\d+\)$/, "").trim();
-        btn.dataset.label = label;
+        let active;
         if (sv === "") {
-          btn.classList.toggle("active", !isBlocked && selected.size === 0);
-          btn.textContent = total ? `${label} (${total})` : label;
+          active = !isBlocked && selected.size === 0;
         } else if (sv === "__blocked__") {
-          btn.classList.toggle("active", isBlocked);
+          active = isBlocked;
         } else if (sv === "__active__") {
-          btn.classList.toggle("active", !isBlocked && selected.has("[ ]") && selected.has("[/]"));
+          active = !isBlocked && selected.has("[ ]") && selected.has("[/]");
         } else {
-          btn.classList.toggle("active", selected.has(sv));
-          const n = counts[sv] || 0;
-          btn.textContent = n ? `${label} (${n})` : label;
+          active = selected.has(sv);
         }
+        btn.classList.toggle("active", active);
+        btn.setAttribute("aria-pressed", String(active));
       });
-    }
-
-    // ── Search result count ────────────────────────────────────────
-    function updateSearchCount(count) {
-      const el = document.getElementById("search-count");
-      if (!el) return;
-      el.textContent = count != null ? `(${count})` : "";
     }
 
     // ── View presets (config-defined, applied via ?preset= URL) ────

@@ -557,7 +557,7 @@
     .kiosk-mode .item-section.page-active { display: flex; flex-direction: column; min-height: 0; }
     .kiosk-mode .item-section .section-head { display: none; }
     .kiosk-mode .items-controls, .kiosk-mode .filter-bar,
-    .kiosk-mode .stats-summary, .kiosk-mode .filter-chips,
+    .kiosk-mode .stats-summary, .kiosk-mode #items-result-count, .kiosk-mode .filter-chips,
     .kiosk-mode .bulk-toolbar { display: none; }
     .display-mode .items-controls, .display-mode .filter-bar { display: none; }
     .kiosk-mode #items {

@@ -141,7 +141,6 @@ __LIFETXT_WEB_STYLES__  </style>
           <div class="search-wrap">
             <span class="search-icon" aria-hidden="true">🔍</span>
             <input id="search" aria-label="Search items" placeholder="Search (/)" list="tag-suggestions" autocomplete="off">
-            <span id="search-count"></span>
           </div>
           <label id="items-layout-control" class="inline" hidden>
             <span>Layout</span>
@@ -233,6 +232,7 @@ __LIFETXT_WEB_STYLES__  </style>
         <button class="filter-btn" data-status="__blocked__" onclick="toggleBlockedFilter()" title="Items blocked by open dependencies">⚡ Blocked</button>
       </div>
       <div id="filter-chips" class="filter-chips"></div>
+      <p id="items-result-count" role="status" aria-atomic="true"></p>
       <div id="stats-summary" class="stats-summary" style="display:none"></div>
       <div id="diagnostics" data-no-i18n></div>
       <div id="bulk-toolbar" class="bulk-toolbar">

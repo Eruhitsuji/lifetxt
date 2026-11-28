@@ -59,6 +59,9 @@
     const UI_STRINGS = {
       ja: {
         "Items layout": "アイテムの表示形式",
+        "Records in list: {count}": "一覧のレコード：{count}件",
+        "Tasks on board: {count}": "ボードのタスク：{count}件",
+        "Not done or cancelled": "完了・中止以外",
         "Layout": "表示形式",
         "List": "一覧",
         "Board": "ボード",

@@ -1,4 +1,4 @@
-"""Items filter reachability across the 680px disclosure breakpoint (#1453)."""
+"""Items filter controls, result counts, and responsive disclosure."""
 
 import json
 import os
@@ -17,6 +17,71 @@ class ItemsFilterFallbackTests(unittest.TestCase):
         tag = re.search(r'<details[^>]*id="items-filter-disclosure"[^>]*>', HTML_PAGE)
         self.assertIsNotNone(tag)
         self.assertRegex(tag.group(), r"\sopen(?:\s|>)")
+
+
+@unittest.skipUnless(shutil.which("node"), "Node.js unavailable")
+class ItemsResultCountTests(unittest.TestCase):
+    def test_summary_counts_the_rendered_layout_and_clears_after_error(self):
+        def extract(start, end):
+            offset = HTML_PAGE.index(start)
+            return HTML_PAGE[offset : HTML_PAGE.index(end, offset)]
+
+        source = "\n".join(
+            (
+                extract("function renderSummary(", "function renderFilterChips("),
+                extract("function renderItems(", "if (kioskNow) _kioskLastFingerprints")
+                + "}",
+                extract("function syncStatusFilterBtns(", "// ── View presets"),
+            )
+        )
+        harness = r"""
+const assert = require("node:assert/strict");
+const noop = () => {};
+const count = {textContent: ""};
+const stats = {style: {}, replaceChildren() { this.innerHTML = ""; }, insertAdjacentHTML: noop};
+const elements = {"items-result-count": count, "stats-summary": stats,
+  "items": {appendChild: noop}, "items-layout-control": {}, "group-by": {}};
+const buttons = ["", "[ ]", "[/]", "__active__", "[x]", "__blocked__"].map(status => ({
+  dataset: {status}, textContent: "Label", classList: {toggle: noop},
+  setAttribute(name, value) { assert.equal(name, "aria-pressed"); this.pressed = value; },
+}));
+const document = {getElementById: id => elements[id], querySelectorAll: () => buttons};
+const t = text => text, escapeHtml = text => text;
+const itemDueSoonClass = () => "", itemsLayoutAvailable = () => true;
+const setBoardDropTarget = noop, _updateBulkToolbar = noop, renderFilterChips = noop;
+const buildItemNode = noop, isKioskMode = () => false, itemsEmptyStateMarkup = () => "";
+let boardDraggedCard, _kbIndex, itemsEmptyKind, params, board = false, cards;
+const query = () => new URLSearchParams(params);
+const itemsBoardActive = () => board, renderItemsBoard = (root, items) => { cards = items; };
+const items = [
+  {type: "T", status: "[ ]"}, {type: "T", status: "[x]"}, {type: "N", status: "[N]"},
+];
+renderItems(items);
+assert.equal(count.textContent, "Records in list: 3");
+assert.match(stats.innerHTML, />2<\/span> Not done or cancelled/);
+board = true;
+renderItems(items);
+assert.equal(count.textContent, "Tasks on board: 2");
+assert.match(stats.innerHTML, />1<\/span> Not done or cancelled/);
+assert.deepEqual(cards, items.slice(0, 2));
+renderItems([items[2]]);
+assert.equal(count.textContent, "Tasks on board: 0");
+assert.equal(stats.style.display, "none");
+renderSummary(null);
+assert.equal(count.textContent, "");
+assert.equal(stats.innerHTML, "");
+params = {status: "[ ],[/]"};
+syncStatusFilterBtns();
+assert.deepEqual(buttons.map(button => button.pressed), ["false", "true", "true", "true", "false", "false"]);
+assert.ok(buttons.every(button => button.textContent === "Label"));
+"""
+        result = subprocess.run(
+            ["node", "-e", source + harness],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        self.assertEqual(0, result.returncode, result.stderr)
 
 
 @unittest.skipUnless(shutil.which("node"), "Node.js unavailable")
@@ -67,7 +132,9 @@ class ItemsEmptyStateTests(unittest.TestCase):
         start = HTML_PAGE.index("    function openEditorModal(")
         end = HTML_PAGE.index("    // ── Context-aware related-item creation", start)
         wrapper = HTML_PAGE.index("    const _structuredOriginalNewItem = newItem;")
-        wrapper_end = HTML_PAGE.index("    const _structuredOriginalSelectItem", wrapper)
+        wrapper_end = HTML_PAGE.index(
+            "    const _structuredOriginalSelectItem", wrapper
+        )
         payload = HTML_PAGE.index("    function editorPayload()")
         payload_end = HTML_PAGE.index("    async function saveItem(", payload)
         harness = r"""

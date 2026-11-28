@@ -79,6 +79,7 @@
       } catch (error) {
         if (generation !== itemsLoadGeneration) return;
         itemsEmptyKind = "error";
+        renderSummary(null);
         renderActionableError(document.getElementById("items"), "Could not load items from the lifetxt server.", error, () => loadItems());
         return;
       }
@@ -181,6 +182,7 @@
         return true;
       } catch (error) {
         itemsEmptyKind = "error";
+        renderSummary(null);
         renderActionableError(document.getElementById("items"),
           "Could not load items from the lifetxt server.", error, reloadItemsBoard);
       }
@@ -338,19 +340,25 @@
       if (diffDays >= 0 && diffDays <= dueSoonDays() && item.status !== "[x]" && item.status !== "[-]") return "due-soon";
       return "";
     }
-    function renderSummary(items) {
+    function renderSummary(items, board = false) {
       const el = document.getElementById("stats-summary");
-      const total = items.length;
-      const open = items.filter(i => !["[x]", "[-]"].includes(i.status)).length;
+      const count = document.getElementById("items-result-count");
+      const label = board ? "Tasks on board: {count}" : "Records in list: {count}";
+      const result = items ? t(label).replace("{count}", items.length) : "";
+      if (count.textContent !== result) count.textContent = result;
+      if (!items?.length) {
+        el.style.display = "none";
+        el.replaceChildren();
+        return;
+      }
+      const unfinished = items.filter(i => !["[x]", "[-]"].includes(i.status)).length;
       const done = items.filter(i => i.status === "[x]").length;
       const overdue = items.filter(i => itemDueSoonClass(i) === "overdue").length;
-      if (!total) { el.style.display = "none"; return; }
       el.style.display = "";
       el.innerHTML = `
-        <div class="stats-count"><span class="n">${total}</span> total</div>
-        <div class="stats-count"><span class="n">${open}</span> open</div>
-        <div class="stats-count"><span class="n">${done}</span> done</div>
-        <div class="stats-count overdue-count"><span class="n">${overdue}</span> overdue</div>
+        <div class="stats-count"><span class="n">${unfinished}</span> ${escapeHtml(t("Not done or cancelled"))}</div>
+        <div class="stats-count"><span class="n">${done}</span> ${escapeHtml(t("Done"))}</div>
+        <div class="stats-count overdue-count"><span class="n">${overdue}</span> ${escapeHtml(t("Overdue"))}</div>
       `;
       // Build per-project mini-table from current items
       const projMap = {};
@@ -804,19 +812,15 @@
       document.getElementById("group-by").hidden = board;
       _updateBulkToolbar();
       if (itemsEmptyKind === "error" && (board || !items.length)) return;
+      const visibleItems = board ? items.filter(item => item.type === "T") : items;
+      if (itemsEmptyKind !== "error") renderSummary(visibleItems, board);
+      renderFilterChips();
       if (board) {
-        const tasks = items.filter(item => item.type === "T");
-        renderSummary(tasks);
-        renderFilterChips();
-        updateSearchCount(tasks.length);
         _kbIndex = -1;
-        renderItemsBoard(root, tasks);
+        renderItemsBoard(root, visibleItems);
         return;
       }
       root.innerHTML = items.length ? "" : itemsEmptyStateMarkup();
-      renderSummary(items);
-      renderFilterChips();
-      updateSearchCount(items.length);
       const kioskNow = isKioskMode();
       const nextFingerprints = new Map();
       _kbIndex = -1;

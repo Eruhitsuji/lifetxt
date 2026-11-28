@@ -11,7 +11,12 @@ const requests = [];
 const server = http.createServer((request, response) => {
   requests.push({url: request.url, method: request.method});
   response.writeHead(200, {"content-type": request.url.startsWith("/api/") ? "application/json" : "text/html; charset=utf-8"});
-  response.end(request.url.startsWith("/api/") ? JSON.stringify({items: [], diagnostics: [], records: [], views: [], areas: []}) : html);
+  const payload = {
+    items: [], diagnostics: [], records: [],
+    views: [{name: "Example view"}],
+    areas: [{name: "Example area", task_done: 0, task_total: 0}],
+  };
+  response.end(request.url.startsWith("/api/") ? JSON.stringify(payload) : html);
 });
 await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
 const port = server.address().port;
@@ -86,7 +91,9 @@ try {
     await resize(width);
     await command("Page.navigate", {url: `http://127.0.0.1:${port}/?view=items&sort=title&order=desc&kind=T`});
     for (let i = 0; i < 100; i++) {
-      if (await evaluate('document.readyState === "complete" && document.getElementById("sort")?.value === "title"')) break;
+      if (await evaluate(`document.readyState === "complete" && document.getElementById("sort")?.value === "title"
+          && !document.getElementById("saved-view-select").disabled
+          && !document.getElementById("area-select").disabled`)) break;
       await delay(25);
     }
     const initial = await state();

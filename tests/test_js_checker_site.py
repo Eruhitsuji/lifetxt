@@ -493,7 +493,7 @@ class JSCheckerSiteTests(unittest.TestCase):
                 expect(output).to_be_empty()
                 expect(status).to_be_empty()
                 expect(button).to_be_enabled()
-                page.evaluate("File.prototype.arrayBuffer = window.originalArrayBuffer")
+                page.evaluate("() => { File.prototype.arrayBuffer = window.originalArrayBuffer; }")
                 verify_hashes.uncheck()
                 button.click()
                 expect(output).to_contain_text("attachment-folder-unavailable")
